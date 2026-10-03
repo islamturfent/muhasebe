@@ -74,4 +74,6 @@ return [
     'balance_status_diff' => 'Opening balances are unbalanced — difference: :diff',
     'edit_entry' => 'Edit Entry',
     'entry_updated' => 'Entry updated.',
+    'opening_debit' => 'Opening Debit',
+    'opening_credit' => 'Opening Credit',
 ];

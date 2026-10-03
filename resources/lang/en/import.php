@@ -35,4 +35,8 @@ return [
     'field_unit' => 'Unit',
     'row' => 'Row',
     'message' => 'Message',
+    'module_chart' => 'Chart of Accounts',
+    'field_subtype' => 'Subtype',
+    'field_currency' => 'Currency',
+    'period_required' => 'A fiscal period must be selected for chart of accounts import.',
 ];

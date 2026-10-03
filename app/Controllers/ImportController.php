@@ -35,11 +35,17 @@ final class ImportController extends Controller
         'stock_quantity' => ['stok miktarı', 'miktar', 'quantity', 'adet'],
         'critical_stock' => ['kritik stok', 'critical'],
         'description' => ['açıklama', 'aciklama', 'description', 'not'],
+        'opening_debit' => ['açılış borç', 'acilis borc', 'opening debit', 'borç'],
+        'opening_credit' => ['açılış alacak', 'acilis alacak', 'opening credit', 'alacak'],
+        'is_header' => ['grup başlığı', 'baslik', 'header'],
+        'subtype' => ['alt tür', 'alt tur', 'subtype'],
+        'currency' => ['para birimi', 'currency', 'döviz'],
     ];
 
     private const MODULES = [
         'cari' => ['label' => 'import.module_cari', 'fields' => ['code', 'name', 'type', 'tax_number', 'phone', 'email', 'iban', 'balance', 'risk_limit']],
         'stok' => ['label' => 'import.module_stok', 'fields' => ['code', 'name', 'barcode', 'type', 'purchase_price', 'sale_price', 'vat_rate', 'stock_quantity', 'critical_stock', 'description', 'unit']],
+        'hesap' => ['label' => 'import.module_chart', 'fields' => ['code', 'name', 'type', 'subtype', 'is_header', 'opening_debit', 'opening_credit', 'currency']],
     ];
 
     public function index(Request $request): Response
@@ -106,11 +112,12 @@ final class ImportController extends Controller
         }
 
         $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
+        $periods = $companyId ? DB::select('SELECT id, name FROM fiscal_periods WHERE company_id = :c AND deleted_at IS NULL ORDER BY start_date DESC', ['c' => $companyId]) : [];
         return $this->view('app.import.preview', [
             'layout' => 'layouts.app',
             'module' => $module, 'fields' => $fields, 'rows' => $rows,
             'mapping' => $mapping, 'maxCols' => $maxCols, 'companies' => $companies,
-            'companyId' => $companyId, 'filename' => $file['name'] ?? '',
+            'periods' => $periods, 'companyId' => $companyId, 'filename' => $file['name'] ?? '',
             'hasHeader' => (bool) ($request->input('has_header')),
         ]);
     }
@@ -129,6 +136,7 @@ final class ImportController extends Controller
         $fields = self::MODULES[$module]['fields'];
         $rows = $data['rows'];
         $companyId = (int) $data['company_id'];
+        $periodId = (int) ($request->input('period_id') ?? 0);
         $tenantId = Auth::tenantId();
 
         // Build mapping: column index -> field (inputs named map_col_<i> value=field).
@@ -146,7 +154,7 @@ final class ImportController extends Controller
         $errors = [];
         $dupes = [];
 
-        DB::transaction(function () use (&$created, &$errors, &$dupes, $module, $rows, $mapping, $start, $companyId, $tenantId) {
+        DB::transaction(function () use (&$created, &$errors, &$dupes, $module, $rows, $mapping, $start, $companyId, $tenantId, $periodId) {
             for ($idx = $start; $idx < count($rows); $idx++) {
                 $row = $rows[$idx];
                 $item = [];
@@ -155,8 +163,10 @@ final class ImportController extends Controller
                 }
                 if ($module === 'cari') {
                     [$ok, $err] = $this->importCari($tenantId, $companyId, $item);
-                } else {
+                } elseif ($module === 'stok') {
                     [$ok, $err] = $this->importStok($tenantId, $companyId, $item);
+                } else {
+                    [$ok, $err] = $this->importHesap($tenantId, $companyId, $periodId, $item);
                 }
                 if ($ok) {
                     $created++;
@@ -240,6 +250,34 @@ final class ImportController extends Controller
             'critical_stock' => (float) ($item['critical_stock'] ?? 0),
             'description' => $item['description'] ?? null,
             'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        return [true, ''];
+    }
+
+    /** @return array{0:bool,1:string} */
+    private function importHesap(int $tenantId, int $companyId, int $periodId, array $item): array
+    {
+        if (!$periodId) {
+            return [false, __('import.period_required')];
+        }
+        if (($item['code'] ?? '') === '' || ($item['name'] ?? '') === '') {
+            return [false, __('import.required', ['fields' => 'Kod, Ad'])];
+        }
+        $exists = DB::first('SELECT id FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p AND code = :code', ['c' => $companyId, 'p' => $periodId, 'code' => $item['code']]);
+        if ($exists) {
+            return [false, __('import.duplicate', ['code' => $item['code']])];
+        }
+        $type = in_array($item['type'] ?? '', ['asset', 'liability', 'equity', 'income', 'expense'], true) ? $item['type'] : 'asset';
+        DB::insert('accounting_accounts', [
+            'tenant_id' => $tenantId, 'company_id' => $companyId, 'fiscal_period_id' => $periodId,
+            'code' => $item['code'], 'name' => $item['name'], 'type' => $type,
+            'subtype' => $item['subtype'] ?? null,
+            'group' => substr($item['code'], 0, 1),
+            'is_header' => in_array(strtolower((string) ($item['is_header'] ?? '')), ['1', 'yes', 'evet', 'true'], true) ? 1 : 0,
+            'currency' => ($item['currency'] ?? '') !== '' ? $item['currency'] : 'TRY',
+            'opening_debit' => (float) ($item['opening_debit'] ?? 0),
+            'opening_credit' => (float) ($item['opening_credit'] ?? 0),
+            'created_at' => now(), 'updated_at' => now(),
         ]);
         return [true, ''];
     }

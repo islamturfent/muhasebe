@@ -18,6 +18,11 @@ $fieldLabels = [
     'critical_stock' => __('import.field_critical'),
     'description' => __('common.description'),
     'unit' => __('import.field_unit'),
+    'subtype' => __('import.field_subtype'),
+    'is_header' => __('accounting.account_is_header'),
+    'opening_debit' => __('accounting.opening_debit'),
+    'opening_credit' => __('accounting.opening_credit'),
+    'currency' => __('import.field_currency'),
 ];
 ?>
 <div class="mb-6">
@@ -28,6 +33,15 @@ $fieldLabels = [
 
 <form method="post" action="<?= e(url('/app/import/run')) ?>">
     <?= csrf_field() ?>
+
+    <?php if ($module === 'hesap'): ?>
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-6">
+        <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.chart_of_accounts')) ?> (<?= e(__('period.title')) ?>) *</label>
+        <select name="period_id" required class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+            <?php foreach ($periods as $p): ?><option value="<?= e($p['id']) ?>"><?= e($p['name']) ?></option><?php endforeach; ?>
+        </select>
+    </div>
+    <?php endif; ?>
 
     <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-6">
         <h3 class="font-semibold text-slate-800 mb-4"><?= e(__('import.map_column')) ?></h3>

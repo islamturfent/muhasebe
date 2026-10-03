@@ -18,6 +18,7 @@ Session::forget('_form_errors');
             <select name="module" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
                 <option value="cari"><?= e(__('import.module_cari')) ?></option>
                 <option value="stok"><?= e(__('import.module_stok')) ?></option>
+                <option value="hesap"><?= e(__('import.module_chart')) ?></option>
             </select>
         </div>
 

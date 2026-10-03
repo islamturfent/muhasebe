@@ -74,4 +74,6 @@ return [
     'balance_status_diff' => 'Açılış bakiyeleri dengeli değil — fark: :diff',
     'edit_entry' => 'Fişi Düzenle',
     'entry_updated' => 'Fiş güncellendi.',
+    'opening_debit' => 'Açılış Borç',
+    'opening_credit' => 'Açılış Alacak',
 ];

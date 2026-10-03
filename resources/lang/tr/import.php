@@ -35,4 +35,8 @@ return [
     'field_unit' => 'Birim',
     'row' => 'Satır',
     'message' => 'Mesaj',
+    'module_chart' => 'Hesap Planı',
+    'field_subtype' => 'Alt Tür',
+    'field_currency' => 'Para Birimi',
+    'period_required' => 'Hesap planı içe aktarımı için mali dönem seçilmelidir.',
 ];
