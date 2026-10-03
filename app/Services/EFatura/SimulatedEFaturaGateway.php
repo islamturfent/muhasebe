@@ -37,6 +37,14 @@ final class SimulatedEFaturaGateway implements EFaturaGateway
 
     public function getStatus(string $uuid): string
     {
+        // Deterministic simulation: an envelope id containing 'accept' means the
+        // document was accepted so pollers can be exercised end-to-end.
+        if (stripos($uuid, 'accept') !== false) {
+            return 'accepted';
+        }
+        if (stripos($uuid, 'reject') !== false) {
+            return 'rejected';
+        }
         return 'sent';
     }
 }

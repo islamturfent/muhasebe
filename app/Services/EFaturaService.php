@@ -26,25 +26,27 @@ final class EFaturaService
             $this->gateway = $gateway;
             return;
         }
-        $cfg = $this->tenantConfig();
+        $this->gateway = $this->buildGateway($this->tenantConfig((int) Auth::tenantId()));
+    }
+
+    private function buildGateway(array $cfg): EFaturaGateway
+    {
         $provider = $cfg['provider'];
         if (in_array($provider, ['rest', 'entegrator'], true)) {
             $rest = new RESTEFaturaGateway($cfg);
             if ($rest->configured()) {
-                $this->gateway = $rest;
-                return;
+                return $rest;
             }
         }
-        $this->gateway = new SimulatedEFaturaGateway();
+        return new SimulatedEFaturaGateway();
     }
 
     /**
-     * Effective e-Fatura config for the current tenant: tenant-stored settings
+     * Effective e-Fatura config for the given tenant: tenant-stored settings
      * override the global env config. Falls back to simulated when unset.
      */
-    private function tenantConfig(): array
+    public function tenantConfig(int $tenantId): array
     {
-        $tenantId = (int) Auth::tenantId();
         $keys = ['provider', 'mode', 'test_url', 'production_url', 'username', 'password'];
         $stored = [];
         if ($tenantId) {
@@ -63,6 +65,40 @@ final class EFaturaService
             'username'       => $stored['username'] ?? '',
             'password'       => $stored['password'] ?? '',
         ];
+    }
+
+    /**
+     * Poll pending e-documents (sending/sent) for a tenant and advance the
+     * invoice status when the integrator reports accepted/rejected.
+     *
+     * @return array<int,array{id:int,from:string,to:string}>
+     */
+    public function pollForTenant(int $tenantId, ?EFaturaGateway $gateway = null): array
+    {
+        $gateway = $gateway ?? $this->buildGateway($this->tenantConfig($tenantId));
+        $invoices = DB::select(
+            "SELECT id, number, efatura_envelope_id, efatura_status, company_id
+               FROM invoices
+              WHERE tenant_id = :t AND deleted_at IS NULL
+                AND efatura_status IN ('sending','sent') AND efatura_envelope_id IS NOT NULL",
+            ['t' => $tenantId]
+        );
+        $results = [];
+        foreach ($invoices as $inv) {
+            $new = $gateway->getStatus((string) $inv['efatura_envelope_id']);
+            if (!in_array($new, ['accepted', 'rejected', 'sent', 'error'], true)) {
+                $new = 'sent';
+            }
+            if ($new === $inv['efatura_status']) {
+                continue;
+            }
+            if (in_array($new, ['accepted', 'rejected'], true)) {
+                DB::update('invoices', ['efatura_status' => $new], 'id = :id', ['id' => (int) $inv['id']]);
+                $results[] = ['id' => (int) $inv['id'], 'from' => $inv['efatura_status'], 'to' => $new];
+                AuditLogService::record('invoice.efatura.poll', 'efatura', 'invoices', (string) $inv['id'], null, ['status' => $new], (int) $inv['company_id'], $tenantId);
+            }
+        }
+        return $results;
     }
 
     /**

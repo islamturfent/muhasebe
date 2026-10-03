@@ -123,6 +123,21 @@ switch ($command) {
         echo "Notifications generated: {$total}\n";
         break;
 
+    case 'efatura:poll':
+        // Query e-Fatura statuses (sending/sent) for every active tenant via the
+        // configured gateway (simulated or real REST integrator).
+        $tenants = DB::select("SELECT id FROM tenants WHERE status = 'active'");
+        $svc = new \Muh\Services\EFaturaService();
+        $advanced = 0;
+        foreach ($tenants as $tenant) {
+            foreach ($svc->pollForTenant((int) $tenant['id']) as $r) {
+                $advanced++;
+                echo "  invoice #{$r['id']}: {$r['from']} -> {$r['to']}\n";
+            }
+        }
+        echo "e-Fatura statuses polled; {$advanced} invoice(s) advanced.\n";
+        break;
+
     case 'security':
         exit((new \Muh\Core\SecurityChecker())->run());
 
