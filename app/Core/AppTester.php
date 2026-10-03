@@ -440,6 +440,41 @@ final class AppTester
         }
         $results[] = ['name' => 'Excel okuyucu (saf PHP .xlsx)', 'ok' => $xlsOk, 'detail' => $xlsDetail];
 
+        // ---- Onay bildirimi + Bildirim Merkezi özeti (Item 2 & 3) ----
+        $apOk = false; $apDetail = '';
+        try {
+            Auth::loginById(1);
+            $tid = Auth::tenantId();
+            DB::transaction(function () use (&$apOk, &$apDetail, $tid) {
+                $comp = DB::first('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL LIMIT 1', ['t' => $tid]);
+                $cid = (int) $comp['id'];
+                $pid = (int) DB::scalar('SELECT id FROM fiscal_periods WHERE company_id = :c LIMIT 1', ['c' => $cid]);
+                $no = '_ap_test_' . uniqid();
+                DB::insert('accounting_entries', [
+                    'tenant_id' => $tid, 'company_id' => $cid, 'fiscal_period_id' => $pid,
+                    'created_by' => 1, 'voucher_type' => 'journal', 'number' => $no,
+                    'date' => date('Y-m-d'), 'description' => 'x', 'debit_total' => 0, 'credit_total' => 0,
+                    'status' => 'draft', 'approval_status' => 'pending',
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                // Notify approvers + verify a notification was created (tenant-scoped).
+                \Muh\Services\NotificationService::notifyApprovers($tid, 'accounting.post', $cid, __('notify.approval_entry_title', ['no' => $no]), 'b', '/app/accounting/journal?company_id=' . $cid, __('notify.approval_entry_mail_subject'));
+                $created = (int) DB::scalar('SELECT COUNT(*) FROM notifications WHERE tenant_id = :t AND type = :ty', ['t' => $tid, 'ty' => 'approval']);
+                $approverIds = \Muh\Services\NotificationService::approverIds($tid, 'accounting.post');
+                $summary = (new \Muh\Services\NotificationService())->summary($tid);
+                $apOk = $created > 0 && count($approverIds) > 0
+                    && array_key_exists('pending_approvals', $summary)
+                    && array_key_exists('critical_stock', $summary)
+                    && array_key_exists('upcoming_tax', $summary);
+                $apDetail = $apOk ? ('bildirim oluştu + özet kartları hazır (approval n=' . $created . ', approver=' . count($approverIds) . ')') : 'bildirim/özet hatası (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $apOk = false; $apDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Onay bildirimi + Bildirim Merkezi özeti', 'ok' => $apOk, 'detail' => $apDetail];
+
         return $results;
     }
 }

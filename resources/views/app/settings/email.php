@@ -48,7 +48,7 @@ $e = Session::get('error'); Session::forget('error');
 
     <div class="pt-2 border-t border-slate-100">
         <h3 class="font-semibold text-slate-800 text-sm mb-2"><?= e(__('mail.notify_types')) ?></h3>
-        <?php foreach (['notify_due','notify_stock','notify_efatura','notify_user','notify_tax'] as $t): ?>
+        <?php foreach (['notify_due','notify_stock','notify_efatura','notify_user','notify_tax','notify_approval'] as $t): ?>
         <label class="flex items-center gap-2 text-sm text-slate-600 py-0.5">
             <input type="checkbox" name="<?= $t ?>" value="1" <?= !empty($settings[$t]) ? 'checked' : '' ?> class="w-4 h-4 text-brand-600"> <?= e(__('mail.' . $t)) ?>
         </label>

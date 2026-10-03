@@ -9,4 +9,11 @@ return [
     'minutes_ago' => ':n min ago',
     'hours_ago' => ':n hrs ago',
     'days_ago' => ':n days ago',
+    'overview' => 'Overview',
+    'pending_approvals' => 'Pending Approvals',
+    'upcoming_tax' => 'Upcoming Tax Obligations',
+    'upcoming_due' => 'Upcoming Due',
+    'overdue' => 'Overdue',
+    'critical_stock' => 'Critical Stock',
+    'view_all' => 'View all',
 ];

@@ -14,7 +14,50 @@ use Muh\Core\DB;
  */
 final class NotificationService
 {
-    private const TYPES = ['due_date', 'unpaid_invoice', 'critical_stock', 'efatura_error', 'subscription', 'user', 'document', 'system', 'tax'];
+    private const TYPES = ['due_date', 'unpaid_invoice', 'critical_stock', 'efatura_error', 'subscription', 'user', 'document', 'system', 'tax', 'approval'];
+
+    /**
+     * Return active user IDs in a tenant who hold a given permission code
+     * (reverse of Auth::loadPermissions) — used to notify approvers.
+     *
+     * @return int[]
+     */
+    public static function approverIds(int $tenantId, string $permission): array
+    {
+        $rows = DB::select(
+            'SELECT DISTINCT u.id AS user_id
+               FROM permissions p
+               JOIN role_permission rp ON rp.permission_id = p.id
+               JOIN user_role ur ON ur.role_id = rp.role_id
+               JOIN users u ON u.id = ur.user_id
+              WHERE p.`key` = :k AND u.tenant_id = :t AND u.status = :st
+                AND u.deleted_at IS NULL',
+            ['k' => $permission, 't' => $tenantId, 'st' => 'active']
+        );
+        return array_map('intval', array_column($rows, 'user_id'));
+    }
+
+    /**
+     * Notify every active approver (users holding $permission) in a tenant with
+     * a per-user notification and a single summary e-mail to the tenant inbox.
+     */
+    public static function notifyApprovers(
+        int $tenantId,
+        string $permission,
+        int $companyId,
+        string $title,
+        string $body,
+        ?string $url = null,
+        string $subject = ''
+    ): void {
+        $svc = new self();
+        foreach (self::approverIds($tenantId, $permission) as $userId) {
+            $svc->create('approval', $title, $body, 'warning', $userId, $companyId, $url);
+        }
+        if ($subject !== '') {
+            self::maybeMail($tenantId, 'approval', $subject, $body . ($url ? ' — <a href="' . url($url) . '">' . __('common.details') . '</a>' : ''));
+        }
+    }
 
     /**
      * Send an e-mail for a notification type if enabled in the tenant mail
@@ -95,6 +138,68 @@ final class NotificationService
     public function markAllRead(): void
     {
         DB::update('notifications', ['is_read' => 1], 'tenant_id = :t AND is_read = 0', ['t' => Auth::tenantId()]);
+    }
+
+    /**
+     * Live counts for the notifications overview panel (Bildirim Merkezi özeti).
+     *
+     * @return array<string,int> keys: pending_approvals, upcoming_tax,
+     *                           upcoming_due, overdue, critical_stock
+     */
+    public function summary(?int $tenantId = null): array
+    {
+        $tenantId = $tenantId ?? Auth::tenantId();
+        $today = date('Y-m-d');
+        $taxFuture = date('Y-m-d', strtotime('+14 days'));
+        $dueFuture = date('Y-m-d', strtotime('+7 days'));
+
+        $pendingEntries = (int) DB::scalar(
+            "SELECT COUNT(*) FROM accounting_entries WHERE tenant_id = :t AND deleted_at IS NULL AND approval_status = 'pending'",
+            ['t' => $tenantId]
+        );
+        $pendingInvoices = (int) DB::scalar(
+            "SELECT COUNT(*) FROM invoices WHERE tenant_id = :t AND deleted_at IS NULL AND approval_status = 'pending'",
+            ['t' => $tenantId]
+        );
+        $pendingApprovals = $pendingEntries + $pendingInvoices;
+
+        $upcomingTax = (int) DB::scalar(
+            "SELECT COUNT(*) FROM tax_obligations
+              WHERE tenant_id = :t AND deleted_at IS NULL AND status = 'pending'
+                AND due_date IS NOT NULL AND due_date <= :future",
+            ['t' => $tenantId, 'future' => $taxFuture]
+        );
+
+        $upcomingDue = 0;
+        $overdue = 0;
+        $invoices = DB::select(
+            "SELECT due_date FROM invoices
+              WHERE tenant_id = :t AND status = 'posted' AND deleted_at IS NULL
+                AND paid < total AND due_date <= :future",
+            ['t' => $tenantId, 'future' => $dueFuture]
+        );
+        foreach ($invoices as $inv) {
+            if (isset($inv['due_date']) && $inv['due_date'] < $today) {
+                $overdue++;
+            } else {
+                $upcomingDue++;
+            }
+        }
+
+        $criticalStock = (int) DB::scalar(
+            "SELECT COUNT(*) FROM products
+              WHERE tenant_id = :t AND type = :prod AND deleted_at IS NULL
+                AND stock_quantity <= critical_stock",
+            ['t' => $tenantId, 'prod' => 'product']
+        );
+
+        return [
+            'pending_approvals' => $pendingApprovals,
+            'upcoming_tax' => $upcomingTax,
+            'upcoming_due' => $upcomingDue,
+            'overdue' => $overdue,
+            'critical_stock' => $criticalStock,
+        ];
     }
 
     /**

@@ -133,6 +133,7 @@ final class InvoiceService
                 'company_id'         => $companyId,
                 'fiscal_period_id'   => $periodId,
                 'current_account_id' => (int) $account['id'],
+                'created_by'         => Auth::id(),
                 'number'             => $number,
                 'type'               => $type,
                 'status'             => $type === 'proforma' ? 'draft' : 'posted',

@@ -12,6 +12,7 @@ use Muh\Core\Response;
 use Muh\Core\Session;
 use Muh\Core\ValidationException;
 use Muh\Services\AccountingService;
+use Muh\Services\NotificationService;
 
 /**
  * Accounting / double-entry views (Phase 8): journal, trial balance,
@@ -158,6 +159,10 @@ final class AccountingController extends Controller
                 $forApproval ? 'draft' : 'posted',
                 $forApproval ? ['status' => 'pending', 'note' => null] : null
             );
+            if ($forApproval) {
+                $entry = DB::first('SELECT number FROM accounting_entries WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => $tenantId]);
+                $this->notifyApprovers('accounting.post', $companyId, __('notify.approval_entry_title', ['no' => $entry['number'] ?? $id]), $entry['number'] ?? null);
+            }
             Session::flash('success', $forApproval ? __('accounting.sent_for_approval') : __('accounting.entry_created'));
             return Response::redirect('/app/accounting/journal?company_id=' . $companyId . '&period_id=' . $periodId);
         } catch (ValidationException $e) {
@@ -287,6 +292,7 @@ final class AccountingController extends Controller
                 "UPDATE accounting_entries SET status = 'posted', approval_status = 'approved', approved_by = :u, approved_at = NOW() WHERE id = :id",
                 ['u' => (int) Auth::id(), 'id' => $id]
             );
+            $this->notifyEntryCreator((int) $entry['created_by'], (int) $entry['company_id'], $entry['number'] ?? '', true);
             Session::flash('success', __('accounting.entry_approved'));
         }
         return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
@@ -303,6 +309,7 @@ final class AccountingController extends Controller
                 'UPDATE accounting_entries SET approval_status = \'rejected\', approval_note = :n, updated_at = NOW() WHERE id = :id',
                 ['n' => $request->input('note') ?: null, 'id' => $id]
             );
+            $this->notifyEntryCreator((int) $entry['created_by'], (int) $entry['company_id'], $entry['number'] ?? '', false, $request->input('note'));
             Session::flash('success', __('accounting.entry_rejected'));
         }
         return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
@@ -569,6 +576,34 @@ final class AccountingController extends Controller
         }
         return Response::redirect('/app/accounting/chart?company_id=' . (int) ($account['company_id'] ?? 0) . '&period_id=' . (int) ($account['fiscal_period_id'] ?? 0));
     }
+
+    /** Notify all users who can post entries that a fiş awaits approval. */
+    private function notifyApprovers(string $permission, int $companyId, string $title, ?string $number = null): void
+    {
+        NotificationService::notifyApprovers(
+            (int) Auth::tenantId(),
+            $permission,
+            $companyId,
+            $title,
+            __('notify.approval_entry_body', ['no' => (string) $number]),
+            '/app/accounting/journal?company_id=' . $companyId,
+            __('notify.approval_entry_mail_subject')
+        );
+    }
+
+    /** Notify the fiş author that their entry was approved or rejected. */
+    private function notifyEntryCreator(int $creatorId, int $companyId, string $number, bool $approved, ?string $note = null): void
+    {
+        if (!$creatorId) {
+            return;
+        }
+        $title = $approved
+            ? __('notify.approval_entry_approved', ['no' => $number])
+            : __('notify.approval_entry_rejected', ['no' => $number]);
+        $body = $approved
+            ? __('notify.approval_entry_approved_body', ['no' => $number])
+            : __('notify.approval_entry_rejected_body', ['no' => $number, 'note' => (string) ($note ?: '-')]);
+        (new NotificationService())->create('approval', $title, $body, $approved ? 'success' : 'danger', $creatorId, $companyId, '/app/accounting/journal?company_id=' . $companyId);
+    }
 }
 
-    

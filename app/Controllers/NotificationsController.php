@@ -26,6 +26,7 @@ final class NotificationsController extends Controller
             'total' => $page['total'],
             'page' => $page['page'],
             'lastPage' => $page['lastPage'],
+            'summary' => $service->summary(),
         ]);
     }
 

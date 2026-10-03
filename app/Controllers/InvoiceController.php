@@ -12,6 +12,7 @@ use Muh\Core\Response;
 use Muh\Core\Session;
 use Muh\Core\ValidationException;
 use Muh\Services\InvoiceService;
+use Muh\Services\NotificationService;
 
 /**
  * Invoices (Phase 6).
@@ -244,7 +245,19 @@ final class InvoiceController extends Controller
     {
         $id = (int) $id;
         Auth::requireCan('invoice.update');
-        DB::execute("UPDATE invoices SET approval_status = 'pending', updated_at = NOW() WHERE id = :id AND tenant_id = :t", ['id' => $id, 't' => Auth::tenantId()]);
+        $invoice = DB::first('SELECT * FROM invoices WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if ($invoice) {
+            DB::execute("UPDATE invoices SET approval_status = 'pending', updated_at = NOW() WHERE id = :id AND tenant_id = :t", ['id' => $id, 't' => Auth::tenantId()]);
+            NotificationService::notifyApprovers(
+                (int) Auth::tenantId(),
+                'invoice.approve',
+                (int) $invoice['company_id'],
+                __('notify.approval_invoice_title', ['no' => $invoice['number']]),
+                __('notify.approval_invoice_body', ['no' => $invoice['number']]),
+                '/app/invoices/' . $id,
+                __('notify.approval_invoice_mail_subject')
+            );
+        }
         Session::flash('success', __('invoice.approval_sent'));
         return Response::redirect('/app/invoices/' . $id);
     }
@@ -254,10 +267,14 @@ final class InvoiceController extends Controller
     {
         $id = (int) $id;
         Auth::requireCan('invoice.approve');
-        DB::execute(
-            "UPDATE invoices SET approval_status = 'approved', approved_by = :u, approved_at = NOW(), updated_at = NOW() WHERE id = :id AND tenant_id = :t",
-            ['id' => $id, 't' => Auth::tenantId(), 'u' => (int) Auth::id()]
-        );
+        $invoice = DB::first('SELECT * FROM invoices WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if ($invoice) {
+            DB::execute(
+                "UPDATE invoices SET approval_status = 'approved', approved_by = :u, approved_at = NOW(), updated_at = NOW() WHERE id = :id AND tenant_id = :t",
+                ['id' => $id, 't' => Auth::tenantId(), 'u' => (int) Auth::id()]
+            );
+            $this->notifyInvoiceCreator((int) $invoice['created_by'], (int) $invoice['company_id'], $invoice['number'], true, null, $id);
+        }
         Session::flash('success', __('invoice.approval_approved'));
         return Response::redirect('/app/invoices/' . $id);
     }
@@ -267,10 +284,14 @@ final class InvoiceController extends Controller
     {
         $id = (int) $id;
         Auth::requireCan('invoice.approve');
-        DB::execute(
-            "UPDATE invoices SET approval_status = 'rejected', approval_note = :n, updated_at = NOW() WHERE id = :id AND tenant_id = :t",
-            ['id' => $id, 't' => Auth::tenantId(), 'n' => $request->input('note') ?: null]
-        );
+        $invoice = DB::first('SELECT * FROM invoices WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if ($invoice) {
+            DB::execute(
+                "UPDATE invoices SET approval_status = 'rejected', approval_note = :n, updated_at = NOW() WHERE id = :id AND tenant_id = :t",
+                ['id' => $id, 't' => Auth::tenantId(), 'n' => $request->input('note') ?: null]
+            );
+            $this->notifyInvoiceCreator((int) $invoice['created_by'], (int) $invoice['company_id'], $invoice['number'], false, $request->input('note'), $id);
+        }
         Session::flash('success', __('invoice.approval_rejected'));
         return Response::redirect('/app/invoices/' . $id);
     }
@@ -389,4 +410,20 @@ final class InvoiceController extends Controller
         Session::flash('success', $ok ? __('invoice.email_sent') : __('invoice.email_failed'));
         return Response::redirect('/app/invoices/' . $id);
     }
+
+    /** Notify the invoice author that their invoice was approved or rejected. */
+    private function notifyInvoiceCreator(int $creatorId, int $companyId, string $number, bool $approved, ?string $note = null, int $invoiceId = 0): void
+    {
+        if (!$creatorId) {
+            return;
+        }
+        $title = $approved
+            ? __('notify.approval_invoice_approved', ['no' => $number])
+            : __('notify.approval_invoice_rejected', ['no' => $number]);
+        $body = $approved
+            ? __('notify.approval_invoice_approved_body', ['no' => $number])
+            : __('notify.approval_invoice_rejected_body', ['no' => $number, 'note' => (string) ($note ?: '-')]);
+        (new NotificationService())->create('approval', $title, $body, $approved ? 'success' : 'danger', $creatorId, $companyId, $invoiceId ? '/app/invoices/' . $invoiceId : '/app/invoices');
+    }
 }
+

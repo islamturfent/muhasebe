@@ -21,6 +21,25 @@ function timeAgo($dt, $locale): string {
     </form>
 </div>
 
+<?php $summaryCards = [
+    ['pending_approvals', 'warning', 'amber', __('notification.pending_approvals'), '/app/notifications'],
+    ['upcoming_tax', 'info', 'brand', __('notification.upcoming_tax'), '/app/tax-calendar'],
+    ['upcoming_due', 'info', 'blue', __('notification.upcoming_due'), '/app/invoices'],
+    ['overdue', 'danger', 'red', __('notification.overdue'), '/app/invoices'],
+    ['critical_stock', 'danger', 'red', __('notification.critical_stock'), '/app/inventory'],
+]; ?>
+<div class="mb-6">
+    <h2 class="text-sm font-semibold text-slate-700 mb-3"><?= e(__('notification.overview')) ?></h2>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <?php foreach ($summaryCards as $card): $cnt = (int) ($summary[$card[0]] ?? 0); ?>
+        <a href="<?= e(url($card[4])) ?>" class="bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition">
+            <div class="text-3xl font-bold <?= $cnt > 0 ? 'text-' . $card[2] . '-600' : 'text-slate-400' ?>"><?= (int) $cnt ?></div>
+            <div class="text-xs text-slate-500 mt-1"><?= e($card[3]) ?></div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <div class="space-y-3">
     <?php if (!$notifications): ?><div class="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-400"><?= e(__('notification.empty')) ?></div><?php endif; ?>
     <?php foreach ($notifications as $n): ?>
