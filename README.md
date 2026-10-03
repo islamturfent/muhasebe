@@ -161,6 +161,10 @@ DB transactions to keep DR/CR balanced and consistent.
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the production setup guide (env config,
 Apache vhost, TLS, security headers, scheduled backups, health check).
 
+> **Not:** Sunucuya canlı kurulum, proje **tamamen bitince** (tüm phase'ler + canlı
+> Stripe/e-Fatura entegrasyonları onaylandıktan sonra) yapılacaktır. Şu anda öncelik
+> geliştirme ve test aşamasındadır.
+
 ## Localization
 - UI text is never hard-coded; everything goes through `__()`/`trans()`.
 - `tr` and `en` dictionaries under `resources/lang`.

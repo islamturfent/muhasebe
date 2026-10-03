@@ -15,6 +15,9 @@ return [
         // Stripe
         'secret_key' => getenv('STRIPE_SECRET_KEY') ?: '',
         'publishable_key' => getenv('STRIPE_PUBLISHABLE_KEY') ?: '',
+        // Optional override of the API base URL (default https://api.stripe.com/v1).
+        // Used to point at a mock/integration-test server.
+        'endpoint' => getenv('STRIPE_ENDPOINT') ?: '',
     ],
 
     // Trial length for new offices (days).

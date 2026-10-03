@@ -1,5 +1,10 @@
 # Hesap360 — Production Deployment Guide
 
+> **⚠️ Deployment ertelemesi:** Bu kılavuz hazırdır; ancak kurulum **henüz**
+> yapılmayacaktır. Sunucuya yerleştirme, projenin tamamı bitince (tüm phase'ler
+> ve canlı entegrasyonlar onaylandıktan sonra) gerçekleştirilecektir. Şimdilik
+> bu belge yalnızca o gün için rehber olarak saklanır.
+
 This guide covers moving Hesap360 from local XAMPP development to a real,
 production server. It assumes an Apache + PHP 8 + MySQL environment.
 

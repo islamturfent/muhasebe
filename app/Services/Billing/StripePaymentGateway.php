@@ -23,6 +23,12 @@ final class StripePaymentGateway implements PaymentGateway
     public function __construct(?string $secretKey = null)
     {
         $this->secretKey = $secretKey ?: (string) Config::get('billing.provider_keys.secret_key', '');
+        // Allow overriding the API base URL (e.g. Stripe test mode uses the
+        // same endpoint, but a mock/integration-test server can be injected).
+        $ep = (string) Config::get('billing.provider_keys.endpoint', '');
+        if ($ep !== '') {
+            $this->endpoint = rtrim($ep, '/');
+        }
     }
 
     public function configured(): bool
