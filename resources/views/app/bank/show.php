@@ -14,6 +14,22 @@
         </div>
     </div>
 
+    <?php if (!empty($recon)): ?>
+    <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800"><?= e(__('report.bank_reconciliation')) ?></h3>
+            <span class="px-2.5 py-1 rounded-full text-xs font-medium <?= $recon['ok'] ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' ?>"><?= e($recon['ok'] ? __('report.rc_ok') : __('report.rc_mismatch')) ?></span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+            <div><div class="text-xs text-slate-400"><?= e(__('report.rc_bank_balance')) ?></div><div class="font-semibold text-slate-800"><?= e(number_format($recon['balance'], 2, ',', '.')) ?></div></div>
+            <div><div class="text-xs text-slate-400"><?= e(__('report.rc_deposits')) ?></div><div class="font-semibold text-emerald-600"><?= e(number_format($recon['deposits'], 2, ',', '.')) ?></div></div>
+            <div><div class="text-xs text-slate-400"><?= e(__('report.rc_withdrawals')) ?></div><div class="font-semibold text-red-600"><?= e(number_format($recon['withdrawals'], 2, ',', '.')) ?></div></div>
+            <div><div class="text-xs text-slate-400"><?= e(__('report.rc_net')) ?></div><div class="font-semibold text-slate-800"><?= e(number_format($recon['net'], 2, ',', '.')) ?></div></div>
+            <div><div class="text-xs text-slate-400"><?= e(__('report.rc_difference')) ?></div><div class="font-semibold <?= $recon['difference'] == 0 ? 'text-slate-500' : 'text-amber-600' ?>"><?= e(number_format($recon['difference'], 2, ',', '.')) ?></div></div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="grid lg:grid-cols-3 gap-6">
         <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-5 h-fit">
             <h3 class="font-semibold text-slate-800 mb-4"><?= e(__('bank.new_transaction')) ?></h3>

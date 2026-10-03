@@ -62,7 +62,28 @@ final class BankController extends Controller
         $type = $request->query('type') ?: null;
         $trx = $service->transactions($id, $from, $to, $type);
         $transferDests = (new \Muh\Services\TransferService())->destinations('bank', $id);
+        $recon = DB::first(
+            "SELECT
+                COALESCE(SUM(CASE WHEN type IN ('deposit','interest','transfer') THEN amount ELSE 0 END), 0) AS deposits,
+                COALESCE(SUM(CASE WHEN type IN ('withdrawal','fee') THEN amount ELSE 0 END), 0) AS withdrawals,
+                COUNT(*) AS tx_count
+               FROM bank_transactions WHERE bank_account_id = :i",
+            ['i' => $id]
+        );
+        $deposits = (float) ($recon['deposits'] ?? 0);
+        $withdrawals = (float) ($recon['withdrawals'] ?? 0);
+        $net = $deposits - $withdrawals;
+        $bankBalance = (float) $account['balance'];
+        $reconData = [
+            'deposits' => $deposits,
+            'withdrawals' => $withdrawals,
+            'net' => $net,
+            'balance' => $bankBalance,
+            'difference' => $bankBalance - $net,
+            'ok' => abs($bankBalance - $net) < 0.005,
+        ];
         return $this->view('app.bank.show', [
+            'recon' => $reconData,
             'layout' => 'layouts.app',
             'account' => $account,
             'transactions' => $trx['items'],

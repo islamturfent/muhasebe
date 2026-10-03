@@ -130,7 +130,7 @@ return function (): void {
                     'product_id' => $l['product_id'], 'description' => $l['description'],
                     'quantity' => $l['qty'], 'unit_price' => $l['price'], 'discount' => 0,
                     'tax_rate' => $l['vat'], 'tax' => $lineTax,
-                    'line_total' => $lineTotal, 'total' => $lineTotal, 'created_at' => $now, 'updated_at' => $now,
+                    'line_total' => $net, 'total' => $lineTotal, 'created_at' => $now, 'updated_at' => $now,
                 ];
             }
 

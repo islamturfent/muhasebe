@@ -115,11 +115,12 @@ final class ReportsController extends Controller
     {
         $format = $request->query('format', 'csv');
         [$companyId, $periodId] = $this->ctx($request);
+        // line_total = tax base (net), tax = VAT, total = VAT-inclusive amount.
         $rows = DB::select(
             "SELECT i.type, ii.tax_rate AS rate,
-                    SUM(ii.line_total - ii.tax) AS net,
+                    SUM(ii.line_total) AS net,
                     SUM(ii.tax) AS tax,
-                    SUM(ii.line_total) AS total
+                    SUM(ii.total) AS total
                FROM invoice_items ii
                JOIN invoices i ON i.id = ii.invoice_id
               WHERE i.company_id = :c AND i.fiscal_period_id = :p
@@ -130,16 +131,107 @@ final class ReportsController extends Controller
         );
         $headers = [__('report.vat_type'), __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.total_incl')];
         $out = [];
+        $tBase = 0.0; $tVat = 0.0; $tTotal = 0.0;
         foreach ($rows as $r) {
+            $net = (float) $r['net']; $vat = (float) $r['tax']; $tot = (float) $r['total'];
+            $tBase += $net; $tVat += $vat; $tTotal += $tot;
             $out[] = [
                 $r['type'] === 'sales' ? __('report.vat_sales_out') : __('report.vat_purchase_in'),
                 number_format((float) $r['rate'], 0, ',', '.') . '%',
-                number_format((float) $r['net'], 2, ',', '.'),
-                number_format((float) $r['tax'], 2, ',', '.'),
-                number_format((float) $r['total'], 2, ',', '.'),
+                number_format($net, 2, ',', '.'),
+                number_format($vat, 2, ',', '.'),
+                number_format($tot, 2, ',', '.'),
             ];
         }
+        $out[] = [__('common.total'), '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
         return $this->export($format, __('report.vat_summary'), 'C:' . $companyId . ' P:' . $periodId, $headers, $out, 'kdv');
+    }
+
+    /**
+     * KDV detay raporu: her fatura satırı için matrah/KDV/dahil tutar.
+     * Item 3 — KDV raporu detayları.
+     */
+    public function kdvDetay(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $company = DB::first('SELECT id, name FROM companies WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $companyId, 't' => Auth::tenantId()]);
+        $rows = DB::select(
+            "SELECT i.number, i.date, i.type, ca.name AS cari,
+                    ii.tax_rate AS rate, ii.line_total AS net, ii.tax AS vat, ii.total AS incl
+               FROM invoice_items ii
+               JOIN invoices i ON i.id = ii.invoice_id
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.company_id = :c AND i.fiscal_period_id = :p
+                AND i.deleted_at IS NULL AND i.status = 'posted'
+              ORDER BY i.date, i.number, ii.id",
+            ['c' => $companyId, 'p' => $periodId]
+        );
+        $headers = [
+            __('accounting.number'), __('common.date'), __('report.vat_type'), __('current_account.name'),
+            __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.total_incl'),
+        ];
+        $out = [];
+        $tBase = 0.0; $tVat = 0.0; $tTotal = 0.0;
+        foreach ($rows as $r) {
+            $net = (float) $r['net']; $vat = (float) $r['vat']; $tot = (float) $r['incl'];
+            $tBase += $net; $tVat += $vat; $tTotal += $tot;
+            $out[] = [
+                $r['number'], format_date($r['date']),
+                $r['type'] === 'sales' ? __('report.vat_sales_out') : __('report.vat_purchase_in'),
+                $r['cari'] ?? '',
+                number_format((float) $r['rate'], 0, ',', '.') . '%',
+                number_format($net, 2, ',', '.'),
+                number_format($vat, 2, ',', '.'),
+                number_format($tot, 2, ',', '.'),
+            ];
+        }
+        $out[] = [__('common.total'), '', '', '', '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
+        return $this->export($format, __('report.vat_detail'), ($company['name'] ?? 'C:' . $companyId) . ' — P:' . $periodId, $headers, $out, 'kdv-detay');
+    }
+
+    // ---- Report: Banka e-mutabakat (bank reconciliation) ----
+    public function bankaMutabakat(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $depositTypes = "('deposit','interest','transfer')";
+        $rows = DB::select(
+            "SELECT a.id, a.bank_name, a.account_name, a.iban, a.balance,
+                    (SELECT COALESCE(SUM(t.amount),0) FROM bank_transactions t WHERE t.bank_account_id = a.id AND t.type IN " . $depositTypes . ") AS deposits,
+                    (SELECT COALESCE(SUM(t.amount),0) FROM bank_transactions t WHERE t.bank_account_id = a.id AND t.type IN ('withdrawal','fee')) AS withdrawals,
+                    (SELECT COUNT(*) FROM bank_transactions t WHERE t.bank_account_id = a.id) AS tx_count
+               FROM bank_accounts a
+              WHERE a.company_id = :c AND a.deleted_at IS NULL
+              ORDER BY a.bank_name, a.id",
+            ['c' => $companyId]
+        );
+        $headers = [
+            __('bank.bank_name'), __('bank.account_name'), __('bank.iban'),
+            __('report.rc_bank_balance'), __('report.rc_deposits'), __('report.rc_withdrawals'),
+            __('report.rc_net'), __('report.rc_computed'), __('report.rc_difference'), __('report.rc_status'),
+        ];
+        $out = [];
+        foreach ($rows as $r) {
+            $dep = (float) $r['deposits'];
+            $wd = (float) $r['withdrawals'];
+            $net = $dep - $wd;
+            $bankBalance = (float) $r['balance'];
+            $diff = $bankBalance - $net;
+            $out[] = [
+                $r['bank_name'], $r['account_name'] ?? '', $r['iban'] ?? '',
+                number_format($bankBalance, 2, ',', '.'),
+                number_format($dep, 2, ',', '.'),
+                number_format($wd, 2, ',', '.'),
+                number_format($net, 2, ',', '.'),
+                number_format($net, 2, ',', '.'),
+                number_format($diff, 2, ',', '.'),
+                abs($diff) < 0.005 ? __('report.rc_ok') : __('report.rc_mismatch'),
+            ];
+        }
+        return $this->export($format, __('report.bank_reconciliation'), 'C:' . $companyId, $headers, $out, 'banka-mutabakat');
     }
 
     public function cari(Request $request): Response

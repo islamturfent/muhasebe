@@ -28,6 +28,9 @@ $reports = [
     ['alis', 'report.purchases'],
     ['kasa', 'report.cash'],
     ['banka', 'report.bank'],
+    ['banka-mutabakat', 'report.bank_reconciliation'],
+    ['kdv', 'report.vat_summary'],
+    ['kdv-detay', 'report.vat_detail'],
     ['karlilik', 'report.profitability'],
     ['borc-alacak', 'report.receivables_payables'],
 ];
