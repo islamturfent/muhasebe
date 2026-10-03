@@ -132,6 +132,11 @@ return function (Router $router): void {
         $g->get('/app/checks/{id}', [\Muh\Controllers\CheckController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Reports export (Phase 9)
+        $g->get('/app/import', [\Muh\Controllers\ImportController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/import/preview', [\Muh\Controllers\ImportController::class, 'preview'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/import/run', [\Muh\Controllers\ImportController::class, 'run'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/import/errors', [\Muh\Controllers\ImportController::class, 'errors'], [\Muh\Middleware\TenantMiddleware::class]);
+
         $g->get('/app/reports', [\Muh\Controllers\ReportsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/mizan/export', [\Muh\Controllers\ReportsController::class, 'mizan'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/yevmiye/export', [\Muh\Controllers\ReportsController::class, 'yevmiye'], [\Muh\Middleware\TenantMiddleware::class]);
