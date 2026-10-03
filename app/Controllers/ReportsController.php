@@ -768,4 +768,69 @@ final class ReportsController extends Controller
             'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
         ]);
     }
+
+    /** KDV özet ekranı. */
+    public function kdvScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select(
+            "SELECT i.type, ii.tax_rate AS rate, SUM(ii.line_total) AS net, SUM(ii.tax) AS tax,
+                    SUM(COALESCE(ii.withholding,0)) AS withholding, SUM(ii.total) AS total
+               FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id
+              WHERE i.company_id = :c AND i.fiscal_period_id = :p AND i.deleted_at IS NULL AND i.status = 'posted'
+              GROUP BY i.type, ii.tax_rate ORDER BY i.type, ii.tax_rate",
+            ['c' => $companyId, 'p' => $periodId]
+        );
+        $headers = [__('report.vat_type'), __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.vat_withholding'), __('report.total_incl')];
+        $out = [];
+        $tBase = 0.0; $tVat = 0.0; $tW = 0.0; $tTotal = 0.0;
+        foreach ($rows as $r) {
+            $tBase += (float) $r['net']; $tVat += (float) $r['tax']; $tW += (float) $r['withholding']; $tTotal += (float) $r['total'];
+            $out[] = [$r['type'] === 'sales' ? __('report.vat_sales_out') : __('report.vat_purchase_in'), number_format((float) $r['rate'], 0, ',', '.') . '%', number_format((float) $r['net'], 2, ',', '.'), number_format((float) $r['tax'], 2, ',', '.'), number_format((float) $r['withholding'], 2, ',', '.'), number_format((float) $r['total'], 2, ',', '.')];
+        }
+        $out[] = [__('common.total'), '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tW, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.vat_summary'), 'subtitle' => __('report.vat_summary_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'kdv',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
+    /** KDV Beyanname ekranı. */
+    public function kdvBeyannameScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select(
+            "SELECT i.type, SUM(ii.line_total) AS net, SUM(ii.tax) AS vat, SUM(COALESCE(ii.withholding,0)) AS withholding
+               FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id
+              WHERE i.company_id = :c AND i.fiscal_period_id = :p AND i.deleted_at IS NULL AND i.status = 'posted'
+              GROUP BY i.type",
+            ['c' => $companyId, 'p' => $periodId]
+        );
+        $sales = null; $purch = null;
+        foreach ($rows as $r) {
+            if ($r['type'] === 'sales') $sales = $r; elseif ($r['type'] === 'purchase') $purch = $r;
+        }
+        $outBase = (float) ($sales['net'] ?? 0); $outVat = (float) ($sales['vat'] ?? 0); $outW = (float) ($sales['withholding'] ?? 0);
+        $inBase = (float) ($purch['net'] ?? 0); $inVat = (float) ($purch['vat'] ?? 0); $inW = (float) ($purch['withholding'] ?? 0);
+        $payable = max(0.0, $outVat - $inVat); $refund = max(0.0, $inVat - $outVat);
+        $fmt = fn ($x) => number_format((float) $x, 2, ',', '.');
+        $headers = [__('report.vat_declaration'), __('report.vat_base'), __('report.vat_amount'), __('report.vat_withholding')];
+        $out = [
+            [__('report.vat_out_base'), $fmt($outBase), $fmt($outVat), $fmt($outW)],
+            [__('report.vat_in_base'), $fmt($inBase), $fmt($inVat), $fmt($inW)],
+            ['', '', '', ''],
+            [__('report.vat_payable'), '', $fmt($payable), ''],
+            [__('report.vat_refund'), '', $fmt($refund), ''],
+        ];
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.vat_declaration'), 'subtitle' => __('report.vat_summary_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'kdv-beyanname',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
 }

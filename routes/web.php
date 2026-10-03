@@ -149,6 +149,8 @@ return function (Router $router): void {
         $g->get('/app/reports/yaslandirma', [\Muh\Controllers\ReportsController::class, 'agingScreen'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok', [\Muh\Controllers\ReportsController::class, 'stockScreen'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/karlilik', [\Muh\Controllers\ReportsController::class, 'profitabilityScreen'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/kdv', [\Muh\Controllers\ReportsController::class, 'kdvScreen'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/kdv-beyanname', [\Muh\Controllers\ReportsController::class, 'kdvBeyannameScreen'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/banka-mutabakat/export', [\Muh\Controllers\ReportsController::class, 'bankaMutabakat'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/yaslandirma/export', [\Muh\Controllers\ReportsController::class, 'yaslandirma'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/cari-ekstre/export', [\Muh\Controllers\ReportsController::class, 'cariEkstre'], [\Muh\Middleware\TenantMiddleware::class]);

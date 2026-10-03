@@ -65,4 +65,5 @@ return [
     'aging_sub' => 'Outstanding invoice balances by due-date buckets',
     'stock_sub' => 'Stock quantities, critical levels and cost value',
     'profit_sub' => 'Period income, expenses and net profit/loss summary',
+    'vat_summary_sub' => 'Periodic VAT summary (base, VAT, withholding)',
 ];

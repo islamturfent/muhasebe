@@ -65,4 +65,5 @@ return [
     'aging_sub' => 'Açık fatura bakiyelerinin vade gruplarına göre dağılımı',
     'stock_sub' => 'Stok miktarı, kritik seviye ve maliyet değeri',
     'profit_sub' => 'Dönem gelir, gider ve net kâr/zarar özeti',
+    'vat_summary_sub' => 'Dönem KDV özeti (matrah, KDV, tevkifat)',
 ];
