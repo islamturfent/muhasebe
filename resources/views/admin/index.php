@@ -30,8 +30,8 @@
             <?php foreach ($statuses as $st): if (empty($subStats['byStatus'][$st])) continue; ?>
             <span class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600"><?= e(__('admin.status_' . $st)) ?>: <b><?= e((int) $subStats['byStatus'][$st]) ?></b></span>
             <?php endforeach; ?>
-            <?php foreach (($subStats['byPlan'] ?? []) as $name => $c): ?>
-            <span class="px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-200 text-brand-700"><?= e($name) ?>: <b><?= e((int) $c) ?></b></span>
+            <?php foreach (($subStats['byPlan'] ?? []) as $code => $c): $label = __('plans.code_' . $code); ?>
+            <span class="px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-200 text-brand-700"><?= e($label) ?>: <b><?= e((int) $c) ?></b></span>
             <?php endforeach; ?>
         </div>
     </div>

@@ -13,4 +13,9 @@ return [
     'efatura' => 'e-Fatura desteği',
     'reports' => 'Profesyonel raporlar',
     'storage' => ':mb MB dosya depolama',
+    'code_FREE' => 'Ücretsiz',
+    'code_PRO' => 'Profesyonel',
+    'code_BUSINESS' => 'İşletme',
+    'code_ENTERPRISE' => 'Kurumsal',
+    'code_OTHER' => 'Diğer',
 ];

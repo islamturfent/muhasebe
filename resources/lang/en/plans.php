@@ -13,4 +13,9 @@ return [
     'efatura' => 'e-Invoice support',
     'reports' => 'Professional reports',
     'storage' => ':mb MB file storage',
+    'code_FREE' => 'Free',
+    'code_PRO' => 'Professional',
+    'code_BUSINESS' => 'Business',
+    'code_ENTERPRISE' => 'Enterprise',
+    'code_OTHER' => 'Other',
 ];

@@ -44,8 +44,10 @@ final class AdminController extends Controller
         foreach (DB::select('SELECT status, COUNT(*) AS c FROM subscriptions GROUP BY status') as $r) {
             $subStats['byStatus'][$r['status']] = (int) $r['c'];
         }
-        foreach (DB::select('SELECT p.name, COUNT(*) AS c FROM subscriptions s JOIN plans p ON p.id = s.plan_id GROUP BY p.name') as $r) {
-            $subStats['byPlan'][$r['name']] = (int) $r['c'];
+        // Group by the stable plan code (the name is a translated JSON field).
+        foreach (DB::select('SELECT p.code, COUNT(*) AS c FROM subscriptions s JOIN plans p ON p.id = s.plan_id GROUP BY p.code') as $r) {
+            $code = (string) $r['code'];
+            $subStats['byPlan'][$code] = (int) $r['c'];
         }
 
         return $this->view('admin.index', [
