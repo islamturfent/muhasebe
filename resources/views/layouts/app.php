@@ -30,7 +30,22 @@ function navItemActive(string $target, bool $exact = false): bool {
         $cur = substr($cur, strlen($base));
     }
     $cur = rtrim($cur, '/') ?: '/';
+    $q = $_SERVER['QUERY_STRING'] ?? '';
     $t = rtrim($target, '/') ?: '/';
+
+    // Müşteriler (customers) — a filtered view of /app/current-accounts?type=customer.
+    if ($target === '/app/customers') {
+        return $cur === '/app/current-accounts' && str_contains($q, 'type=customer');
+    }
+    if ($target === '/app/current-accounts') {
+        // Detail/create/transaction subpages keep Cari active.
+        if (str_starts_with($cur, '/app/current-accounts/')) {
+            return true;
+        }
+        // General list is active only when NOT the customer-only filter.
+        return $cur === '/app/current-accounts' && !str_contains($q, 'type=customer');
+    }
+
     if ($exact) {
         return $cur === $t;
     }
