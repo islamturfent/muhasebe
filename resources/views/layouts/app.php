@@ -129,7 +129,7 @@ $menu = [
                 </form>
 
                 <form method="get" action="<?= e(url('/app/search')) ?>" class="hidden md:flex flex-1 max-w-md ml-4">
-                    <input type="text" name="q" id="globalSearch" placeholder="<?= e(__('nav.search')) ?> (<span class="kbd-hint">/</span>)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
+                    <input type="text" name="q" id="globalSearch" placeholder="<?= e(__('nav.search')) ?> (/) " class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
                 </form>
             </div>
 
