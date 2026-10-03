@@ -22,8 +22,23 @@ if ($tenantId) {
         }
     }
 }
+/* Aktif menü eşleştirmesi: base path (örn. /muh) göz ardı edilir. */
+function navItemActive(string $target, bool $exact = false): bool {
+    $base = rtrim((string) parse_url(url('/'), PHP_URL_PATH), '/');
+    $cur = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    if ($base !== '' && str_starts_with($cur, $base)) {
+        $cur = substr($cur, strlen($base));
+    }
+    $cur = rtrim($cur, '/') ?: '/';
+    $t = rtrim($target, '/') ?: '/';
+    if ($exact) {
+        return $cur === $t;
+    }
+    return $cur === $t || str_starts_with($cur, $t . '/');
+}
 function navItem(string $path, string $label): string {
-    $active = str_contains($_SERVER['REQUEST_URI'] ?? '/', $path) ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:bg-slate-100';
+    $exact = ($path === '/app/dashboard'); // Dashboard yalnızca tam adreste aktif
+    $active = navItemActive($path, $exact) ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:bg-slate-100';
     return '<a href="' . e(url($path)) . '" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ' . $active . '">' . e($label) . '</a>';
 }
 $menu = [
