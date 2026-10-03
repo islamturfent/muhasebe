@@ -88,6 +88,9 @@ return function (Router $router): void {
         $g->get('/app/accounting/trial-balance', [\Muh\Controllers\AccountingController::class, 'trialBalance'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/balance-sheet', [\Muh\Controllers\AccountingController::class, 'balanceSheet'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/income-statement', [\Muh\Controllers\AccountingController::class, 'incomeStatement'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/accounting/entry/create', [\Muh\Controllers\AccountingController::class, 'createEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/accounting/entry', [\Muh\Controllers\AccountingController::class, 'storeEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/accounting/entry/{id}/delete', [\Muh\Controllers\AccountingController::class, 'destroyEntry'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)
         $g->get('/app/cash', [\Muh\Controllers\CashController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);

@@ -42,4 +42,11 @@ return [
     'total_expense' => 'Toplam Gider',
     'net_profit' => 'Dönem Net Kârı / Zararı',
     'section_total' => 'Toplam',
+    'new_entry' => 'Yeni Fiş',
+    'manual_entry' => 'Manuel yevmiye fişi',
+    'entry_created' => 'Yevmiye fişi oluşturuldu.',
+    'entry_deleted' => 'Yevmiye fişi silindi.',
+    'account_code' => 'Hesap Kodu',
+    'add_line' => 'Satır Ekle',
+    'delete_entry' => 'Fişi Sil',
 ];

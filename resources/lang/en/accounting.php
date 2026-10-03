@@ -42,4 +42,11 @@ return [
     'total_expense' => 'Total Expenses',
     'net_profit' => 'Net Profit / Loss',
     'section_total' => 'Total',
+    'new_entry' => 'New Entry',
+    'manual_entry' => 'Manual journal entry',
+    'entry_created' => 'Journal entry created.',
+    'entry_deleted' => 'Journal entry deleted.',
+    'account_code' => 'Account Code',
+    'add_line' => 'Add Line',
+    'delete_entry' => 'Delete Entry',
 ];

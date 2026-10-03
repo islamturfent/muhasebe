@@ -101,4 +101,71 @@ final class AccountingController extends Controller
             'data' => $data,
         ]);
     }
+
+    /** Yeni yevmiye/mahsup fişi formu. */
+    public function createEntry(Request $request): Response
+    {
+        Auth::requireCan('accounting.create');
+        [$companies, $companyId, $periods, $periodId] = $this->resolveContext($request);
+        $accounts = $companyId ? DB::select(
+            'SELECT code, name FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p ORDER BY code',
+            ['c' => $companyId, 'p' => $periodId]
+        ) : [];
+        return $this->view('app.accounting.entry-create', [
+            'layout' => 'layouts.app',
+            'companies' => $companies, 'companyId' => $companyId,
+            'periods' => $periods, 'periodId' => $periodId,
+            'accounts' => $accounts,
+        ]);
+    }
+
+    /** Yevmiye fişi kaydet (dengeli olmalı). */
+    public function storeEntry(Request $request): Response
+    {
+        Auth::requireCan('accounting.create');
+        $companyId = (int) $request->input('company_id');
+        $periodId = (int) ($request->input('period_id') ?? 0);
+        $tenantId = Auth::tenantId();
+
+        $lines = [];
+        foreach ((array) $request->input('lines', []) as $l) {
+            $code = trim((string) ($l['account_code'] ?? ''));
+            $debit = (float) ($l['debit'] ?? 0);
+            $credit = (float) ($l['credit'] ?? 0);
+            if ($code === '' || ($debit <= 0 && $credit <= 0)) {
+                continue;
+            }
+            $lines[] = ['account_code' => $code, 'debit' => $debit, 'credit' => $credit];
+        }
+
+        try {
+            $id = AccountingService::postEntry(
+                $tenantId, $companyId, $periodId,
+                'journal', $request->input('date') ?: date('Y-m-d'),
+                $request->input('description') ?: __('accounting.manual_entry'),
+                $lines, $request
+            );
+            Session::flash('success', __('accounting.entry_created'));
+            return Response::redirect('/app/accounting/journal?company_id=' . $companyId . '&period_id=' . $periodId);
+        } catch (ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+            return Response::redirect('/app/accounting/entry/create?company_id=' . $companyId . '&period_id=' . $periodId);
+        }
+    }
+
+    /** Yevmiye fişi sil. */
+    public function destroyEntry(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.delete');
+        $id = (int) $id;
+        $entry = DB::first('SELECT * FROM accounting_entries WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if ($entry) {
+            DB::execute('DELETE FROM accounting_entry_lines WHERE entry_id = :id', ['id' => $id]);
+            DB::execute('DELETE FROM accounting_entries WHERE id = :id', ['id' => $id]);
+            Session::flash('success', __('accounting.entry_deleted'));
+        }
+        return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
+    }
 }
+
+    
