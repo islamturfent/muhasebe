@@ -150,6 +150,68 @@ final class ReportsController extends Controller
     }
 
     /**
+     * KDV Beyanname raporu (dönem bazlı kümülatif özet).
+     * Item 3 — indirilecek/hesaplanan KDV + tevkifat ve net ödenecek/iade.
+     */
+    public function kdvBeyanname(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $company = DB::first('SELECT id, name FROM companies WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $companyId, 't' => Auth::tenantId()]);
+
+        $rows = DB::select(
+            "SELECT i.type, SUM(ii.line_total) AS net, SUM(ii.tax) AS vat,
+                    SUM(COALESCE(ii.withholding,0)) AS withholding
+               FROM invoice_items ii
+               JOIN invoices i ON i.id = ii.invoice_id
+              WHERE i.company_id = :c AND i.fiscal_period_id = :p
+                AND i.deleted_at IS NULL AND i.status = 'posted'
+              GROUP BY i.type",
+            ['c' => $companyId, 'p' => $periodId]
+        );
+        $sales = null; $purch = null;
+        foreach ($rows as $r) {
+            if ($r['type'] === 'sales') {
+                $sales = $r;
+            } elseif ($r['type'] === 'purchase') {
+                $purch = $r;
+            }
+        }
+
+        $outBase = (float) ($sales['net'] ?? 0);
+        $outVat  = (float) ($sales['vat'] ?? 0);
+        $outW    = (float) ($sales['withholding'] ?? 0);
+        $inBase  = (float) ($purch['net'] ?? 0);
+        $inVat   = (float) ($purch['vat'] ?? 0);
+        $inW     = (float) ($purch['withholding'] ?? 0);
+
+        $payable = $outVat - $inVat;
+        $refund  = $payable < 0 ? abs($payable) : 0.0;
+        if ($payable < 0) {
+            $payable = 0.0;
+        }
+
+        $fmt = fn ($x) => number_format((float) $x, 2, ',', '.');
+        $headers = [__('report.vat_declaration'), __('report.vat_base'), __('report.vat_amount'), __('report.vat_withholding')];
+        $out = [
+            [__('report.vat_out_base'), $fmt($outBase), $fmt($outVat), $fmt($outW)],
+            [__('report.vat_in_base'), $fmt($inBase), $fmt($inVat), $fmt($inW)],
+            ['', '', '', ''],
+            [__('report.vat_payable'), '', $fmt($payable), ''],
+            [__('report.vat_refund'), '', $fmt($refund), ''],
+        ];
+
+        return $this->export(
+            $format,
+            __('report.vat_declaration'),
+            ($company['name'] ?? 'C:' . $companyId) . ' — ' . __('report.vat_declaration_subtitle'),
+            $headers,
+            $out,
+            'kdv-beyanname'
+        );
+    }
+
+    /**
      * KDV detay raporu: her fatura satırı için matrah/KDV/dahil tutar.
      * Item 3 — KDV raporu detayları.
      */

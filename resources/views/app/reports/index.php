@@ -24,6 +24,7 @@ $reports = [
     ['cari', 'current_account.title'],
     ['yaslandirma', 'report.aging'],
     ['kdv', 'report.vat_summary'],
+    ['kdv-beyanname', 'report.vat_declaration'],
     ['stok', 'report.stock'],
     ['satis', 'report.sales'],
     ['alis', 'report.purchases'],
