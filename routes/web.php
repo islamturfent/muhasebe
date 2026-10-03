@@ -110,6 +110,8 @@ return function (Router $router): void {
         $g->get('/app/checks/notes/create', [\Muh\Controllers\CheckController::class, 'create', 'note'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/checks/notes', [\Muh\Controllers\CheckController::class, 'store', 'note'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/checks/{id}/note/status', [\Muh\Controllers\CheckController::class, 'updateStatus', 'note'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/checks/notes/{id}', [\Muh\Controllers\CheckController::class, 'show', 'note'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/checks/{id}', [\Muh\Controllers\CheckController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Reports export (Phase 9)
         $g->get('/app/reports', [\Muh\Controllers\ReportsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -121,6 +123,8 @@ return function (Router $router): void {
         $g->get('/app/reports/kdv/export', [\Muh\Controllers\ReportsController::class, 'kdv'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/kdv-detay/export', [\Muh\Controllers\ReportsController::class, 'kdvDetay'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/banka-mutabakat/export', [\Muh\Controllers\ReportsController::class, 'bankaMutabakat'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/yaslandirma/export', [\Muh\Controllers\ReportsController::class, 'yaslandirma'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/cari-ekstre/export', [\Muh\Controllers\ReportsController::class, 'cariEkstre'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/satis/export', [\Muh\Controllers\ReportsController::class, 'satis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/alis/export', [\Muh\Controllers\ReportsController::class, 'alis'], [\Muh\Middleware\TenantMiddleware::class]);

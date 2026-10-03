@@ -393,6 +393,132 @@ final class ReportsController extends Controller
         return $this->export($format, __('report.receivables_payables'), 'C:' . $companyId, $headers, array_map(fn ($r) => [$r['code'], $r['name'], __('current_account.type_' . $r['type']), number_format((float) $r['balance'], 2, ',', '.')], $rows), 'borc-alacak');
     }
 
+    // ---- Report: Cari Yaşlandırma (receivables aging) ----
+    public function yaslandirma(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $today = date('Y-m-d');
+
+        // Open (unpaid) invoiced amounts per current account.
+        $invoices = DB::select(
+            "SELECT current_account_id, due_date, (total - paid) AS outstanding
+               FROM invoices
+              WHERE company_id = :c AND status = 'posted' AND deleted_at IS NULL AND total > paid",
+            ['c' => $companyId]
+        );
+        $accounts = DB::select(
+            'SELECT id, code, name, type FROM current_accounts WHERE company_id = :c AND deleted_at IS NULL ORDER BY type, name',
+            ['c' => $companyId]
+        );
+
+        $bucketLabels = [
+            'current' => __('report.aging_current'),
+            'd30'     => __('report.aging_30'),
+            'd60'     => __('report.aging_60'),
+            'd90'     => __('report.aging_90'),
+            'd90p'    => __('report.aging_90p'),
+        ];
+        $buckets = array_keys($bucketLabels);
+
+        $map = [];
+        foreach ($accounts as $a) {
+            $map[(int) $a['id']] = array_fill_keys($buckets, 0.0) + ['total' => 0.0];
+        }
+        foreach ($invoices as $inv) {
+            $aid = (int) $inv['current_account_id'];
+            if (!isset($map[$aid])) {
+                continue;
+            }
+            $amt = (float) $inv['outstanding'];
+            if ($amt <= 0) {
+                continue;
+            }
+            $bucket = 'current';
+            if (!empty($inv['due_date'])) {
+                $days = (int) floor((strtotime($today) - strtotime($inv['due_date'])) / 86400);
+                if ($days > 90) {
+                    $bucket = 'd90p';
+                } elseif ($days > 60) {
+                    $bucket = 'd90';
+                } elseif ($days > 30) {
+                    $bucket = 'd60';
+                } elseif ($days > 0) {
+                    $bucket = 'd30';
+                }
+            }
+            $map[$aid][$bucket] += $amt;
+            $map[$aid]['total'] += $amt;
+        }
+
+        $headers = array_merge(
+            [__('current_account.code'), __('current_account.name'), __('current_account.type')],
+            array_values($bucketLabels),
+            [__('report.aging_total')]
+        );
+        $out = [];
+        $totals = array_fill_keys($buckets, 0.0) + ['total' => 0.0];
+        foreach ($accounts as $a) {
+            $m = $map[(int) $a['id']];
+            foreach ($totals as $k => $v) {
+                $totals[$k] += $m[$k];
+            }
+            $row = [$a['code'], $a['name'], __('current_account.type_' . $a['type'])];
+            foreach ($buckets as $b) {
+                $row[] = number_format($m[$b], 2, ',', '.');
+            }
+            $row[] = number_format($m['total'], 2, ',', '.');
+            $out[] = $row;
+        }
+        $row = [__('common.total'), '', ''];
+        foreach ($buckets as $b) {
+            $row[] = number_format($totals[$b], 2, ',', '.');
+        }
+        $row[] = number_format($totals['total'], 2, ',', '.');
+        $out[] = $row;
+
+        return $this->export($format, __('report.aging'), 'C:' . $companyId, $headers, $out, 'cari-yaslandirma');
+    }
+
+    // ---- Report: Cari Ekstre (current-account statement) ----
+    public function cariEkstre(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        $accountId = (int) $request->query('account_id', 0);
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+        if (!$accountId) {
+            return Response::redirect('/app/current-accounts');
+        }
+        $account = DB::first('SELECT * FROM current_accounts WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $accountId, 't' => Auth::tenantId()]);
+        if (!$account) {
+            return Response::redirect('/app/current-accounts');
+        }
+        $st = \Muh\Services\CurrentAccountService::statement($accountId, $from, $to);
+        $headers = [
+            __('common.date'), __('current_account.type'), __('common.description'),
+            __('current_account.debit'), __('current_account.credit'), __('report.balance'),
+        ];
+        $out = [];
+        $out[] = [__('report.ekstre_opening'), '', '', '', '', number_format($st['opening'], 2, ',', '.')];
+        foreach ($st['rows'] as $r) {
+            $debit = $r['sign'] > 0 ? $r['amount'] : 0;
+            $credit = $r['sign'] < 0 ? $r['amount'] : 0;
+            $out[] = [
+                format_date($r['date']),
+                __('current_account.type_' . $r['type']),
+                $r['description'] ?: '',
+                $debit ? number_format((float) $debit, 2, ',', '.') : '',
+                $credit ? number_format((float) $credit, 2, ',', '.') : '',
+                number_format((float) $r['running'], 2, ',', '.'),
+            ];
+        }
+        $out[] = [__('report.ekstre_closing'), '', '', '', '', number_format($st['closing'], 2, ',', '.')];
+        $sub = $account['name'] . ($from ? ' — ' . $from . ($to ? ' / ' . $to : '') : '');
+        return $this->export($format, __('report.cari_ekstre'), $sub, $headers, $out, 'cari-ekstre');
+    }
+
     private function firstCompanyId(): int
     {
         return (int) DB::scalar('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY id LIMIT 1', ['t' => Auth::tenantId()]);

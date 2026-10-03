@@ -22,6 +22,7 @@ $reports = [
     ['bilanco', 'accounting.balance_sheet'],
     ['gelir', 'accounting.income_statement'],
     ['cari', 'current_account.title'],
+    ['yaslandirma', 'report.aging'],
     ['kdv', 'report.vat_summary'],
     ['stok', 'report.stock'],
     ['satis', 'report.sales'],

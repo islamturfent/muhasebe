@@ -30,9 +30,11 @@ final class CheckController extends Controller
         $service = new CheckService();
         $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
         $page = $service->list($companyId ?: null, $kind, $from, $to, $status);
+        $overview = $service->overview($companyId ?: null, $kind);
         return $this->view($this->viewName($kind), [
             'layout' => 'layouts.app',
             'kind' => $kind,
+            'overview' => $overview,
             'records' => $page['items'],
             'companies' => $companies,
             'companyId' => $companyId,
@@ -72,6 +74,22 @@ final class CheckController extends Controller
         }
         Session::flash('success', __('check.created'));
         return Response::redirect($kind === 'note' ? '/app/checks/notes' : '/app/checks');
+    }
+
+    public function show(Request $request, $id, string $kind = 'check'): Response
+    {
+        Auth::requireCan('check.read');
+        $service = new CheckService();
+        $record = $service->find((int) $id, $kind);
+        if (!$record) {
+            return Response::redirect($kind === 'note' ? '/app/checks/notes' : '/app/checks');
+        }
+        return $this->view('app.check.show', [
+            'layout' => 'layouts.app',
+            'kind' => $kind,
+            'record' => $record,
+            'statuses' => ['in_portfolio', 'banked', 'collected', 'endorsed', 'returned', 'unpaid', 'cancelled'],
+        ]);
     }
 
     public function updateStatus(Request $request, $id, string $kind = 'check'): Response

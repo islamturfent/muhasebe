@@ -34,6 +34,17 @@ $statuses = ['in_portfolio','banked','collected','endorsed','returned','unpaid',
     <a href="<?= e(url($isNote ? '/app/checks/notes' : '/app/checks')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-sm"><?= e(__('common.reset')) ?></a>
 </form>
 
+<?php if (!empty($overview)): ?>
+<!-- Vade takibi özeti -->
+<div class="mb-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="text-xs text-slate-400 uppercase"><?= e(__('check.ov_total')) ?><span class="ml-1 text-slate-300">(<?= e($overview['count']) ?> <?= e(__('check.ov_records')) ?>)</span></div><div class="mt-1 text-lg font-bold text-slate-800"><?= e(money($overview['total'])) ?></div></div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="text-xs text-slate-400 uppercase"><?= e(__('check.ov_incoming')) ?></div><div class="mt-1 text-lg font-bold text-emerald-600"><?= e(money($overview['incoming'])) ?></div></div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-4"><div class="text-xs text-slate-400 uppercase"><?= e(__('check.ov_portfolio')) ?></div><div class="mt-1 text-lg font-bold text-blue-600"><?= e(money($overview['portfolio'])) ?> <span class="text-xs text-slate-400">(<?= e($overview['portfolio_count']) ?>)</span></div></div>
+    <div class="rounded-2xl bg-white border border-amber-200 p-4"><div class="text-xs text-amber-500 uppercase"><?= e(__('check.ov_due30')) ?></div><div class="mt-1 text-lg font-bold text-amber-600"><?= e(money($overview['due30'])) ?></div></div>
+    <div class="rounded-2xl bg-white border border-red-200 p-4"><div class="text-xs text-red-500 uppercase"><?= e(__('check.ov_overdue')) ?> <span class="ml-1 text-red-300">(<?= e($overview['overdue_count']) ?>)</span></div><div class="mt-1 text-lg font-bold text-red-600"><?= e(money($overview['overdue'])) ?></div></div>
+</div>
+<?php endif; ?>
+
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -50,9 +61,9 @@ $statuses = ['in_portfolio','banked','collected','endorsed','returned','unpaid',
             </thead>
             <tbody class="divide-y divide-slate-50">
                 <?php if (!$records): ?><tr><td colspan="7" class="px-5 py-8 text-center text-slate-400"><?= e(__('check.no_records')) ?></td></tr><?php endif; ?>
-                <?php foreach ($records as $r): ?>
+                <?php foreach ($records as $r): $showUrl = url('/app/checks/' . $r['id'] . ($isNote ? '/notes' : '')); ?>
                 <tr class="hover:bg-slate-50">
-                    <td class="px-5 py-3 font-mono text-brand-600"><?= e($r['check_no'] ?? $r['note_no'] ?? '—') ?></td>
+                    <td class="px-5 py-3 font-mono text-brand-600"><a href="<?= e($showUrl) ?>" class="hover:underline"><?= e($r['check_no'] ?? $r['note_no'] ?? '—') ?></a></td>
                     <td class="px-5 py-3 text-slate-700"><?= e($r['company_name']) ?></td>
                     <td class="px-5 py-3 text-slate-500"><?= e($r['account_name'] ?? '—') ?></td>
                     <td class="px-5 py-3"><span class="text-xs px-2 py-0.5 rounded-full <?= $r['direction']==='incoming' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' ?>"><?= e(__('check.direction_' . $r['direction'])) ?></span></td>

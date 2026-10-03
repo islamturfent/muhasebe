@@ -44,6 +44,27 @@ $running = $balance; // walk transactions newest-first is misleading; compute op
     </div>
 </div>
 
+<?php if (!empty($statement)): ?>
+<!-- Ekstre özeti (opening/closing) + export -->
+<div class="mb-6 bg-white border border-slate-200 rounded-2xl p-5">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-800"><?= e(__('report.cari_ekstre')) ?> <span class="text-xs text-slate-400 font-normal">(<?= e($from ?? '—') ?> → <?= e($to ?? '—') ?>)</span></h3>
+        <div class="flex gap-2">
+            <?php $ek = url('/app/reports/cari-ekstre/export?account_id=' . $account['id'] . '&from=' . ($from ?? '') . '&to=' . ($to ?? '')); ?>
+            <?php foreach (['pdf' => 'PDF', 'excel' => 'Excel', 'csv' => 'CSV'] as $fmt => $lbl): ?>
+            <a href="<?= e($ek . '&format=' . $fmt) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:border-brand-300 hover:text-brand-600"><?= e($lbl) ?></a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div><div class="text-xs text-slate-400"><?= e(__('report.ekstre_opening')) ?></div><div class="font-semibold text-slate-800"><?= e(number_format($statement['opening'], 2, ',', '.')) ?></div></div>
+        <div><div class="text-xs text-slate-400"><?= e(__('current_account.debit')) ?></div><div class="font-semibold text-red-600"><?= e(number_format($statement['debit'], 2, ',', '.')) ?></div></div>
+        <div><div class="text-xs text-slate-400"><?= e(__('current_account.credit')) ?></div><div class="font-semibold text-emerald-600"><?= e(number_format($statement['credit'], 2, ',', '.')) ?></div></div>
+        <div><div class="text-xs text-slate-400"><?= e(__('report.ekstre_closing')) ?></div><div class="font-semibold <?= $statement['closing'] < 0 ? 'text-red-600' : 'text-emerald-600' ?>"><?= e(number_format($statement['closing'], 2, ',', '.')) ?></div></div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Details + transactions -->
 <div class="grid lg:grid-cols-3 gap-6">
     <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-5 space-y-3 h-fit">

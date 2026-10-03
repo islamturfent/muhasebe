@@ -222,6 +222,55 @@ final class CurrentAccountService
         return DB::select($sql, $params);
     }
 
+    /**
+     * Compute a current-account statement (ekstre): opening balance, in-range
+     * debit/credit totals and closing balance, plus the in-range rows.
+     * Sign convention: debt/payment = debit (+), credit/collection = credit (-).
+     *
+     * @return array{opening:float, debit:float, credit:float, closing:float, rows:array}
+     */
+    public static function statement(int $currentAccountId, ?string $from = null, ?string $to = null): array
+    {
+        $txs = DB::select(
+            'SELECT * FROM current_account_transactions WHERE current_account_id = :id ORDER BY date ASC, id ASC',
+            ['id' => $currentAccountId]
+        );
+        $opening = 0.0;
+        $rows = [];
+        $debit = 0.0;
+        $credit = 0.0;
+        $running = 0.0;
+        foreach ($txs as $t) {
+            $sign = in_array($t['type'], ['debt', 'payment'], true) ? 1 : -1;
+            $amt = (float) $t['amount'];
+            // accumulate opening balance from movements strictly before $from
+            if ($from !== null && $t['date'] < $from) {
+                $opening += $sign * $amt;
+                continue;
+            }
+            if ($to !== null && $t['date'] > $to) {
+                continue;
+            }
+            $running += $sign * $amt;
+            if ($sign > 0) {
+                $debit += $amt;
+            } else {
+                $credit += $amt;
+            }
+            $row = $t;
+            $row['sign'] = $sign;
+            $row['running'] = $running;
+            $rows[] = $row;
+        }
+        return [
+            'opening' => $opening,
+            'debit'   => $debit,
+            'credit'  => $credit,
+            'closing' => $opening + $debit - $credit,
+            'rows'    => $rows,
+        ];
+    }
+
     public function transactions(int $currentAccountId, ?string $from = null, ?string $to = null, ?string $type = null): array
     {
         $sql = 'SELECT * FROM current_account_transactions WHERE current_account_id = :id';

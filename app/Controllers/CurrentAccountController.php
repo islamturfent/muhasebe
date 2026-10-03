@@ -125,8 +125,11 @@ final class CurrentAccountController extends Controller
         $to = $request->query('to') ?: null;
         $type = $request->query('type') ?: null;
         $trx = $service->transactions($id, $from, $to, $type);
+        // Statement (ekstre) summary for the selected range (Item 2).
+        $statement = CurrentAccountService::statement($id, $from, $to);
 
         return $this->view('app.current-accounts.show', [
+            'statement' => $statement,
             'layout' => 'layouts.app',
             'account' => $account,
             'company' => $company,
