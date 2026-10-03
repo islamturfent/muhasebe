@@ -23,14 +23,16 @@ final class RESTEFaturaGateway implements EFaturaGateway
     private string $baseUrl;
     private string $username;
     private string $password;
+    private string $provider = '';
 
     /**
-     * @param array $cfg optional overrides: mode, test_url, production_url, username, password
+     * @param array $cfg optional overrides: provider, mode, test_url, production_url, username, password
      *                   (falls back to the env-based efatura.* config)
      */
     public function __construct(?array $cfg = null)
     {
         $cfg = $cfg ?? [];
+        $this->provider = (string) ($cfg['provider'] ?? Config::get('efatura.provider', 'entegrator'));
         $mode = $cfg['mode'] ?? Config::get('efatura.mode', 'test');
         $base = $mode === 'production'
             ? ($cfg['production_url'] ?? Config::get('efatura.production_url', ''))
@@ -50,7 +52,8 @@ final class RESTEFaturaGateway implements EFaturaGateway
         if (!$this->configured()) {
             return ['status' => 'error', 'uuid' => $payload['uuid'] ?? '', 'message' => 'e-Fatura REST integrator not configured.'];
         }
-        $res = $this->request('POST', '/documents', $payload);
+        $eps = EFaturaProviders::endpoints($this->provider);
+        $res = $this->request('POST', $eps['documents'], $payload);
         return [
             'status' => in_array($res['status'] ?? null, ['sent', 'accepted', 'rejected', 'error'], true) ? $res['status'] : 'error',
             'uuid' => $res['uuid'] ?? ($payload['uuid'] ?? ''),
@@ -64,8 +67,15 @@ final class RESTEFaturaGateway implements EFaturaGateway
         if (!$this->configured()) {
             return 'error';
         }
-        $res = $this->request('GET', '/documents/' . urlencode($uuid));
+        $eps = EFaturaProviders::endpoints($this->provider);
+        $res = $this->request('GET', str_replace('{uuid}', urlencode($uuid), $eps['status']));
         return (string) ($res['status'] ?? 'error');
+    }
+
+    /** @return string The active integrator provider key. */
+    public function provider(): string
+    {
+        return $this->provider;
     }
 
     private function request(string $method, string $path, array $body = []): array

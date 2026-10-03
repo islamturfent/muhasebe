@@ -8,7 +8,9 @@ $locale = Translator::instance()->locale();
         <h1 class="text-2xl font-bold text-slate-900"><?= e(__('inventory.products')) ?></h1>
         <p class="text-slate-500"><?= (int) ($total ?? count($products)) ?> <?= e(__('common.records')) ?></p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex items-center gap-2">
+        <a href="<?= e(url('/app/inventory/export?format=csv&company_id=' . (int)$companyId)) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">CSV</a>
+        <a href="<?= e(url('/app/inventory/export?format=excel&company_id=' . (int)$companyId)) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">Excel</a>
         <a href="<?= e(url('/app/inventory/warehouses')) ?>" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50"><?= e(__('inventory.warehouses')) ?></a>
         <a href="<?= e(url('/app/inventory/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('inventory.new_product')) ?></a>
     </div>

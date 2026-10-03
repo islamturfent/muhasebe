@@ -1,5 +1,5 @@
 <?php
-/** @var array $cfg */
+/** @var array $cfg @var array $providers */
 ?>
 <div class="max-w-2xl mx-auto p-6">
     <h1 class="text-2xl font-bold text-slate-900"><?= e(__('efatura.settings_title')) ?></h1>
@@ -11,8 +11,9 @@
         <div>
             <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('efatura.provider')) ?></label>
             <select name="provider" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
-                <option value="simulated" <?= ($cfg['provider'] ?? '') === 'simulated' ? 'selected' : '' ?>><?= e(__('efatura.provider_simulated')) ?></option>
-                <option value="rest" <?= in_array($cfg['provider'] ?? '', ['rest', 'entegrator'], true) ? 'selected' : '' ?>><?= e(__('efatura.provider_rest')) ?></option>
+                <?php foreach ($providers as $pKey => $pLabel): ?>
+                <option value="<?= e($pKey) ?>" <?= ($cfg['provider'] ?? '') === $pKey ? 'selected' : '' ?>><?= e(__($pLabel)) ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
 

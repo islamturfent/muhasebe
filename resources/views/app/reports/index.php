@@ -19,6 +19,7 @@
 $reports = [
     ['mizan', 'accounting.trial_balance'],
     ['yevmiye', 'accounting.journal'],
+    ['defter', 'report.ledger'],
     ['bilanco', 'accounting.balance_sheet'],
     ['gelir', 'accounting.income_statement'],
     ['cari', 'current_account.title'],

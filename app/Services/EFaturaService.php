@@ -31,14 +31,21 @@ final class EFaturaService
 
     private function buildGateway(array $cfg): EFaturaGateway
     {
-        $provider = $cfg['provider'];
-        if (in_array($provider, ['rest', 'entegrator'], true)) {
+        $provider = $cfg['provider'] ?? 'simulated';
+        // Any named integrator (entegrator/logo/foriba/izibiz) is backed by the REST adapter.
+        if (\Muh\Services\EFatura\EFaturaProviders::isReal($provider)) {
             $rest = new RESTEFaturaGateway($cfg);
             if ($rest->configured()) {
                 return $rest;
             }
         }
         return new SimulatedEFaturaGateway();
+    }
+
+    /** @return array<string,string> provider key => label translation key. */
+    public static function supportedProviders(): array
+    {
+        return \Muh\Services\EFatura\EFaturaProviders::labels();
     }
 
     /**
@@ -107,8 +114,12 @@ final class EFaturaService
     public static function saveTenantConfig(array $data): void
     {
         $tenantId = (int) Auth::tenantId();
+        $provider = (string) ($data['provider'] ?? '');
+        if ($provider !== 'simulated' && !\Muh\Services\EFatura\EFaturaProviders::isReal($provider)) {
+            $provider = 'simulated'; // whitelist only known providers
+        }
         $map = [
-            'provider' => (string) ($data['provider'] ?? ''),
+            'provider' => $provider,
             'mode' => (string) ($data['mode'] ?? 'test'),
             'test_url' => trim((string) ($data['test_url'] ?? '')),
             'production_url' => trim((string) ($data['production_url'] ?? '')),

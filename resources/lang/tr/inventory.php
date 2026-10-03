@@ -19,6 +19,7 @@ return [
     'vat_rate' => 'KDV Oranı',
     'stock' => 'Stok',
     'critical_stock' => 'Kritik Stok',
+    'stock_value' => 'Stok Değeri',
     'warehouse' => 'Depo',
     'warehouse_code' => 'Depo Kodu',
     'warehouse_name' => 'Depo Adı',

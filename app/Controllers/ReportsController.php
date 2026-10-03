@@ -77,6 +77,44 @@ final class ReportsController extends Controller
         return $this->export($format, __('accounting.journal'), '', $headers, $rows, 'yevmiye');
     }
 
+    // ---- Report: Büyük Defter (general ledger) ----
+    public function defter(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $lines = DB::select(
+            "SELECT a.code, a.name, e.date, e.number, e.description, l.debit, l.credit
+               FROM accounting_entry_lines l
+               JOIN accounting_accounts a ON a.id = l.account_id
+               JOIN accounting_entries e ON e.id = l.entry_id
+              WHERE a.company_id = :c AND e.fiscal_period_id = :p
+                AND e.status = 'posted' AND e.deleted_at IS NULL
+              ORDER BY a.code, e.date, e.id",
+            ['c' => $companyId, 'p' => $periodId]
+        );
+        // Kümülatif hesap bakiyesi (borç - alacak).
+        $running = 0.0;
+        $lastCode = null;
+        $rows = [];
+        foreach ($lines as $ln) {
+            if ($lastCode !== null && $lastCode !== $ln['code']) {
+                $running = 0.0;
+            }
+            $lastCode = $ln['code'];
+            $running += (float) $ln['debit'] - (float) $ln['credit'];
+            $rows[] = [
+                $ln['code'], $ln['name'], format_date($ln['date']), $ln['number'],
+                $ln['description'] ?? '',
+                number_format((float) $ln['debit'], 2, ',', '.'),
+                number_format((float) $ln['credit'], 2, ',', '.'),
+                number_format((float) $running, 2, ',', '.'),
+            ];
+        }
+        $headers = [__('accounting.chart_of_accounts'), __('common.name'), __('common.date'), __('accounting.number'), __('common.description'), __('accounting.debit'), __('accounting.credit'), __('report.balance')];
+        return $this->export($format, __('report.ledger'), "C: {$companyId} P: {$periodId}", $headers, $rows, 'defter');
+    }
+
     public function bilanco(Request $request): Response
     {
         $format = $request->query('format', 'csv');

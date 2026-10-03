@@ -8,7 +8,12 @@ $locale = Translator::instance()->locale();
         <h1 class="text-2xl font-bold text-slate-900"><?= e(__('current_account.title')) ?></h1>
         <p class="text-slate-500"><?= (int) ($total ?? count($accounts)) ?> <?= e(__('common.records')) ?></p>
     </div>
-    <a href="<?= e(url('/app/current-accounts/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('current_account.new')) ?></a>
+    <div class="flex items-center gap-2">
+        <?php $exportQ = 'company_id=' . (int)$companyId . '&type=' . e($type ?? ''); ?>
+        <a href="<?= e(url('/app/current-accounts/export?format=csv&' . $exportQ)) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">CSV</a>
+        <a href="<?= e(url('/app/current-accounts/export?format=excel&' . $exportQ)) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">Excel</a>
+        <a href="<?= e(url('/app/current-accounts/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('current_account.new')) ?></a>
+    </div>
 </div>
 
 <!-- Filters -->

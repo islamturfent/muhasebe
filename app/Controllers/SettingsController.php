@@ -43,6 +43,7 @@ final class SettingsController extends Controller
         return $this->view('app.settings.efatura', [
             'layout' => 'layouts.app',
             'cfg' => EFaturaService::tenantSettings(),
+            'providers' => ['simulated' => 'efatura.provider_simulated'] + EFaturaService::supportedProviders(),
         ]);
     }
 

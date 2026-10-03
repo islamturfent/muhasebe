@@ -77,6 +77,8 @@ return [
     'efatura_sub' => 'Faturaların e-Fatura durumları',
     'comparative' => 'Karşılaştırmalı Gelir Tablosu & Bütçe',
     'comparative_sub' => 'Bu dönem / geçen dönem / bütçe karşılaştırması',
+    'ledger' => 'Büyük Defter',
+    'ledger_sub' => 'Hesap bazında tüm hareketler ve kümülatif bakiye',
     'period_current' => 'Bu Dönem',
     'period_previous' => 'Geçen Dönem',
     'budget' => 'Bütçe',

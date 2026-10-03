@@ -498,6 +498,62 @@ final class AppTester
         }
         $results[] = ['name' => "Beni Hatırla (remember-me)", 'ok' => $rmOk, 'detail' => $rmDetail];
 
+        // ---- Büyük Defter (general ledger) sorgusu ----
+        $ledOk = false; $ledDetail = '';
+        try {
+            $comp = DB::first('SELECT id FROM companies WHERE tenant_id = 1 LIMIT 1');
+            $period = DB::first('SELECT id FROM fiscal_periods WHERE company_id = :c LIMIT 1', ['c' => (int) $comp['id']]);
+            $lines = DB::select(
+                "SELECT a.code, a.name, e.date, e.number, e.description, l.debit, l.credit
+                   FROM accounting_entry_lines l
+                   JOIN accounting_accounts a ON a.id = l.account_id
+                   JOIN accounting_entries e ON e.id = l.entry_id
+                  WHERE a.company_id = :c AND e.fiscal_period_id = :p
+                    AND e.status = 'posted' AND e.deleted_at IS NULL
+                  ORDER BY a.code, e.date",
+                ['c' => (int) $comp['id'], 'p' => (int) $period['id']]
+            );
+            $ledOk = is_array($lines);
+            $ledDetail = $ledOk ? ('Büyük Defter sorgusu çalıştı (satır=' . count($lines) . ')') : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $ledOk = false; $ledDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Büyük Defter (general ledger) sorgusu', 'ok' => $ledOk, 'detail' => $ledDetail];
+
+        // ---- e-Fatura sağlayıcı kayıt defteri + REST adapter ----
+        $provOk = false; $provDetail = '';
+        try {
+            $gw = new \Muh\Services\EFatura\RESTEFaturaGateway([
+                'provider' => 'logo', 'mode' => 'test', 'test_url' => 'https://x.test',
+                'production_url' => '', 'username' => 'u', 'password' => 'p',
+            ]);
+            $eps = \Muh\Services\EFatura\EFaturaProviders::endpoints('izibiz');
+            $provOk = $gw->provider() === 'logo'
+                && \Muh\Services\EFatura\EFaturaProviders::isReal('logo')
+                && \Muh\Services\EFatura\EFaturaProviders::isReal('foriba')
+                && !\Muh\Services\EFatura\EFaturaProviders::isReal('simulated')
+                && isset($eps['documents'], $eps['status'])
+                && strpos($eps['status'], '{uuid}') !== false;
+            $provDetail = $provOk ? 'sağlayıcı + uç nokta eşleme ok' : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $provOk = false; $provDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'e-Fatura sağlayıcı kayıt defteri + REST adapter', 'ok' => $provOk, 'detail' => $provDetail];
+
+        // ---- Performans indeksleri (migration 0018) ----
+        $idxOk = false; $idxDetail = '';
+        try {
+            $c = (int) DB::scalar(
+                "SELECT COUNT(*) FROM information_schema.STATISTICS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifications' AND INDEX_NAME = 'idx_notif_tenant_read'"
+            );
+            $idxOk = $c >= 1;
+            $idxDetail = $idxOk ? 'perf indeksleri mevcut (migration 0018)' : 'eksik (BUG)';
+        } catch (\Throwable $e) {
+            $idxOk = false; $idxDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Performans indeksleri (migration 0018)', 'ok' => $idxOk, 'detail' => $idxDetail];
+
         return $results;
     }
 }

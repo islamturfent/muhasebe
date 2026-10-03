@@ -23,3 +23,5 @@ Thumbs.db
 # Composer / vendor
 /vendor/
 composer.lock
+storage/rate/*
+!storage/rate/.gitkeep

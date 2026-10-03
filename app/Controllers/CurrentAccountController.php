@@ -69,6 +69,46 @@ final class CurrentAccountController extends Controller
         ]);
     }
 
+    /** Cari listesini CSV/Excel olarak dışa aktar (master-data export). */
+    public function export(Request $request): Response
+    {
+        Auth::requireCan('current_account.read');
+        $tenantId = Auth::tenantId();
+        $format = $request->query('format', 'csv');
+        $companyId = (int) ($request->query('company_id') ?? 0);
+        $type = $request->query('type') ?: null;
+
+        $sql = 'SELECT ca.*, c.name AS company_name FROM current_accounts ca
+                 JOIN companies c ON c.id = ca.company_id
+                WHERE ca.tenant_id = :t AND ca.deleted_at IS NULL';
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND ca.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        if ($type && in_array($type, ['customer', 'supplier', 'both'], true)) {
+            $sql .= ' AND ca.type = :type';
+            $params['type'] = $type;
+        }
+        $sql .= ' ORDER BY ca.name ASC';
+        $rows = DB::select($sql, $params);
+
+        $headers = [
+            __('current_account.code'), __('current_account.name'), __('current_account.company'),
+            __('current_account.type'), __('current_account.tax_number'), __('current_account.phone'),
+            __('current_account.email'), __('current_account.iban'), __('current_account.balance'),
+        ];
+        $data = array_map(fn ($r) => [
+            $r['code'], $r['name'], $r['company_name'],
+            __('current_account.type_' . $r['type']), $r['tax_number'] ?? '', $r['phone'] ?? '',
+            $r['email'] ?? '', $r['iban'] ?? '', number_format((float) ($r['balance'] ?? 0), 2, ',', '.'),
+        ], $rows);
+
+        return $format === 'excel'
+            ? \Muh\Services\ReportExportService::excel(__('current_account.title'), $headers, $data, 'cari.xls')
+            : \Muh\Services\ReportExportService::csv($headers, $data, 'cari.csv');
+    }
+
     public function create(Request $request): Response
     {
         Auth::requireCan('current_account.create');

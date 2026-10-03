@@ -59,6 +59,44 @@ final class ProductController extends Controller
         ]);
     }
 
+    /** Stok/stok kartlarını CSV/Excel olarak dışa aktar (master-data export). */
+    public function export(Request $request): Response
+    {
+        Auth::requireCan('inventory.read');
+        $tenantId = Auth::tenantId();
+        $format = $request->query('format', 'csv');
+        $companyId = (int) ($request->query('company_id') ?? 0);
+
+        $sql = 'SELECT p.*, c.name AS company_name, u.abbr AS unit_abbr FROM products p
+                 JOIN companies c ON c.id = p.company_id
+                 LEFT JOIN units u ON u.id = p.unit_id
+                WHERE p.tenant_id = :t AND p.deleted_at IS NULL';
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND p.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        $sql .= ' ORDER BY p.name ASC';
+        $rows = DB::select($sql, $params);
+
+        $headers = [
+            __('inventory.code'), __('inventory.name'), __('inventory.company'), __('inventory.barcode'),
+            __('inventory.type'), __('inventory.unit'), __('inventory.purchase_price'), __('inventory.sale_price'),
+            __('inventory.stock'), __('inventory.critical_stock'), __('inventory.stock_value'),
+        ];
+        $data = array_map(fn ($p) => [
+            $p['code'], $p['name'], $p['company_name'], $p['barcode'] ?? '',
+            $p['type'] === 'product' ? __('inventory.type_product') : __('inventory.type_service'),
+            $p['unit_abbr'] ?? '', number_format((float) ($p['purchase_price'] ?? 0), 2, ',', '.'),
+            number_format((float) ($p['sale_price'] ?? 0), 2, ',', '.'), (float) $p['stock_quantity'],
+            (float) ($p['critical_stock'] ?? 0), number_format((float) ($p['purchase_price'] ?? 0) * (float) $p['stock_quantity'], 2, ',', '.'),
+        ], $rows);
+
+        return $format === 'excel'
+            ? \Muh\Services\ReportExportService::excel(__('inventory.products'), $headers, $data, 'stok.xls')
+            : \Muh\Services\ReportExportService::csv($headers, $data, 'stok.csv');
+    }
+
     public function create(Request $request): Response
     {
         Auth::requireCan('inventory.create');

@@ -21,7 +21,7 @@ return function (Router $router): void {
     $router->get('/theme', [ThemeController::class, 'toggle']);
 
     // ---- Auth (guest) ----
-    $router->group(['middleware' => [\Muh\Middleware\GuestMiddleware::class, \Muh\Middleware\CsrfMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
+    $router->group(['middleware' => [\Muh\Middleware\GuestMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
         $g->get('/login', [AuthController::class, 'showLogin']);
         $g->get('/register', [AuthController::class, 'showRegister']);
         $g->post('/login', [AuthController::class, 'login']);
@@ -48,6 +48,7 @@ return function (Router $router): void {
         $g->get('/app/companies/{id}', [\Muh\Controllers\CompanyController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/app/current-accounts', [\Muh\Controllers\CurrentAccountController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/current-accounts/export', [\Muh\Controllers\CurrentAccountController::class, 'export'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/customers', function (\Muh\Core\Request $request) {
             return \Muh\Core\Response::redirect('/app/current-accounts?type=customer');
         }, [\Muh\Middleware\TenantMiddleware::class]);
@@ -60,6 +61,7 @@ return function (Router $router): void {
         $g->post('/app/current-accounts/{id}/transaction', [\Muh\Controllers\CurrentAccountController::class, 'transaction'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/app/inventory', [\Muh\Controllers\ProductController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/inventory/export', [\Muh\Controllers\ProductController::class, 'export'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/create', [\Muh\Controllers\ProductController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/inventory', [\Muh\Controllers\ProductController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/{id}/edit', [\Muh\Controllers\ProductController::class, 'edit'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -151,6 +153,7 @@ return function (Router $router): void {
         $g->get('/app/reports', [\Muh\Controllers\ReportsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/mizan/export', [\Muh\Controllers\ReportsController::class, 'mizan'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/yevmiye/export', [\Muh\Controllers\ReportsController::class, 'yevmiye'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/defter/export', [\Muh\Controllers\ReportsController::class, 'defter'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/bilanco/export', [\Muh\Controllers\ReportsController::class, 'bilanco'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/gelir/export', [\Muh\Controllers\ReportsController::class, 'gelir'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/cari/export', [\Muh\Controllers\ReportsController::class, 'cari'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -248,7 +251,7 @@ return function (Router $router): void {
     });
 
     // ---- Super-admin panel (owner / assigned system admins only) ----
-    $router->group(['middleware' => [\Muh\Middleware\AuthMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\AdminMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
+    $router->group(['middleware' => [\Muh\Middleware\AuthMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class, \Muh\Middleware\AdminMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
         $g->get('/admin', [\Muh\Controllers\AdminController::class, 'index']);
         $g->get('/admin/tenants', [\Muh\Controllers\AdminController::class, 'tenants']);
         $g->get('/admin/tenants/{id}', [\Muh\Controllers\AdminController::class, 'tenantShow']);

@@ -81,4 +81,6 @@ return [
     'period_previous' => 'Previous Period',
     'budget' => 'Budget',
     'budget_variance' => 'Budget Variance',
+    'ledger' => 'General Ledger',
+    'ledger_sub' => 'All movements per account with a cumulative balance',
 ];

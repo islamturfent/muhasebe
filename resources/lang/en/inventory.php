@@ -19,6 +19,7 @@ return [
     'vat_rate' => 'VAT Rate',
     'stock' => 'Stock',
     'critical_stock' => 'Critical Stock',
+    'stock_value' => 'Stock Value',
     'warehouse' => 'Warehouse',
     'warehouse_code' => 'Warehouse Code',
     'warehouse_name' => 'Warehouse Name',
