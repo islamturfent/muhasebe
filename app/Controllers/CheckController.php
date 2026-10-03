@@ -26,12 +26,16 @@ final class CheckController extends Controller
         $companyId = (int) ($request->query('company_id') ?? 0);
         $service = new CheckService();
         $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
+        $page = $service->list($companyId ?: null, $kind);
         return $this->view($this->viewName($kind), [
             'layout' => 'layouts.app',
             'kind' => $kind,
-            'records' => $service->list($companyId ?: null, $kind),
+            'records' => $page['items'],
             'companies' => $companies,
             'companyId' => $companyId,
+            'page' => $page['page'],
+            'lastPage' => $page['lastPage'],
+            'total' => $page['total'],
         ]);
     }
 

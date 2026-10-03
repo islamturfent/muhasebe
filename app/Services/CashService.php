@@ -74,6 +74,10 @@ final class CashService
 
     public function transactions(int $cashAccountId): array
     {
-        return DB::select('SELECT * FROM cash_transactions WHERE cash_account_id = :id ORDER BY date DESC, id DESC LIMIT 200', ['id' => $cashAccountId]);
+        return paginate(
+            'SELECT * FROM cash_transactions WHERE cash_account_id = :id ORDER BY date DESC, id DESC',
+            ['id' => $cashAccountId],
+            50
+        );
     }
 }

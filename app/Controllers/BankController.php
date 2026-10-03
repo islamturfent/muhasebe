@@ -57,10 +57,14 @@ final class BankController extends Controller
         if (!$account) {
             return Response::redirect('/app/bank');
         }
+        $trx = $service->transactions($id);
         return $this->view('app.bank.show', [
             'layout' => 'layouts.app',
             'account' => $account,
-            'transactions' => $service->transactions($id),
+            'transactions' => $trx['items'],
+            'page' => $trx['page'],
+            'lastPage' => $trx['lastPage'],
+            'total' => $trx['total'],
         ]);
     }
 

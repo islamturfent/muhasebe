@@ -31,7 +31,7 @@ final class CheckService
             $params['c'] = $companyId;
         }
         $sql .= ' ORDER BY t.due_date ASC';
-        return DB::select($sql, $params);
+        return paginate($sql, $params, 25);
     }
 
     public function create(array $data, string $kind = 'check'): int

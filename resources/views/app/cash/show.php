@@ -60,6 +60,7 @@ use Muh\Core\Auth;
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
         </div>
     </div>
 </div>

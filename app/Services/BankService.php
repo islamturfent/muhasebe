@@ -73,6 +73,10 @@ final class BankService
 
     public function transactions(int $bankAccountId): array
     {
-        return DB::select('SELECT * FROM bank_transactions WHERE bank_account_id = :id ORDER BY date DESC, id DESC LIMIT 200', ['id' => $bankAccountId]);
+        return paginate(
+            'SELECT * FROM bank_transactions WHERE bank_account_id = :id ORDER BY date DESC, id DESC',
+            ['id' => $bankAccountId],
+            50
+        );
     }
 }

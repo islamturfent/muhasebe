@@ -20,8 +20,12 @@ final class CompanyController extends Controller
     public function index(Request $request): Response
     {
         Auth::requireCan('company.read');
-        $company = new Company();
-        $companies = $company->queryWhereAll(['tenant_id' => Auth::tenantId()]);
+        $paged = paginate(
+            'SELECT * FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY id DESC',
+            ['t' => Auth::tenantId()],
+            25
+        );
+        $companies = $paged['items'];
 
         $stats = [];
         foreach ($companies as $c) {
@@ -45,6 +49,9 @@ final class CompanyController extends Controller
             'layout' => 'layouts.app',
             'companies' => $companies,
             'stats' => $stats,
+            'page' => $paged['page'],
+            'lastPage' => $paged['lastPage'],
+            'total' => $paged['total'],
         ]);
     }
 

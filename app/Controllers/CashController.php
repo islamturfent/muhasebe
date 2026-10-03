@@ -61,11 +61,15 @@ final class CashController extends Controller
             return Response::redirect('/app/cash');
         }
         $company = DB::first('SELECT id, name FROM companies WHERE id = :id', ['id' => $account['company_id']]);
+        $trx = $service->transactions($id);
         return $this->view('app.cash.show', [
             'layout' => 'layouts.app',
             'account' => $account,
             'company' => $company,
-            'transactions' => $service->transactions($id),
+            'transactions' => $trx['items'],
+            'page' => $trx['page'],
+            'lastPage' => $trx['lastPage'],
+            'total' => $trx['total'],
         ]);
     }
 

@@ -66,4 +66,5 @@ $statuses = ['in_portfolio','banked','collected','endorsed','returned','unpaid',
             </tbody>
         </table>
     </div>
+    <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
 </div>

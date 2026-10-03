@@ -46,3 +46,5 @@ $locale = Translator::instance()->locale();
     </a>
     <?php endforeach; ?>
 </div>
+
+<?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
