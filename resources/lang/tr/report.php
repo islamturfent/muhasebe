@@ -62,4 +62,7 @@ return [
     'vat_refund' => 'İade Alınacak / Devreden KDV',
     'vat_base' => 'Matrah',
     'vat_amount' => 'KDV Tutarı',
+    'aging_sub' => 'Açık fatura bakiyelerinin vade gruplarına göre dağılımı',
+    'stock_sub' => 'Stok miktarı, kritik seviye ve maliyet değeri',
+    'profit_sub' => 'Dönem gelir, gider ve net kâr/zarar özeti',
 ];

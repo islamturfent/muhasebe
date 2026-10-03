@@ -39,12 +39,17 @@ $reports = [
 ];
 ?>
 <div class="grid md:grid-cols-2 gap-4">
-    <?php foreach ($reports as [$slug, $label]): ?>
+    <?php
+    $screenable = ['yaslandirma' => true, 'stok' => true, 'karlilik' => true];
+    foreach ($reports as [$slug, $label]): ?>
     <div class="bg-white border border-slate-200 rounded-2xl p-5">
         <div class="flex items-center gap-3 mb-4">
             <span class="w-10 h-10 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">📊</span>
             <h3 class="font-semibold text-slate-900"><?= e(__($label)) ?></h3>
         </div>
+        <?php if (isset($screenable[$slug])): ?>
+        <a href="<?= e(url('/app/reports/' . $slug . '?company_id=' . $companyId . '&period_id=' . $periodId)) ?>" class="mb-3 block w-full text-center px-3 py-2 rounded-lg bg-brand-50 text-brand-700 text-sm font-medium hover:bg-brand-100"><?= e(__('common.view')) ?> →</a>
+        <?php endif; ?>
         <div class="flex gap-2">
             <?php foreach (['pdf' => 'PDF', 'excel' => 'Excel', 'csv' => 'CSV'] as $fmt => $lbl): ?>
             <?php $url = url('/app/reports/' . $slug . '/export?format=' . $fmt . '&company_id=' . $companyId . '&period_id=' . $periodId); ?>

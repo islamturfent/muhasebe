@@ -62,4 +62,7 @@ return [
     'vat_refund' => 'VAT Refundable / Carry Forward',
     'vat_base' => 'Tax Base',
     'vat_amount' => 'VAT Amount',
+    'aging_sub' => 'Outstanding invoice balances by due-date buckets',
+    'stock_sub' => 'Stock quantities, critical levels and cost value',
+    'profit_sub' => 'Period income, expenses and net profit/loss summary',
 ];

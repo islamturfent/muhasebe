@@ -639,4 +639,133 @@ final class ReportsController extends Controller
         $periodId = (int) $request->query('period_id', 0);
         return [$companyId, $periodId];
     }
+
+    private function screenContext(Request $request): array
+    {
+        $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
+        $companyId = (int) ($request->query('company_id') ?? ($companies[0]['id'] ?? 0));
+        $periods = $companyId ? DB::select('SELECT * FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC', ['c' => $companyId]) : [];
+        $periodId = (int) ($request->query('period_id') ?? ($periods[0]['id'] ?? 0));
+        return [$companies, $companyId, $periods, $periodId];
+    }
+
+    // ---- Ekran görünümleri (on-screen reports) ----
+
+    /** Cari Yaşlandırma ekranı. */
+    public function agingScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $today = date('Y-m-d');
+        $invoices = DB::select(
+            "SELECT current_account_id, due_date, (total - paid) AS outstanding FROM invoices
+              WHERE company_id = :c AND status = 'posted' AND deleted_at IS NULL AND total > paid",
+            ['c' => $companyId]
+        );
+        $accounts = DB::select('SELECT id, code, name, type FROM current_accounts WHERE company_id = :c AND deleted_at IS NULL ORDER BY type, name', ['c' => $companyId]);
+        $bucketLabels = ['current' => __('report.aging_current'), 'd30' => __('report.aging_30'), 'd60' => __('report.aging_60'), 'd90' => __('report.aging_90'), 'd90p' => __('report.aging_90p')];
+        $buckets = array_keys($bucketLabels);
+        $map = [];
+        foreach ($accounts as $a) {
+            $map[(int) $a['id']] = array_fill_keys($buckets, 0.0) + ['total' => 0.0];
+        }
+        foreach ($invoices as $inv) {
+            $aid = (int) $inv['current_account_id'];
+            if (!isset($map[$aid])) {
+                continue;
+            }
+            $amt = (float) $inv['outstanding'];
+            if ($amt <= 0) {
+                continue;
+            }
+            $bucket = 'current';
+            if (!empty($inv['due_date'])) {
+                $days = (int) floor((strtotime($today) - strtotime($inv['due_date'])) / 86400);
+                $bucket = $days > 90 ? 'd90p' : ($days > 60 ? 'd90' : ($days > 30 ? 'd60' : ($days > 0 ? 'd30' : 'current')));
+            }
+            $map[$aid][$bucket] += $amt;
+            $map[$aid]['total'] += $amt;
+        }
+        $headers = array_merge([__('current_account.code'), __('current_account.name'), __('current_account.type')], array_values($bucketLabels), [__('report.aging_total')]);
+        $rows = [];
+        $totals = array_fill_keys($buckets, 0.0) + ['total' => 0.0];
+        foreach ($accounts as $a) {
+            $m = $map[(int) $a['id']];
+            foreach ($totals as $k => $v) {
+                $totals[$k] += $m[$k];
+            }
+            $row = [$a['code'], $a['name'], __('current_account.type_' . $a['type'])];
+            foreach ($buckets as $b) {
+                $row[] = number_format($m[$b], 2, ',', '.');
+            }
+            $row[] = number_format($m['total'], 2, ',', '.');
+            $rows[] = $row;
+        }
+        $t = [__('common.total'), '', ''];
+        foreach ($buckets as $b) {
+            $t[] = number_format($totals[$b], 2, ',', '.');
+        }
+        $t[] = number_format($totals['total'], 2, ',', '.');
+        $rows[] = $t;
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.aging'), 'subtitle' => __('report.aging_sub'),
+            'headers' => $headers, 'rows' => $rows, 'exportSlug' => 'yaslandirma',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
+    /** Stok / Değerleme ekranı. */
+    public function stockScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select('SELECT code, name, type, stock_quantity, critical_stock, purchase_price, sale_price FROM products WHERE company_id = :c AND deleted_at IS NULL ORDER BY code', ['c' => $companyId]);
+        $headers = [__('inventory.code'), __('inventory.name'), __('inventory.type'), __('report.stock_qty'), __('inventory.critical_stock'), __('inventory.purchase_price'), __('inventory.sale_price'), __('report.stock_value')];
+        $out = [];
+        $sum = 0.0;
+        foreach ($rows as $r) {
+            $val = (float) $r['stock_quantity'] * (float) $r['purchase_price'];
+            $sum += $val;
+            $out[] = [$r['code'], $r['name'], $r['type'], number_format((float) $r['stock_quantity'], 2, ',', '.'), number_format((float) $r['critical_stock'], 2, ',', '.'), number_format((float) $r['purchase_price'], 2, ',', '.'), number_format((float) $r['sale_price'], 2, ',', '.'), number_format($val, 2, ',', '.')];
+        }
+        $out[] = ['', __('common.total'), '', '', '', '', '', number_format($sum, 2, ',', '.')];
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.stock'), 'subtitle' => __('report.stock_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'stok',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
+    /** Kârlılık ekranı. */
+    public function profitabilityScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $data = AccountingService::incomeStatement($companyId, $periodId);
+        $headers = ['Hesap', __('common.name'), __('report.amount')];
+        $rows = [];
+        $revenue = 0.0;
+        $expense = 0.0;
+        $rows[] = [__('report.revenue'), '', ''];
+        foreach ($data['income'] as $r) {
+            $bal = (float) $r['credit'] - (float) $r['debit'];
+            $revenue += $bal;
+            $rows[] = [$r['code'], $r['name'], number_format($bal, 2, ',', '.')];
+        }
+        $rows[] = [__('report.expenses'), '', ''];
+        foreach ($data['expense'] as $r) {
+            $bal = (float) $r['debit'] - (float) $r['credit'];
+            $expense += $bal;
+            $rows[] = [$r['code'], $r['name'], number_format($bal, 2, ',', '.')];
+        }
+        $rows[] = [__('report.net_profit'), '', number_format($revenue - $expense, 2, ',', '.')];
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.profitability'), 'subtitle' => __('report.profit_sub'),
+            'headers' => $headers, 'rows' => $rows, 'exportSlug' => 'karlilik',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
 }
