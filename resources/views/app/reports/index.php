@@ -40,7 +40,7 @@ $reports = [
 ?>
 <div class="grid md:grid-cols-2 gap-4">
     <?php
-    $screenable = ['yaslandirma' => true, 'stok' => true, 'karlilik' => true, 'kdv' => true, 'kdv-beyanname' => true, 'yuklumlulukler' => true];
+    $screenable = ['yaslandirma' => true, 'stok' => true, 'karlilik' => true, 'kdv' => true, 'kdv-beyanname' => true, 'yuklumlulukler' => true, 'kasa' => true, 'banka' => true, 'efatura' => true];
     foreach ($reports as [$slug, $label]): ?>
     <div class="bg-white border border-slate-200 rounded-2xl p-5">
         <div class="flex items-center gap-3 mb-4">

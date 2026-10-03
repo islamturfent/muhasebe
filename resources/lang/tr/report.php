@@ -73,4 +73,6 @@ return [
     'upcoming_status' => 'Durum',
     'upcoming_overdue' => 'Vadesi Geçmiş',
     'upcoming_upcoming' => 'Yaklaşan',
+    'statement_sub' => 'Hesap hareket dökümü (kümülatif bakiye ile)',
+    'efatura_sub' => 'Faturaların e-Fatura durumları',
 ];

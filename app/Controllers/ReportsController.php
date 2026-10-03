@@ -834,6 +834,92 @@ final class ReportsController extends Controller
         ]);
     }
 
+    // ---- Kasa / Banka Ekstre & e-Fatura durum ekranları ----
+
+    /** Kasa ekstre ekranı. */
+    public function kasaScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select(
+            "SELECT a.code, a.name, t.date, t.description, t.type, t.amount, a.balance
+               FROM cash_transactions t JOIN cash_accounts a ON a.id = t.cash_account_id
+              WHERE a.company_id = :c ORDER BY t.date",
+            ['c' => $companyId]
+        );
+        $headers = [__('cash.code'), __('cash.name'), __('common.date'), __('common.description'), __('report.flow'), __('report.amount'), __('report.balance')];
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [$r['code'], $r['name'], format_date($r['date']), $r['description'] ?? '', $r['type'] === 'income' ? __('report.income') : __('report.expense'), number_format((float) $r['amount'], 2, ',', '.'), number_format((float) $r['balance'], 2, ',', '.')];
+        }
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.cash'), 'subtitle' => __('report.statement_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'kasa',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
+    /** Banka ekstre ekranı (running bakiye ile). */
+    public function bankaScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select(
+            "SELECT ba.id AS aid, ba.bank_name, ba.iban, ba.balance, t.date, t.description, t.type, t.amount
+               FROM bank_transactions t JOIN bank_accounts ba ON ba.id = t.bank_account_id
+              WHERE ba.company_id = :c ORDER BY ba.id, t.date, t.id",
+            ['c' => $companyId]
+        );
+        $headers = [__('bank.bank_name'), __('bank.iban'), __('common.date'), __('common.description'), __('report.flow'), __('report.amount'), __('report.balance')];
+        $running = [];
+        $out = [];
+        $isIncrease = fn ($t) => in_array($t, ['deposit', 'interest'], true);
+        foreach ($rows as $r) {
+            $aid = (int) $r['aid'];
+            if (!isset($running[$aid])) {
+                $running[$aid] = 0.0;
+            }
+            $amt = (float) $r['amount'];
+            $running[$aid] += $isIncrease($r['type']) ? $amt : -$amt;
+            $out[] = [$r['bank_name'], $r['iban'] ?? '', format_date($r['date']), $r['description'] ?? '', $isIncrease($r['type']) ? __('report.income') : __('report.expense'), number_format($amt, 2, ',', '.'), number_format($running[$aid], 2, ',', '.')];
+        }
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.bank'), 'subtitle' => __('report.statement_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'banka',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
+    /** e-Fatura durum raporu ekranı. */
+    public function efaturaScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $tenantId = (int) Auth::tenantId();
+        $companyId2 = (int) ($request->query('company_id') ?? 0);
+        $status = $request->query('status') ?: null;
+        $sql = "SELECT i.number, i.date, i.type, i.total, i.efatura_status, c.name AS company_name, ca.name AS cari
+                  FROM invoices i JOIN companies c ON c.id = i.company_id LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+                 WHERE i.tenant_id = :t AND i.deleted_at IS NULL";
+        $params = ['t' => $tenantId];
+        if ($companyId2) { $sql .= ' AND i.company_id = :c'; $params['c'] = $companyId2; }
+        if ($status && in_array($status, ['draft', 'sending', 'sent', 'accepted', 'rejected', 'error'], true)) { $sql .= ' AND i.efatura_status = :st'; $params['st'] = $status; }
+        $sql .= ' ORDER BY i.date DESC, i.id DESC';
+        $rows = DB::select($sql, $params);
+        $headers = [__('accounting.number'), __('common.date'), __('invoice.type'), __('invoice.company'), __('current_account.name'), __('report.amount'), __('efatura.status')];
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [$r['number'], format_date($r['date']), __('invoice.type_' . $r['type']), $r['company_name'], $r['cari'] ?? '', number_format((float) $r['total'], 2, ',', '.'), __('efatura.st_' . $r['efatura_status'])];
+        }
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.efatura_status'), 'subtitle' => __('report.efatura_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'efatura',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
     // ---- Yaklaşan yükümlülükler (unpaid invoices / upcoming & overdue) ----
 
     private function upcomingData(Request $request): array

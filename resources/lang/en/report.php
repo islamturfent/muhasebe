@@ -73,4 +73,6 @@ return [
     'upcoming_status' => 'Status',
     'upcoming_overdue' => 'Overdue',
     'upcoming_upcoming' => 'Upcoming',
+    'statement_sub' => 'Account movement detail (with cumulative balance)',
+    'efatura_sub' => 'Invoice e-invoice statuses',
 ];
