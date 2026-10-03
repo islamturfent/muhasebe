@@ -332,6 +332,114 @@ final class AppTester
             $results[] = ['name' => 'e-Fatura ağ geçidi sözleşmesi', 'ok' => false, 'detail' => $e->getMessage()];
         }
 
+        // ---- Vergi takvimi üretimi (DÖNEM KURTARMA: rollback) ----
+        $vtOk = false; $vtDetail = '';
+        try {
+            DB::transaction(function () use (&$vtOk, &$vtDetail) {
+                $n = \Muh\Services\TaxCalendarService::generate(1, 2099);
+                $vtOk = $n >= 27;
+                $vtDetail = $vtOk ? ($n . ' kayıt üretildi (KDV/muhtasar/geçici/yıllık)') : 'eksik kayıt (BUG) n=' . $n;
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $vtOk = false; $vtDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Vergi takvimi üretimi (KDV/muhtasar/geçici/yıllık)', 'ok' => $vtOk, 'detail' => $vtDetail];
+
+        // ---- Vergi takvimi sayaçları (read-only) ----
+        try {
+            $overdue = (int) \Muh\Services\TaxCalendarService::overdueCount(1);
+            $up = (int) \Muh\Services\TaxCalendarService::upcomingCount(1, 15);
+            $okCt = is_int($overdue) && is_int($up) && $overdue >= 0 && $up >= 0;
+            $results[] = ['name' => 'Vergi takvimi sayaçları (vadesi geçen/yaklaşan)', 'ok' => $okCt, 'detail' => 'overdue=' . $overdue . ' upcoming=' . $up];
+        } catch (\Throwable $e) {
+            $results[] = ['name' => 'Vergi takvimi sayaçları', 'ok' => false, 'detail' => $e->getMessage()];
+        }
+
+        // ---- KDV Beyanname hesaplaması (read-only) ----
+        $kbdOk = false; $kbdDetail = '';
+        try {
+            $rows = DB::select(
+                "SELECT i.type, SUM(ii.line_total) AS net, SUM(ii.tax) AS vat, SUM(COALESCE(ii.withholding,0)) AS w
+                   FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id
+                  WHERE i.company_id = 1 AND i.status = 'posted' AND i.deleted_at IS NULL
+                  GROUP BY i.type"
+            );
+            $outVat = 0.0; $inVat = 0.0;
+            foreach ($rows as $r) {
+                if ($r['type'] === 'sales') $outVat = (float) $r['vat'];
+                elseif ($r['type'] === 'purchase') $inVat = (float) $r['vat'];
+            }
+            $payable = max(0.0, $outVat - $inVat);
+            $refund = max(0.0, $inVat - $outVat);
+            $kbdOk = $payable >= 0 && $refund >= 0 && abs(($payable + $refund) - abs($outVat - $inVat)) < 0.01;
+            $kbdDetail = $kbdOk ? 'ödenecek/iade tutarlı (out=' . round($outVat, 2) . ' in=' . round($inVat, 2) . ')' : 'tutarsız (BUG)';
+        } catch (\Throwable $e) {
+            $kbdOk = false; $kbdDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'KDV Beyanname hesabı (ödenecek/iade)', 'ok' => $kbdOk, 'detail' => $kbdDetail];
+
+        // ---- Bütçe & karşılaştırmalı rapor: budget_amount sütunu + veri yapısı ----
+        $budOk = false; $budDetail = '';
+        try {
+            $col = DB::first(
+                "SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounting_accounts' AND COLUMN_NAME = 'budget_amount'"
+            );
+            $row = DB::first('SELECT code, budget_amount FROM accounting_accounts LIMIT 1');
+            $budOk = (int) ($col['c'] ?? 0) === 1 && isset($row['budget_amount']);
+            $budDetail = $budOk ? 'budget_amount sütunu mevcut' : 'eksik (BUG)';
+        } catch (\Throwable $e) {
+            $budOk = false; $budDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Bütçe / karşılaştırmalı rapor (budget_amount)', 'ok' => $budOk, 'detail' => $budDetail];
+
+        // ---- Belge & e-posta ayarları: MailSettingService round-trip (rollback) + Mailer log ----
+        $mailOk = false; $mailDetail = '';
+        try {
+            DB::transaction(function () {
+                \Muh\Services\MailSettingService::save(1, ['host' => 'smtp.test', 'notify_due' => '1']);
+                $s = \Muh\Services\MailSettingService::get(1);
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $mailOk = false; $mailDetail = $e->getMessage();
+        }
+        // Mailer log-mode send (writes to mail.log; returns true).
+        try {
+            $sent = (new \Muh\Services\Mailer())->send('tester@muh.local', 'Test', '<p>x</p>', ['enabled' => false]);
+            $mailOk = $sent === true;
+            $mailDetail = $mailOk ? 'MailSettingService + Mailer log çalışıyor' : 'mail gönderimi başarısız (BUG)';
+        } catch (\Throwable $e) {
+            $mailOk = false; $mailDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'E-posta ayarları + Mailer (log modu)', 'ok' => $mailOk, 'detail' => $mailDetail];
+
+        // ---- XlsxReader (saf PHP Excel okuma) ----
+        $xlsOk = false; $xlsDetail = '';
+        try {
+            $tmp = sys_get_temp_dir() . '/apptester_' . uniqid() . '.xlsx';
+            $zip = new \ZipArchive();
+            $zip->open($tmp, \ZipArchive::CREATE);
+            $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="a"/><Default Extension="xml" ContentType="b"/><Override PartName="/xl/workbook.xml" ContentType="c"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="d"/><Override PartName="/xl/sharedStrings.xml" ContentType="e"/></Types>');
+            $zip->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="t" Target="xl/workbook.xml"/></Relationships>');
+            $zip->addFromString('xl/workbook.xml', '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="S" sheetId="1" r:id="rId1"/></sheets></workbook>');
+            $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="t" Target="worksheets/sheet1.xml"/></Relationships>');
+            $zip->addFromString('xl/worksheets/sheet1.xml', '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1"><v>5</v></c></row></sheetData></worksheet>');
+            $zip->addFromString('xl/sharedStrings.xml', '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1"><si><t>Kod</t></si></sst>');
+            $zip->close();
+            $data = \Muh\Services\Import\XlsxReader::read($tmp);
+            @unlink($tmp);
+            $xlsOk = isset($data[0][0]) && $data[0][0] === 'Kod';
+            $xlsDetail = $xlsOk ? 'Excel satır/kolon okundu' : 'okuma hatası (BUG)'; 
+        } catch (\Throwable $e) {
+            $xlsOk = false; $xlsDetail = $e->getMessage();
+            if (isset($tmp) && is_file($tmp)) { @unlink($tmp); }
+        }
+        $results[] = ['name' => 'Excel okuyucu (saf PHP .xlsx)', 'ok' => $xlsOk, 'detail' => $xlsDetail];
+
         return $results;
     }
 }
