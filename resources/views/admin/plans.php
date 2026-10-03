@@ -20,6 +20,8 @@ $featureFields = ['companies' => __('admin.f_companies'), 'users' => __('admin.f
             <input name="name" required placeholder="<?= e(__('admin.plan_name')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
             <input name="price_monthly" type="number" step="0.01" placeholder="<?= e(__('admin.price_monthly')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
             <input name="price_yearly" type="number" step="0.01" placeholder="<?= e(__('admin.price_yearly')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+            <input name="stripe_price_monthly_id" placeholder="Stripe price_ (monthly)" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+            <input name="stripe_price_yearly_id" placeholder="Stripe price_ (yearly)" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
         </div>
         <div class="grid md:grid-cols-5 gap-2 mt-3">
             <?php foreach ($featureFields as $f => $lbl): ?><input name="features[<?= $f ?>]" placeholder="<?= e($lbl) ?>" class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs"><?php endforeach; ?>
@@ -45,6 +47,8 @@ $featureFields = ['companies' => __('admin.f_companies'), 'users' => __('admin.f
                 <input name="name" value="<?= e($decode($p['name'])) ?>" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
                 <input name="price_monthly" type="number" step="0.01" value="<?= e($p['price_monthly']) ?>" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
                 <input name="price_yearly" type="number" step="0.01" value="<?= e($p['price_yearly']) ?>" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
+                <input name="stripe_price_monthly_id" value="<?= e($p['stripe_price_monthly_id'] ?? '') ?>" placeholder="price_ (aylık)" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
+                <input name="stripe_price_yearly_id" value="<?= e($p['stripe_price_yearly_id'] ?? '') ?>" placeholder="price_ (yıllık)" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
                 <input name="features[companies]" value="<?= e($ff['companies'] ?? 1) ?>" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
                 <input name="features[invoices]" value="<?= e($ff['invoices'] ?? 0) ?>" class="px-2 py-1.5 rounded-lg border border-slate-200 text-sm">
             </div>
