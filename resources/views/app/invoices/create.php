@@ -23,6 +23,8 @@ $isSales = true;
                     <select name="type" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
                         <option value="sales"><?= e(__('invoice.sales')) ?></option>
                         <option value="purchase"><?= e(__('invoice.purchase')) ?></option>
+                        <option value="sales_return"><?= e(__('invoice.sales_return')) ?></option>
+                        <option value="purchase_return"><?= e(__('invoice.purchase_return')) ?></option>
                     </select>
                 </div>
                 <div>

@@ -157,11 +157,53 @@ final class DashboardController extends Controller
             ['c' => $cid, 'today' => date('Y-m-d')]
         );
 
+        // Monthly sales / purchases / collections / payments (last 6 months) for charts.
+        $chart = ['labels' => [], 'sales' => [], 'purchase' => [], 'collection' => [], 'payment' => []];
+        for ($m = 5; $m >= 0; $m--) {
+            $start = date('Y-m-01', strtotime("-$m months"));
+            $end = date('Y-m-t', strtotime("-$m months"));
+            $chart['labels'][] = date('M', strtotime($start));
+            $chart['sales'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = :c AND type = 'sales' AND status = 'posted' AND deleted_at IS NULL AND date BETWEEN :s AND :e",
+                ['c' => $cid, 's' => $start, 'e' => $end]
+            );
+            $chart['purchase'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = :c AND type = 'purchase' AND status = 'posted' AND deleted_at IS NULL AND date BETWEEN :s AND :e",
+                ['c' => $cid, 's' => $start, 'e' => $end]
+            );
+            $chart['collection'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(amount),0) FROM current_account_transactions WHERE company_id = :c AND type = 'collection' AND date BETWEEN :s AND :e",
+                ['c' => $cid, 's' => $start, 'e' => $end]
+            );
+            $chart['payment'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(amount),0) FROM current_account_transactions WHERE company_id = :c AND type = 'payment' AND date BETWEEN :s AND :e",
+                ['c' => $cid, 's' => $start, 'e' => $end]
+            );
+        }
+
+        $recentInvoices = DB::select(
+            'SELECT id, number, type, total, date, status FROM invoices
+              WHERE company_id = :c AND deleted_at IS NULL
+              ORDER BY date DESC, id DESC LIMIT 6',
+            ['c' => $cid]
+        );
+        $recentCollections = DB::select(
+            "SELECT cat.date, cat.amount, cat.type, ca.name AS cari
+               FROM current_account_transactions cat
+               LEFT JOIN current_accounts ca ON ca.id = cat.current_account_id
+              WHERE cat.company_id = :c AND cat.type IN ('collection','payment')
+              ORDER BY cat.date DESC, cat.id DESC LIMIT 6",
+            ['c' => $cid]
+        );
+
         return $this->view('app.company-dashboard', [
             'layout' => 'layouts.app',
             'company' => $company,
             'kpis' => $kpis,
             'upcoming' => $upcoming,
+            'chart' => $chart,
+            'recentInvoices' => $recentInvoices,
+            'recentCollections' => $recentCollections,
             'periodId' => $periodId,
         ]);
     }

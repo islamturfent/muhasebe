@@ -23,7 +23,7 @@ $locale = Translator::instance()->locale();
                 <?= e(($invoice['efatura_doc_type'] === 'archive' ? __('efatura.type_archive') : __('efatura.title'))) ?>: <?= e(__('efatura.st_' . $invoice['efatura_status'])) ?>
                 <?php if (!empty($invoice['efatura_envelope_id'])): ?><br><span class="font-normal"><?= e(__('efatura.envelope_id') . ': ' . $invoice['efatura_envelope_id']) ?></span><?php endif; ?>
             </span>
-            <button onclick="window.print()" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">🖨 <?= e(__('invoice.print')) ?></button>
+            <a href="<?= e(url('/app/invoices/' . $invoice['id'] . '/print')) ?>" target="_blank" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">🖨 <?= e(__('invoice.print')) ?></a>
         </div>
     </div>
 
@@ -66,6 +66,7 @@ $locale = Translator::instance()->locale();
                     <th class="py-2 text-right"><?= e(__('invoice.line_qty')) ?></th>
                     <th class="py-2 text-right"><?= e(__('invoice.line_price')) ?></th>
                     <th class="py-2 text-right">% <?= e(__('invoice.line_vat')) ?></th>
+                    <th class="py-2 text-right">% <?= e(__('invoice.line_withholding')) ?></th>
                     <th class="py-2 text-right"><?= e(__('invoice.total')) ?></th>
                 </tr>
             </thead>
@@ -76,6 +77,7 @@ $locale = Translator::instance()->locale();
                     <td class="py-2.5 text-right text-slate-600"><?= e((float)$it['quantity']) ?></td>
                     <td class="py-2.5 text-right text-slate-600"><?= e(money($it['unit_price'])) ?></td>
                     <td class="py-2.5 text-right text-slate-600">%<?= e((float)$it['tax_rate']) ?></td>
+                    <td class="py-2.5 text-right text-slate-600">%<?= e((float)($it['withholding_rate'] ?? 0)) ?></td>
                     <td class="py-2.5 text-right font-medium text-slate-800"><?= e(money($it['total'])) ?></td>
                 </tr>
                 <?php endforeach; ?>
@@ -87,6 +89,10 @@ $locale = Translator::instance()->locale();
             <div class="flex justify-between text-slate-500"><span><?= e(__('invoice.subtotal')) ?></span><span><?= e(money($invoice['subtotal'])) ?></span></div>
             <div class="flex justify-between text-slate-500"><span><?= e(__('invoice.discount')) ?></span><span>-<?= e(money($invoice['discount'])) ?></span></div>
             <div class="flex justify-between text-slate-500"><span><?= e(__('invoice.tax')) ?></span><span><?= e(money($invoice['tax'])) ?></span></div>
+            <?php $w = (float)($invoice['withholding'] ?? 0); if ($w): ?>
+            <div class="flex justify-between text-slate-500"><span><?= e(__('report.vat_withholding')) ?></span><span>-<?= e(money($w)) ?></span></div>
+            <div class="flex justify-between text-slate-500"><span><?= e(__('invoice.net_vat')) ?></span><span><?= e(money((float)$invoice['tax'] - $w)) ?></span></div>
+            <?php endif; ?>
             <div class="flex justify-between text-lg font-bold text-slate-900 border-t border-slate-200 pt-2"><span><?= e(__('invoice.total')) ?></span><span><?= e(money($invoice['total'])) ?></span></div>
         </div>
 

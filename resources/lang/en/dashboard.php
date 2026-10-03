@@ -33,4 +33,13 @@ return [
     'products' => 'Products',
     'profit' => 'Profit / Loss',
     'upcoming_payments' => 'Upcoming Payments',
+    'monthly_flow' => 'Monthly Movement',
+    'monthly_sales' => 'Monthly Sales',
+    'monthly_purchases' => 'Monthly Purchases',
+    'collections' => 'Collections',
+    'payments' => 'Payments',
+    'recent_collections' => 'Recent Collections / Payments',
+    'amount' => 'Amount',
+    'type' => 'Type',
+    'status' => 'Status',
 ];

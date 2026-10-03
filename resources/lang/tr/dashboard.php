@@ -33,4 +33,13 @@ return [
     'products' => 'Ürün',
     'profit' => 'Kâr / Zarar',
     'upcoming_payments' => 'Yaklaşan Ödemeler',
+    'monthly_flow' => 'Aylık Hareketler',
+    'monthly_sales' => 'Aylık Satış',
+    'monthly_purchases' => 'Aylık Alış',
+    'collections' => 'Tahsilat',
+    'payments' => 'Ödeme',
+    'recent_collections' => 'Son Tahsilatlar / Ödemeler',
+    'amount' => 'Tutar',
+    'type' => 'Tür',
+    'status' => 'Durum',
 ];

@@ -35,7 +35,7 @@ final class InvoiceService
         $v->validateOrFail($data, [
             'company_id'         => 'required',
             'current_account_id' => 'required',
-            'type'               => 'required|in:sales,purchase',
+            'type'               => 'required|in:sales,purchase,sales_return,purchase_return',
             'date'               => 'required|date',
             'due_date'           => 'nullable|date',
         ]);
@@ -165,12 +165,15 @@ final class InvoiceService
             DB::insertMany('invoice_items', $rows);
 
             // 3. Current account movement (net of withholding — the amount the
-            //    counterparty actually owes / is owed).
-            $movementType = $type === 'sales' ? 'debt' : 'credit';
+            //    counterparty actually owes / is owed). Returns reverse the sign.
+            $movementType = match ($type) {
+                'sales', 'purchase_return' => 'debt',
+                'purchase', 'sales_return' => 'credit',
+            };
             $netPayable = round($total - $totalWithholding, 2);
             $this->recordAccountMovement($tenantId, $companyId, (int) $account['id'], $movementType, $date, $netPayable, $data['notes'] ?? null, 'invoice', (string) $invoiceId);
 
-            // 4. Stock movement (sales reduce stock; purchases increase it)
+            // 4. Stock movement. Sales/purchase returns reverse the flow.
             if ($warehouse) {
                 foreach ($preparedLines as $l) {
                     if (empty($l['product_id'])) {
@@ -180,10 +183,11 @@ final class InvoiceService
                     if (!$prod || $prod['type'] === 'service') {
                         continue;
                     }
-                    $qty = $type === 'sales' ? -abs($l['quantity']) : abs($l['quantity']);
+                    $qty = in_array($type, ['sales', 'purchase_return'], true) ? -abs($l['quantity']) : abs($l['quantity']);
+                    $movType = in_array($type, ['sales', 'purchase'], true) ? ($type === 'sales' ? 'sale' : 'purchase') : 'return';
                     InventoryService::recordMovement(
                         $tenantId, $companyId, (int) $warehouse['id'], (int) $prod['id'],
-                        $type === 'sales' ? 'sale' : 'purchase',
+                        $movType,
                         $date, $qty, $l['unit_price'],
                         __('invoice.stock_' . $type, ['no' => $number]),
                         'invoice', (string) $invoiceId
@@ -233,20 +237,38 @@ final class InvoiceService
         $netVat = round($tax - $withholding, 2);
         $netPayable = round($net + $netVat, 2);
 
-        if ($type === 'sales') {
-            // Debit 120 Alıcılar (net), credit 600 Satışlar + 391 net KDV
-            $lines[] = ['account_code' => '120', 'debit' => $netPayable, 'credit' => 0];
-            $lines[] = ['account_code' => '600', 'debit' => 0, 'credit' => $net];
-            if ($netVat > 0) {
-                $lines[] = ['account_code' => '391', 'debit' => 0, 'credit' => $netVat];
+        if (in_array($type, ['sales', 'sales_return'], true)) {
+            if ($type === 'sales') {
+                // Sales: DR 120 (net), CR 600 + 391 (net VAT)
+                $lines[] = ['account_code' => '120', 'debit' => $netPayable, 'credit' => 0];
+                $lines[] = ['account_code' => '600', 'debit' => 0, 'credit' => $net];
+                if ($netVat > 0) {
+                    $lines[] = ['account_code' => '391', 'debit' => 0, 'credit' => $netVat];
+                }
+            } else {
+                // Sales return (credit note): reverse — CR 120, DR 600/610 + 391
+                $lines[] = ['account_code' => '120', 'debit' => 0, 'credit' => $netPayable];
+                $lines[] = ['account_code' => '600', 'debit' => $net, 'credit' => 0];
+                if ($netVat > 0) {
+                    $lines[] = ['account_code' => '391', 'debit' => $netVat, 'credit' => 0];
+                }
             }
         } else {
-            // Purchase: debit 620 (inventory) + 191 net KDV, credit 320 Satıcılar (net)
-            $lines[] = ['account_code' => '620', 'debit' => $net, 'credit' => 0];
-            if ($netVat > 0) {
-                $lines[] = ['account_code' => '191', 'debit' => $netVat, 'credit' => 0];
+            if ($type === 'purchase') {
+                // Purchase: DR 620 + 191 (net VAT), CR 320 (net)
+                $lines[] = ['account_code' => '620', 'debit' => $net, 'credit' => 0];
+                if ($netVat > 0) {
+                    $lines[] = ['account_code' => '191', 'debit' => $netVat, 'credit' => 0];
+                }
+                $lines[] = ['account_code' => '320', 'debit' => 0, 'credit' => $netPayable];
+            } else {
+                // Purchase return (debit note): reverse — DR 320, CR 620 + 191
+                $lines[] = ['account_code' => '320', 'debit' => $netPayable, 'credit' => 0];
+                $lines[] = ['account_code' => '620', 'debit' => 0, 'credit' => $net];
+                if ($netVat > 0) {
+                    $lines[] = ['account_code' => '191', 'debit' => 0, 'credit' => $netVat];
+                }
             }
-            $lines[] = ['account_code' => '320', 'debit' => 0, 'credit' => $netPayable];
         }
 
         AccountingService::postEntry(
@@ -269,7 +291,12 @@ final class InvoiceService
 
     private function nextInvoiceNumber(int $companyId, string $type): string
     {
-        $prefix = $type === 'sales' ? 'F-S' : 'F-A'; // satış / alış
+        $prefix = match ($type) {
+            'sales' => 'F-S',
+            'purchase' => 'F-A',
+            'sales_return' => 'F-IS',
+            'purchase_return' => 'F-IA',
+        };
         $seq = ((int) DB::scalar(
             'SELECT COUNT(*)+1 FROM invoices WHERE company_id = :c AND type = :t AND deleted_at IS NULL',
             ['c' => $companyId, 't' => $type]

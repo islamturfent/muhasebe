@@ -48,6 +48,7 @@ return [
     'yes' => 'Yes',
     'no' => 'No',
     'close' => 'Close',
+    'tax_number' => 'Tax No',
     'records' => 'records',
     'debit' => 'Debit',
     'credit' => 'Credit',

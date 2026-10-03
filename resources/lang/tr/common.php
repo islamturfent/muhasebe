@@ -48,6 +48,7 @@ return [
     'yes' => 'Evet',
     'no' => 'Hayır',
     'close' => 'Kapat',
+    'tax_number' => 'Vergi No',
     'records' => 'kayıt',
     'debit' => 'Borç',
     'credit' => 'Alacak',

@@ -184,6 +184,34 @@ final class InvoiceController extends Controller
         ]);
     }
 
+    /** Standalone, print/PDF-friendly invoice (no app chrome). */
+    public function print(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('invoice.read');
+        $invoice = DB::first(
+            'SELECT i.*, c.name AS company_name, c.trade_name, c.tax_number, c.tax_office, c.address,
+                    c.email AS company_email, c.phone AS company_phone,
+                    ca.name AS account_name, ca.address AS account_address, ca.tax_number AS account_tax
+               FROM invoices i
+               JOIN companies c ON c.id = i.company_id
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.id = :id AND i.tenant_id = :t AND i.deleted_at IS NULL',
+            ['id' => $id, 't' => Auth::tenantId()]
+        );
+        if (!$invoice) {
+            return Response::redirect('/app/invoices');
+        }
+        $items = DB::select(
+            'SELECT ii.*, p.name AS product_name FROM invoice_items ii
+              LEFT JOIN products p ON p.id = ii.product_id
+             WHERE ii.invoice_id = :id ORDER BY ii.id',
+            ['id' => $id]
+        );
+        // No layout → the view is a self-contained HTML document.
+        return $this->view('app.invoices.print', ['invoice' => $invoice, 'items' => $items]);
+    }
+
     public function sendEfatura(Request $request, $id): Response
     {
         $id = (int) $id;
