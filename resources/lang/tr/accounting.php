@@ -68,4 +68,5 @@ return [
     'account_is_header' => 'Grup Başlığı',
     'opening_balance' => 'Açılış Bakiyesi',
     'is_header_help' => 'Bu hesap yalnızca gruplama başlığıdır ve tek başına hareket almaz.',
+    'all_accounts' => 'Tüm Hesaplar',
 ];

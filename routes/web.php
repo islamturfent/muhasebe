@@ -97,6 +97,8 @@ return function (Router $router): void {
         $g->get('/app/accounting/chart/{id}/edit', [\Muh\Controllers\AccountingController::class, 'editChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/chart/{id}', [\Muh\Controllers\AccountingController::class, 'updateChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/chart/{id}/delete', [\Muh\Controllers\AccountingController::class, 'destroyChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/accounting/ledger', [\Muh\Controllers\AccountingController::class, 'ledger'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/accounting/ledger/export', [\Muh\Controllers\AccountingController::class, 'ledgerExport'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/periods/close', [\Muh\Controllers\PeriodController::class, 'close'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)

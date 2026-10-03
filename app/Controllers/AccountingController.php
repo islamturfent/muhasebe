@@ -167,6 +167,77 @@ final class AccountingController extends Controller
         return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
     }
 
+    // ---- Büyük Defter (General Ledger) ----
+
+    public function ledger(Request $request): Response
+    {
+        Auth::requireCan('accounting.read');
+        [$companies, $companyId, $periods, $periodId] = $this->resolveContext($request);
+        $accountId = (int) ($request->query('account_id') ?? 0);
+        $accountOptions = $companyId ? DB::select(
+            'SELECT id, code, name FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p ORDER BY code',
+            ['c' => $companyId, 'p' => $periodId]
+        ) : [];
+        $lines = $companyId ? AccountingService::ledger($companyId, $periodId, $accountId ?: null) : [];
+
+        return $this->view('app.accounting.ledger', [
+            'layout' => 'layouts.app',
+            'companies' => $companies, 'companyId' => $companyId,
+            'periods' => $periods, 'periodId' => $periodId,
+            'accountOptions' => $accountOptions, 'accountId' => $accountId,
+            'lines' => $lines,
+        ]);
+    }
+
+    public function ledgerExport(Request $request): Response
+    {
+        Auth::requireCan('report.export');
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ledgerCtx($request);
+        $accountId = (int) ($request->query('account_id') ?? 0);
+        $lines = $companyId ? AccountingService::ledger($companyId, $periodId, $accountId ?: null) : [];
+
+        $headers = [
+            __('accounting.account_code'), __('common.name'), __('accounting.number'), __('accounting.date'),
+            __('accounting.description'), __('common.debit'), __('common.credit'), __('accounting.balance'),
+        ];
+        $running = [];
+        $out = [];
+        foreach ($lines as $ln) {
+            $k = $ln['account_code'];
+            if (!isset($running[$k])) {
+                $running[$k] = (float) $ln['opening_debit'] - (float) $ln['opening_credit'];
+            }
+            $running[$k] += (float) $ln['debit'] - (float) $ln['credit'];
+            $out[] = [
+                $ln['account_code'], $ln['account_name'], $ln['number'], format_date($ln['date']),
+                $ln['description'] ?? '',
+                number_format((float) $ln['debit'], 2, ',', '.'),
+                number_format((float) $ln['credit'], 2, ',', '.'),
+                number_format($running[$k], 2, ',', '.'),
+            ];
+        }
+        $safe = str_slug('buyuk-defter');
+        switch ($format) {
+            case 'excel':
+                return \Muh\Services\ReportExportService::excel(__('accounting.ledger'), $headers, $out, $safe . '.xls');
+            case 'pdf':
+                return \Muh\Services\ReportExportService::pdf(__('accounting.ledger'), 'C:' . $companyId . ' P:' . $periodId, $headers, $out, $safe . '.pdf');
+            default:
+                return \Muh\Services\ReportExportService::csv($headers, $out, $safe . '.csv');
+        }
+    }
+
+    private function ledgerCtx(Request $request): array
+    {
+        $tenantId = Auth::tenantId();
+        $companies = DB::select('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => $tenantId]);
+        $companyId = (int) ($request->query('company_id') ?? ($companies[0]['id'] ?? 0));
+        $periods = $companyId ? DB::select('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC', ['c' => $companyId]) : [];
+        $periodId = (int) ($request->query('period_id') ?? ($periods[0]['id'] ?? 0));
+        return [$companyId, $periodId];
+    }
+
     // ---- Hesap Planı (Chart of Accounts) CRUD ----
 
     public function chart(Request $request): Response

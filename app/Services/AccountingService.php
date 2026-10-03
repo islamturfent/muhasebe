@@ -206,6 +206,32 @@ final class AccountingService
         );
     }
 
+    /**
+     * General ledger (büyük defter): per-account movement detail with opening balance.
+     * Optionally filtered to a single account.
+     */
+    public static function ledger(int $companyId, int $periodId, ?int $accountId = null): array
+    {
+        $params = ['c' => $companyId, 'p' => $periodId];
+        $accFilter = '';
+        if ($accountId) {
+            $accFilter = ' AND el.account_id = :a';
+            $params['a'] = $accountId;
+        }
+        return DB::select(
+            "SELECT a.id AS account_id, a.code AS account_code, a.name AS account_name,
+                    a.opening_debit, a.opening_credit,
+                    el.debit, el.credit,
+                    e.number, e.date, e.description, e.voucher_type
+               FROM accounting_entry_lines el
+               JOIN accounting_entries e ON e.id = el.entry_id
+               JOIN accounting_accounts a ON a.id = el.account_id
+              WHERE e.company_id = :c AND e.fiscal_period_id = :p AND e.status = 'posted'" . $accFilter . "
+              ORDER BY a.code ASC, e.date ASC, e.id ASC, el.id ASC",
+            $params
+        );
+    }
+
     /** Balance sheet (bilanço): asset/liability/equity account balances. */
     public static function balanceSheet(int $companyId, int $periodId): array
     {

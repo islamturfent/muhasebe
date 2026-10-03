@@ -68,4 +68,5 @@ return [
     'account_is_header' => 'Group Header',
     'opening_balance' => 'Opening Balance',
     'is_header_help' => 'This account is only a grouping header and does not take movements on its own.',
+    'all_accounts' => 'All Accounts',
 ];
