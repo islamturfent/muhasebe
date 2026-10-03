@@ -26,6 +26,9 @@ $days = $due ? (int) floor(($due - time()) / 86400) : null;
             <div class="text-2xl font-bold text-slate-900"><?= e(money($record['amount'])) ?></div>
         </div>
     </div>
+    <?php if (!empty($record['posted_at'])): ?>
+    <div class="mb-4 px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm"><?= e(__('check.fin_posted')) ?> · <?= e(format_date(substr((string) $record['posted_at'], 0, 10))) ?></div>
+    <?php endif; ?>
 
     <div class="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="rounded-2xl bg-white border border-slate-200 p-5">

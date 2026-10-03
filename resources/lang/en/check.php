@@ -42,4 +42,6 @@ return [
     'ov_overdue' => 'Overdue',
     'ov_due30' => 'Within 30 Days',
     'ov_records' => 'records',
+    'fin_post_description' => 'Check/Note collection (:no)',
+    'fin_posted' => 'Collection posted to accounting',
 ];

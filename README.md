@@ -69,7 +69,11 @@ Automated due/unpaid invoice **reminder e-mails** can be run on a schedule:
 ```
 # Every morning at 08:00
 0 8 * * *  cd /path/to/muh && php bin/muh reminders >> storage/logs/cron.log 2>&1
+
+# Every morning also generate automatic notifications (due invoices, critical stock, ...)
+5 8 * * *  cd /path/to/muh && php bin/muh notifications >> storage/logs/cron.log 2>&1
 ```
+Run `php bin/muh notifications` manually any time; it is idempotent per day.
 With SMTP configured (`MAIL_ENABLED=true`, `MAIL_HOST=...`) it sends real e-mails;
 otherwise (default) it writes to `storage/logs/mail.log`.
 

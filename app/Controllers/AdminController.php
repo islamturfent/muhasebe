@@ -35,10 +35,24 @@ final class AdminController extends Controller
 
         $recentTenants = DB::select('SELECT * FROM tenants ORDER BY id DESC LIMIT 8');
 
+        // Platform subscription / plan distribution.
+        $subStats = [
+            'total' => (int) DB::scalar('SELECT COUNT(*) FROM subscriptions'),
+            'byStatus' => [],
+            'byPlan' => [],
+        ];
+        foreach (DB::select('SELECT status, COUNT(*) AS c FROM subscriptions GROUP BY status') as $r) {
+            $subStats['byStatus'][$r['status']] = (int) $r['c'];
+        }
+        foreach (DB::select('SELECT p.name, COUNT(*) AS c FROM subscriptions s JOIN plans p ON p.id = s.plan_id GROUP BY p.name') as $r) {
+            $subStats['byPlan'][$r['name']] = (int) $r['c'];
+        }
+
         return $this->view('admin.index', [
             'layout' => 'layouts.admin',
             'stats' => $stats,
             'recentTenants' => $recentTenants,
+            'subStats' => $subStats,
         ]);
     }
 
@@ -405,6 +419,68 @@ final class AdminController extends Controller
         AuditLogService::record('admin.settings.save', 'admin', 'settings', null, null, ['maintenance' => $maintenance]);
         Session::flash('success', __('admin.settings_saved'));
         return Response::redirect('/admin/settings');
+    }
+
+    // ---- Sistem sağlığı & yedekleme yönetimi ----
+    public function backups(Request $request): Response
+    {
+        $dir = dirname(__DIR__, 2) . '/storage/backups';
+        $files = [];
+        if (is_dir($dir)) {
+            foreach (glob($dir . '/*.sql') ?: [] as $f) {
+                $files[] = [
+                    'name' => basename($f),
+                    'size' => filesize($f),
+                    'date' => date('Y-m-d H:i:s', filemtime($f)),
+                ];
+            }
+        }
+        usort($files, fn ($a, $b) => strcmp($b['name'], $a['name']));
+
+        // System health
+        $health = [
+            'driver' => DB::driver(),
+            'tables' => count(DB::select('SHOW TABLES')),
+            'db_size' => 0,
+            'version' => '',
+        ];
+        if ($health['driver'] === 'mysql') {
+            $row = DB::first(
+                "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()"
+            );
+            $health['db_size'] = (float) ($row['mb'] ?? 0);
+            $ver = DB::first("SELECT VERSION() AS v");
+            $health['version'] = $ver['v'] ?? '';
+        }
+
+        return $this->view('admin.backups', [
+            'layout' => 'layouts.admin',
+            'files' => $files,
+            'backupDir' => $dir,
+            'health' => $health,
+        ]);
+    }
+
+    public function runBackup(Request $request): Response
+    {
+        try {
+            $file = (new \Muh\Database\Backup())->run();
+            Session::flash('success', __('admin.backup_created') . ' — ' . basename($file));
+        } catch (\Throwable $e) {
+            Session::flash('error', __('admin.backup_failed') . ': ' . $e->getMessage());
+        }
+        return Response::redirect('/admin/backups');
+    }
+
+    public function downloadBackup(Request $request, string $file): Response
+    {
+        $dir = realpath(dirname(__DIR__, 2) . '/storage/backups');
+        $name = basename($file);
+        $path = realpath($dir . '/' . $name);
+        if ($dir === false || $path === false || strpos($path, $dir) !== 0 || !is_file($path) || !preg_match('/^muh-\d{8}-\d{6}\.sql$/', $name)) {
+            return Response::redirect('/admin/backups');
+        }
+        return Response::download($path, $name, 'application/sql');
     }
 
     private function platformSetting(string $key, string $value): void

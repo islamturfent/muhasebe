@@ -43,13 +43,13 @@ final class NotificationService
         );
     }
 
-    public function create(string $type, string $title, string $body = '', string $level = 'info', ?int $userId = null, ?int $companyId = null, ?string $actionUrl = null, array $payload = []): int
+    public function create(string $type, string $title, string $body = '', string $level = 'info', ?int $userId = null, ?int $companyId = null, ?string $actionUrl = null, array $payload = [], ?int $tenantId = null): int
     {
         if (!in_array($type, self::TYPES, true)) {
             $type = 'system';
         }
         return (int) DB::insert('notifications', [
-            'tenant_id' => Auth::tenantId(),
+            'tenant_id' => $tenantId ?? Auth::tenantId(),
             'user_id' => $userId,
             'company_id' => $companyId,
             'type' => $type,
@@ -82,9 +82,9 @@ final class NotificationService
     /**
      * Scan for noteworthy events and create notifications (idempotent per day).
      */
-    public function generate(): int
+    public function generate(?int $tenantId = null): int
     {
-        $tenantId = Auth::tenantId();
+        $tenantId = $tenantId ?? Auth::tenantId();
         $created = 0;
         $todayKey = date('Y-m-d');
 
@@ -110,7 +110,8 @@ final class NotificationService
                 __('notify.due_body', ['company' => $inv['company_name'], 'amount' => money($inv['total'] - $inv['paid']), 'date' => format_date($inv['due_date'])]),
                 $overdue ? 'danger' : 'warning',
                 null, null, '/app/invoices/' . $inv['id'],
-                ['key' => $key]
+                ['key' => $key],
+                $tenantId
             );
             $created++;
         }
@@ -128,7 +129,7 @@ final class NotificationService
             if (DB::scalar('SELECT COUNT(*) FROM notifications WHERE tenant_id = :t AND payload = :p', ['t' => $tenantId, 'p' => json_encode(['key' => $key])]) > 0) {
                 continue;
             }
-            $this->create('critical_stock', __('notify.stock_title', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]), 'danger', null, null, '/app/inventory/' . $p['id'], ['key' => $key]);
+            $this->create('critical_stock', __('notify.stock_title', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]), 'danger', null, null, '/app/inventory/' . $p['id'], ['key' => $key], $tenantId);
             $created++;
         }
 

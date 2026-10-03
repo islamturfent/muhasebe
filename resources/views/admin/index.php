@@ -22,6 +22,21 @@
         <?php endforeach; ?>
     </div>
 
+    <?php if (!empty($subStats)): ?>
+    <?php $statuses = ['active','trial','past_due','cancelled','expired']; ?>
+    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <div class="font-semibold text-slate-800 mb-3"><?= e(__('admin.sub_platform')) ?> <span class="text-slate-400 font-normal text-sm">(<?= e((int) ($subStats['total'] ?? 0)) ?>)</span></div>
+        <div class="flex flex-wrap gap-3 text-sm">
+            <?php foreach ($statuses as $st): if (empty($subStats['byStatus'][$st])) continue; ?>
+            <span class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600"><?= e(__('admin.status_' . $st)) ?>: <b><?= e((int) $subStats['byStatus'][$st]) ?></b></span>
+            <?php endforeach; ?>
+            <?php foreach (($subStats['byPlan'] ?? []) as $name => $c): ?>
+            <span class="px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-200 text-brand-700"><?= e($name) ?>: <b><?= e((int) $c) ?></b></span>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('admin.recent_tenants')) ?></div>
         <div class="divide-y divide-slate-100">

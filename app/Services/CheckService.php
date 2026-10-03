@@ -155,9 +155,91 @@ final class CheckService
             throw new ValidationException(['status' => __('validation.in')]);
         }
         $table = $kind === 'check' ? 'checks' : 'promissory_notes';
-        $where = 'id = :id AND tenant_id = :t';
-        DB::update($table, ['status' => $status], $where, ['id' => $id, 't' => $tenantId]);
-        AuditLogService::record($kind . '.status', 'check', $table, (string)$id, null, ['status' => $status], null, $tenantId);
+        $record = DB::first(
+            'SELECT * FROM ' . DB::quoteIdentifier($table) . ' WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL',
+            ['id' => $id, 't' => $tenantId]
+        );
+        if (!$record) {
+            throw new ValidationException(['id' => __('validation.in')]);
+        }
+
+        DB::update($table, ['status' => $status], 'id = :id AND tenant_id = :t', ['id' => $id, 't' => $tenantId]);
+
+        // Financial effect: when a check/note is collected, post the cari + kasa
+        // + journal entry once (guarded by posted_at).
+        $alreadyPosted = !empty($record['posted_at']);
+        if ($status === 'collected' && !$alreadyPosted) {
+            DB::transaction(function () use ($tenantId, $record, $kind, $id, $table): void {
+                $this->postCollection($tenantId, $record, $kind, $id, $table);
+            });
+        }
+
+        AuditLogService::record($kind . '.status', 'check', $table, (string)$id, null, ['status' => $status], (int) ($record['company_id'] ?? 0), $tenantId);
         return true;
+    }
+
+    /**
+     * Post the financial effect of a collected check/note: current-account
+     * movement, a cash (kasa) transaction and a balanced journal entry.
+     * Cash is routed to the company's default cash account (account code 100
+     * in the journal); customer/supplier cleared via 120/320 respectively.
+     */
+    private function postCollection(int $tenantId, array $record, string $kind, int $id, string $table): void
+    {
+        $companyId = (int) $record['company_id'];
+        $amount = (float) $record['amount'];
+        if ($amount <= 0) {
+            return;
+        }
+        $date = $record['due_date'] ?: date('Y-m-d');
+        $no = $record[$kind === 'check' ? 'check_no' : 'note_no'] ?: ('#' . $id);
+        $refType = $kind === 'check' ? 'check' : 'note';
+        $refId = (string) $id;
+        $desc = __('check.fin_post_description', ['no' => $no]);
+        $currentAccountId = (int) ($record['current_account_id'] ?? 0);
+
+        $cash = DB::first(
+            'SELECT id FROM cash_accounts WHERE company_id = :c AND tenant_id = :t AND deleted_at IS NULL ORDER BY id ASC LIMIT 1',
+            ['c' => $companyId, 't' => $tenantId]
+        );
+
+        $outgoing = $record['direction'] === 'outgoing';
+
+        if ($outgoing) {
+            // We pay the supplier: clear payable, cash decreases.
+            if ($currentAccountId) {
+                \Muh\Services\CurrentAccountService::addMovement($tenantId, $companyId, $currentAccountId, 'payment', $date, $amount, $desc, $refType, $refId);
+            }
+            if ($cash) {
+                \Muh\Services\CashService::addTransaction($tenantId, $companyId, (int) $cash['id'], 'payment', $date, $amount, $desc);
+            }
+            $lines = [
+                ['account_code' => '320', 'debit' => $amount, 'credit' => 0],
+                ['account_code' => '100', 'debit' => 0, 'credit' => $amount],
+            ];
+        } else {
+            // Customer pays us: clear receivable, cash increases.
+            if ($currentAccountId) {
+                \Muh\Services\CurrentAccountService::addMovement($tenantId, $companyId, $currentAccountId, 'collection', $date, $amount, $desc, $refType, $refId);
+            }
+            if ($cash) {
+                \Muh\Services\CashService::addTransaction($tenantId, $companyId, (int) $cash['id'], 'collection', $date, $amount, $desc);
+            }
+            $lines = [
+                ['account_code' => '100', 'debit' => $amount, 'credit' => 0],
+                ['account_code' => '120', 'debit' => 0, 'credit' => $amount],
+            ];
+        }
+
+        $periodId = (int) DB::scalar(
+            'SELECT id FROM fiscal_periods WHERE company_id = :c AND :d BETWEEN start_date AND end_date ORDER BY start_date DESC LIMIT 1',
+            ['c' => $companyId, 'd' => $date]
+        ) ?: (int) DB::scalar('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC LIMIT 1', ['c' => $companyId]);
+
+        if ($periodId) {
+            \Muh\Services\AccountingService::postEntry($tenantId, $companyId, $periodId, 'journal', $date, $desc, $lines, null, $refType, $refId);
+        }
+
+        DB::update($table, ['posted_at' => now()], 'id = :id', ['id' => $id]);
     }
 }

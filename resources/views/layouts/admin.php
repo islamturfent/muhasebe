@@ -31,6 +31,7 @@ $menu = [
     '/admin/subscriptions' => __('admin.subscriptions'),
     '/admin/plans' => __('admin.plans'),
     '/admin/audit' => __('admin.audit'),
+    '/admin/backups' => __('admin.backups'),
     '/admin/admins' => __('admin.admins'),
     '/admin/settings' => __('admin.platform_settings'),
 ];

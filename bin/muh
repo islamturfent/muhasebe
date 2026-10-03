@@ -111,6 +111,18 @@ switch ($command) {
         echo "Reminders sent: {$totalSent} e-mails across {$totalInvoices} due invoice(s).\n";
         break;
 
+    case 'notifications':
+    case 'notify:run':
+        // Generate automatic notifications (due invoices, critical stock...) for every active tenant.
+        $tenants = DB::select("SELECT id FROM tenants WHERE status = 'active'");
+        $svc = new \Muh\Services\NotificationService();
+        $total = 0;
+        foreach ($tenants as $tenant) {
+            $total += $svc->generate((int) $tenant['id']);
+        }
+        echo "Notifications generated: {$total}\n";
+        break;
+
     case 'security':
         exit((new \Muh\Core\SecurityChecker())->run());
 

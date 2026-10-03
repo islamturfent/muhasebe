@@ -42,4 +42,6 @@ return [
     'ov_overdue' => 'Vadesi Geçen',
     'ov_due30' => '30 Gün İçinde',
     'ov_records' => 'kayıt',
+    'fin_post_description' => 'Çek/Senet tahsilatı (:no)',
+    'fin_posted' => 'Tahsilat muhasebeleştirildi',
 ];
