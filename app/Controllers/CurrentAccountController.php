@@ -128,12 +128,23 @@ final class CurrentAccountController extends Controller
         // Statement (ekstre) summary for the selected range (Item 2).
         $statement = CurrentAccountService::statement($id, $from, $to);
 
+        // Cash & bank accounts for the collection / payment (tahsil / tediye) form.
+        $tenantId = (int) Auth::tenantId();
+        $cashAccounts = DB::select('SELECT id, name, code FROM cash_accounts WHERE company_id = :c AND tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['c' => (int) $account['company_id'], 't' => $tenantId]);
+        $bankAccounts = DB::select('SELECT id, bank_name, account_name FROM bank_accounts WHERE company_id = :c AND tenant_id = :t AND deleted_at IS NULL ORDER BY bank_name', ['c' => (int) $account['company_id'], 't' => $tenantId]);
+        $unpaidInvoices = $account['type'] === 'customer'
+            ? DB::select("SELECT id, number, total, paid FROM invoices WHERE company_id = :c AND current_account_id = :a AND type = 'sales' AND status = 'posted' AND paid < total AND deleted_at IS NULL ORDER BY due_date LIMIT 20", ['c' => (int) $account['company_id'], 'a' => $id])
+            : [];
+
         return $this->view('app.current-accounts.show', [
             'statement' => $statement,
             'layout' => 'layouts.app',
             'account' => $account,
             'company' => $company,
             'transactions' => $trx['items'],
+            'cashAccounts' => $cashAccounts,
+            'bankAccounts' => $bankAccounts,
+            'unpaidInvoices' => $unpaidInvoices,
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],
@@ -141,6 +152,42 @@ final class CurrentAccountController extends Controller
             'to' => $to,
             'type' => $type,
         ]);
+    }
+
+    /** Tahsilat / Ödeme kaydı (manual collection / payment). */
+    public function transaction(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('current_account.update');
+        $tenantId = (int) Auth::tenantId();
+        $service = new CurrentAccountService();
+        $account = $service->findForTenant($tenantId, $id);
+        if (!$account) {
+            return Response::redirect('/app/current-accounts');
+        }
+        $type = $request->input('type');
+        $targetType = $request->input('target_type') ?: 'cash';
+        $targetId = (int) ($request->input('target_id') ?? 0);
+        $amount = (float) ($request->input('amount') ?? 0);
+        $date = $request->input('date') ?: date('Y-m-d');
+        $invoiceId = (int) ($request->input('invoice_id') ?? 0);
+
+        try {
+            if ($amount <= 0) {
+                throw new \Muh\Core\ValidationException(['amount' => __('validation.min')]);
+            }
+            CurrentAccountService::postCollectionPayment(
+                $tenantId, (int) $account['company_id'], $id,
+                $type === 'payment' ? 'payment' : 'collection',
+                $date, $amount, $targetType, $targetId,
+                $request->input('description') ?: null,
+                $invoiceId ?: null
+            );
+            Session::flash('success', $type === 'payment' ? __('current_account.payment_done') : __('current_account.collection_done'));
+        } catch (\Muh\Core\ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+        }
+        return Response::redirect('/app/current-accounts/' . $id);
     }
 
     public function edit(Request $request, $id): Response

@@ -65,6 +65,75 @@ $running = $balance; // walk transactions newest-first is misleading; compute op
 </div>
 <?php endif; ?>
 
+<?php if (!empty($cashAccounts) || !empty($bankAccounts)): ?>
+<!-- Tahsilat / Ödeme -->
+<div class="mb-6 bg-white border border-slate-200 rounded-2xl p-5">
+    <h3 class="font-semibold text-slate-800 mb-4"><?= e(__('current_account.collection_payment')) ?></h3>
+    <form method="post" action="<?= e(url('/app/current-accounts/' . $account['id'] . '/transaction')) ?>" class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+        <?= csrf_field() ?>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('current_account.type')) ?></label>
+            <select name="type" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                <option value="collection"><?= e(__('current_account.new_collection')) ?></option>
+                <option value="payment"><?= e(__('current_account.new_payment')) ?></option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('current_account.target')) ?></label>
+            <select name="target_type" onchange="toggleTarget(this.value)" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                <option value="cash"><?= e(__('current_account.target_cash')) ?></option>
+                <?php if (!empty($bankAccounts)): ?><option value="bank"><?= e(__('current_account.target_bank')) ?></option><?php endif; ?>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('current_account.target')) ?></label>
+            <select name="target_id" id="targetCash" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                <?php if ((int) $account['company_id']): ?>
+                <?php foreach ($cashAccounts as $ca): ?><option value="<?= e($ca['id']) ?>"><?= e($ca['name']) ?> (<?= e($ca['code']) ?>)</option><?php endforeach; ?>
+                <?php endif; ?>
+            </select>
+            <?php if (!empty($bankAccounts)): ?>
+            <select name="target_id" id="targetBank" class="w-full px-3 py-2 rounded-lg border border-slate-200 hidden" disabled>
+                <?php foreach ($bankAccounts as $ba): ?><option value="<?= e($ba['id']) ?>"><?= e($ba['bank_name']) ?> — <?= e($ba['account_name'] ?? '') ?></option><?php endforeach; ?>
+            </select>
+            <?php endif; ?>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('current_account.amount')) ?></label>
+            <input type="number" name="amount" step="0.01" min="0" required class="w-full px-3 py-2 rounded-lg border border-slate-200">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('current_account.date')) ?></label>
+            <input type="date" name="date" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('common.description')) ?></label>
+            <input name="description" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+        </div>
+        <?php if (!empty($unpaidInvoices)): ?>
+        <div class="col-span-2 md:col-span-1">
+            <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('current_account.apply_to_invoice')) ?></label>
+            <select name="invoice_id" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                <option value="">—</option>
+                <?php foreach ($unpaidInvoices as $vi): ?><option value="<?= e($vi['id']) ?>"><?= e($vi['number']) ?> · <?= e(money((float)$vi['total'] - (float)$vi['paid'])) ?></option><?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+        <div class="col-span-2 md:col-span-1">
+            <button class="w-full px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('common.save')) ?></button>
+        </div>
+    </form>
+</div>
+<script>
+function toggleTarget(v){
+  document.getElementById('targetCash').classList.toggle('hidden', v!=='cash');
+  document.getElementById('targetCash').disabled = v!=='cash';
+  var b=document.getElementById('targetBank');
+  if(b){ b.classList.toggle('hidden', v!=='bank'); b.disabled = v!=='bank'; }
+}
+</script>
+<?php endif; ?>
+
 <!-- Details + transactions -->
 <div class="grid lg:grid-cols-3 gap-6">
     <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-5 space-y-3 h-fit">

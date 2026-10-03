@@ -271,6 +271,80 @@ final class CurrentAccountService
         ];
     }
 
+    /**
+     * Post a manual collection (tahsil) or payment (tediye) on a current account
+     * atomically: cari movement + cash/bank transaction + balanced journal.
+     *
+     * @param string $type  'collection' (çek-alış → müşteriden tahsil) | 'payment' (ödeme)
+     * @param string $targetType 'cash'|'bank'
+     */
+    public static function postCollectionPayment(
+        int $tenantId,
+        int $companyId,
+        int $currentAccountId,
+        string $type,
+        string $date,
+        float $amount,
+        string $targetType,
+        int $targetId,
+        ?string $description = null,
+        ?int $invoiceId = null
+    ): int {
+        if (!in_array($type, ['collection', 'payment'], true)) {
+            throw new \Muh\Core\ValidationException(['type' => __('validation.in')]);
+        }
+        $description = $description ?: ($type === 'collection' ? __('current_account.pay_collection') : __('current_account.pay_payment'));
+
+        DB::transaction(function () use ($tenantId, $companyId, $currentAccountId, $type, $date, $amount, $targetType, $targetId, $description, $invoiceId): void {
+            // 1. Cari movement
+            $movId = self::addMovement($tenantId, $companyId, $currentAccountId, $type, $date, $amount, $description, 'manual', (string) $currentAccountId);
+
+            // 2. Cash / bank transaction
+            if ($targetType === 'bank') {
+                \Muh\Services\BankService::addTransaction(
+                    $tenantId, $companyId, $targetId,
+                    $type === 'collection' ? 'deposit' : 'withdrawal',
+                    $date, $amount, $description
+                );
+                $assetCode = '102';
+            } else {
+                \Muh\Services\CashService::addTransaction($tenantId, $companyId, $targetId, $type, $date, $amount, $description);
+                $assetCode = '100';
+            }
+
+            // 3. Balanced journal: collection → DR cash/bank, CR 120; payment → DR 320, CR cash/bank
+            $cariCode = $type === 'collection' ? '120' : '320';
+            $lines = $type === 'collection'
+                ? [['account_code' => $assetCode, 'debit' => $amount, 'credit' => 0], ['account_code' => $cariCode, 'debit' => 0, 'credit' => $amount]]
+                : [['account_code' => $cariCode, 'debit' => $amount, 'credit' => 0], ['account_code' => $assetCode, 'debit' => 0, 'credit' => $amount]];
+
+            $periodId = (int) DB::scalar(
+                'SELECT id FROM fiscal_periods WHERE company_id = :c AND :d BETWEEN start_date AND end_date ORDER BY start_date DESC LIMIT 1',
+                ['c' => $companyId, 'd' => $date]
+            ) ?: (int) DB::scalar('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC LIMIT 1', ['c' => $companyId]);
+
+            if ($periodId) {
+                \Muh\Services\AccountingService::postEntry($tenantId, $companyId, $periodId, 'journal', $date, $description, $lines, null, 'payment', (string) $movId);
+            }
+
+            // 4. Optionally mark an invoice as (partially) paid.
+            if ($invoiceId) {
+                $inv = DB::first('SELECT id, paid, total FROM invoices WHERE id = :id AND company_id = :c AND deleted_at IS NULL', ['id' => (int) $invoiceId, 'c' => $companyId]);
+                if ($inv) {
+                    $newPaid = round((float) $inv['paid'] + $amount, 2);
+                    if ($newPaid > (float) $inv['total']) {
+                        $newPaid = (float) $inv['total'];
+                    }
+                    DB::update('invoices', ['paid' => $newPaid], 'id = :id', ['id' => (int) $invoiceId]);
+                }
+            }
+
+            AuditLogService::record('current_account.payment', 'cari', 'current_accounts', (string) $currentAccountId, null, ['type' => $type, 'amount' => $amount, 'target' => $targetType . ':' . $targetId], $companyId, $tenantId);
+        });
+
+        return 1;
+    }
+
     public function transactions(int $currentAccountId, ?string $from = null, ?string $to = null, ?string $type = null): array
     {
         $sql = 'SELECT * FROM current_account_transactions WHERE current_account_id = :id';

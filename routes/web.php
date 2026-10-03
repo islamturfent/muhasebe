@@ -57,6 +57,7 @@ return function (Router $router): void {
         $g->post('/app/current-accounts/{id}', [\Muh\Controllers\CurrentAccountController::class, 'update'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/current-accounts/{id}/delete', [\Muh\Controllers\CurrentAccountController::class, 'destroy'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/current-accounts/{id}', [\Muh\Controllers\CurrentAccountController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/current-accounts/{id}/transaction', [\Muh\Controllers\CurrentAccountController::class, 'transaction'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/app/inventory', [\Muh\Controllers\ProductController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/create', [\Muh\Controllers\ProductController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);

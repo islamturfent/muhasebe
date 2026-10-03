@@ -25,6 +25,7 @@ final class InvoiceController extends Controller
         $tenantId = Auth::tenantId();
         $companyId = (int) ($request->query('company_id') ?? 0);
         $type = $request->query('type') ?: null;
+        $efatura = $request->query('efatura') ?: null;
         $from = $request->query('from') ?: null;
         $to = $request->query('to') ?: null;
 
@@ -38,9 +39,13 @@ final class InvoiceController extends Controller
             $sql .= ' AND i.company_id = :c';
             $params['c'] = $companyId;
         }
-        if ($type && in_array($type, ['sales', 'purchase'], true)) {
+        if ($type && in_array($type, ['sales', 'purchase', 'sales_return', 'purchase_return', 'proforma'], true)) {
             $sql .= ' AND i.type = :type';
             $params['type'] = $type;
+        }
+        if ($efatura && in_array($efatura, ['draft', 'sending', 'sent', 'accepted', 'rejected', 'error'], true)) {
+            $sql .= ' AND i.efatura_status = :ef';
+            $params['ef'] = $efatura;
         }
         if ($from) {
             $sql .= ' AND i.date >= :from';
@@ -61,6 +66,7 @@ final class InvoiceController extends Controller
             'companies' => $companies,
             'companyId' => $companyId,
             'type' => $type,
+            'efatura' => $efatura,
             'from' => $from,
             'to' => $to,
             'page' => $page['page'],
