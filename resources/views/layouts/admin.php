@@ -7,8 +7,16 @@ $locale = Translator::instance()->locale();
 $dark = Session::get('theme') === 'dark';
 $user = Auth::user();
 function adminNav(string $path, string $label): string {
-    $active = str_contains($_SERVER['REQUEST_URI'] ?? '/', $path) ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:bg-slate-100';
-    return '<a href="' . e(url($path)) . '" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ' . $active . '">' . e($label) . '</a>';
+    $current = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
+    $target = rtrim($path, '/');
+    if ($target === '/admin') {
+        // Dashboard yalnızca tam /admin adresinde aktif olur (alt sayfalarda değil).
+        $active = ($current === '/admin');
+    } else {
+        $active = ($current === $target) || str_starts_with($current, $target . '/');
+    }
+    $cls = $active ? 'text-brand-600 bg-brand-50' : 'text-slate-600 hover:bg-slate-100';
+    return '<a href="' . e(url($path)) . '" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ' . $cls . '">' . e($label) . '</a>';
 }
 $menu = [
     '/admin' => __('admin.dashboard'),
