@@ -31,6 +31,7 @@ return [
     'cari_ekstre' => 'Cari Ekstre',
     'ekstre_opening' => 'Açılış Bakiyesi',
     'ekstre_closing' => 'Kapanış Bakiyesi',
+    'ekstre_running' => 'Bakiye',
     'stock' => 'Stok Raporu',
     'stock_qty' => 'Stok Miktarı',
     'stock_value' => 'Stok Değeri',

@@ -66,6 +66,39 @@ $running = $balance; // walk transactions newest-first is misleading; compute op
         <div><div class="text-xs text-slate-400"><?= e(__('current_account.credit')) ?></div><div class="font-semibold text-emerald-600"><?= e(number_format($statement['credit'], 2, ',', '.')) ?></div></div>
         <div><div class="text-xs text-slate-400"><?= e(__('report.ekstre_closing')) ?></div><div class="font-semibold <?= $statement['closing'] < 0 ? 'text-red-600' : 'text-emerald-600' ?>"><?= e(number_format($statement['closing'], 2, ',', '.')) ?></div></div>
     </div>
+
+    <?php if (!empty($statement['rows'])): ?>
+    <div class="mt-4 overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full text-sm">
+            <thead class="text-left text-xs text-slate-400 uppercase bg-slate-50">
+                <tr>
+                    <th class="px-4 py-2"><?= e(__('current_account.date')) ?></th>
+                    <th class="px-4 py-2"><?= e(__('current_account.type')) ?></th>
+                    <th class="px-4 py-2"><?= e(__('common.description')) ?></th>
+                    <th class="px-4 py-2 text-right"><?= e(__('current_account.debit')) ?></th>
+                    <th class="px-4 py-2 text-right"><?= e(__('current_account.credit')) ?></th>
+                    <th class="px-4 py-2 text-right"><?= e(__('report.ekstre_running')) ?></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+                <tr class="bg-slate-50/60">
+                    <td class="px-4 py-2 text-xs text-slate-400 font-medium" colspan="5"><?= e(__('report.ekstre_opening')) ?></td>
+                    <td class="px-4 py-2 text-right text-slate-700 font-semibold"><?= e(number_format((float) $statement['opening'], 2, ',', '.')) ?></td>
+                </tr>
+                <?php foreach ($statement['rows'] as $row): $isDebit = (int)$row['sign'] > 0; ?>
+                <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-2 text-slate-500"><?= e(format_date($row['date'])) ?></td>
+                    <td class="px-4 py-2"><span class="text-xs px-2 py-0.5 rounded-full <?= $isDebit ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700' ?>"><?= e(__('current_account.type_' . $row['type'])) ?></span></td>
+                    <td class="px-4 py-2 text-slate-600"><?= e($row['description'] ?: '—') ?></td>
+                    <td class="px-4 py-2 text-right text-red-600"><?= $isDebit ? e(number_format((float)$row['amount'], 2, ',', '.')) : '' ?></td>
+                    <td class="px-4 py-2 text-right text-emerald-600"><?= !$isDebit ? e(number_format((float)$row['amount'], 2, ',', '.')) : '' ?></td>
+                    <td class="px-4 py-2 text-right font-medium <?= (float)$row['running'] < 0 ? 'text-emerald-700' : 'text-slate-800' ?>"><?= e(number_format((float)$row['running'], 2, ',', '.')) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 

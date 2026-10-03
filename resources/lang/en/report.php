@@ -31,6 +31,7 @@ return [
     'cari_ekstre' => 'Account Statement',
     'ekstre_opening' => 'Opening Balance',
     'ekstre_closing' => 'Closing Balance',
+    'ekstre_running' => 'Balance',
     'stock' => 'Stock Report',
     'stock_qty' => 'Stock Qty',
     'stock_value' => 'Stock Value',
