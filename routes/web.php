@@ -263,6 +263,8 @@ return function (Router $router): void {
         $g->post('/admin/plans/{id}/delete', [\Muh\Controllers\AdminController::class, 'planDelete']);
         $g->get('/admin/settings', [\Muh\Controllers\AdminController::class, 'settings']);
         $g->post('/admin/settings', [\Muh\Controllers\AdminController::class, 'saveSettings']);
+        $g->get('/admin/settings/session', [\Muh\Controllers\AdminController::class, 'sessionSettings']);
+        $g->post('/admin/settings/session', [\Muh\Controllers\AdminController::class, 'saveSessionSettings']);
         $g->get('/admin/backups', [\Muh\Controllers\AdminController::class, 'backups']);
         $g->post('/admin/backups/run', [\Muh\Controllers\AdminController::class, 'runBackup']);
         $g->get('/admin/backups/{file}/download', [\Muh\Controllers\AdminController::class, 'downloadBackup']);

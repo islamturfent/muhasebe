@@ -431,7 +431,7 @@ final class AdminController extends Controller
         return Response::redirect('/admin/plans');
     }
 
-    // ---- Platform settings (maintenance + announcement) ----
+    // ---- Ayarlar menüsü: Genel (maintenance + announcement) ----
     public function settings(Request $request): Response
     {
         $platform = function (string $key) {
@@ -440,13 +440,12 @@ final class AdminController extends Controller
         };
         $announcement = $platform('announcement') ?? '';
         $maintenance = ((string) $platform('maintenance') === '1');
-        $sessionLifetime = (int) ($platform('session_lifetime_minutes') ?? \Muh\Core\Config::get('app.session.lifetime', 480));
 
         return $this->view('admin.settings', [
             'layout' => 'layouts.admin',
+            'activeTab' => 'general',
             'announcement' => $announcement,
             'maintenance' => $maintenance,
-            'sessionLifetime' => $sessionLifetime,
         ]);
     }
 
@@ -454,16 +453,39 @@ final class AdminController extends Controller
     {
         $maintenance = (bool) $request->input('maintenance');
         $announcement = trim((string) $request->input('announcement'));
+        $this->platformSetting('maintenance', $maintenance ? '1' : '0');
+        $this->platformSetting('announcement', $announcement);
+        AuditLogService::record('admin.settings.save', 'admin', 'settings', null, null, ['maintenance' => $maintenance]);
+        Session::flash('success', __('admin.settings_saved'));
+        return Response::redirect('/admin/settings');
+    }
+
+    // ---- Ayarlar menüsü: Oturum & Güvenlik ----
+    public function sessionSettings(Request $request): Response
+    {
+        $platform = function (string $key) {
+            $r = DB::first("SELECT value FROM settings WHERE `group` = 'platform' AND `key` = :k", ['k' => $key]);
+            return $r ? $r['value'] : null;
+        };
+        $sessionLifetime = (int) ($platform('session_lifetime_minutes') ?? \Muh\Core\Config::get('app.session.lifetime', 480));
+
+        return $this->view('admin.settings_session', [
+            'layout' => 'layouts.admin',
+            'activeTab' => 'session',
+            'sessionLifetime' => $sessionLifetime,
+        ]);
+    }
+
+    public function saveSessionSettings(Request $request): Response
+    {
         $sessionLifetime = (int) $request->input('session_lifetime_minutes');
         if ($sessionLifetime < 5 || $sessionLifetime > 432000) {
             $sessionLifetime = 480;
         }
-        $this->platformSetting('maintenance', $maintenance ? '1' : '0');
-        $this->platformSetting('announcement', $announcement);
         $this->platformSetting('session_lifetime_minutes', (string) $sessionLifetime);
-        AuditLogService::record('admin.settings.save', 'admin', 'settings', null, null, ['maintenance' => $maintenance, 'session_lifetime_minutes' => $sessionLifetime]);
+        AuditLogService::record('admin.settings.session.save', 'admin', 'settings', null, null, ['session_lifetime_minutes' => $sessionLifetime]);
         Session::flash('success', __('admin.settings_saved'));
-        return Response::redirect('/admin/settings');
+        return Response::redirect('/admin/settings/session');
     }
 
     // ---- Sistem sağlığı & yedekleme yönetimi ----

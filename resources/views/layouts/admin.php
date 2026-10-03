@@ -33,7 +33,7 @@ $menu = [
     '/admin/audit' => __('admin.audit'),
     '/admin/backups' => __('admin.backups'),
     '/admin/admins' => __('admin.admins'),
-    '/admin/settings' => __('admin.platform_settings'),
+    '/admin/settings' => __('admin.settings_menu'),
 ];
 ?>
 <!DOCTYPE html>
