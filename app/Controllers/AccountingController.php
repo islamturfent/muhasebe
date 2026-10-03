@@ -161,6 +161,116 @@ final class AccountingController extends Controller
         }
     }
 
+    /** Yevmiye fişi düzenleme formu. */
+    public function editEntry(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.update');
+        $tenantId = Auth::tenantId();
+        $id = (int) $id;
+        $entry = DB::first(
+            'SELECT * FROM accounting_entries WHERE id = :id AND tenant_id = :t',
+            ['id' => $id, 't' => $tenantId]
+        );
+        if (!$entry) {
+            return Response::redirect('/app/accounting/journal');
+        }
+        $companyId = (int) $entry['company_id'];
+        $periodId = (int) $entry['fiscal_period_id'];
+        $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => $tenantId]);
+        $periods = DB::select('SELECT * FROM fiscal_periods WHERE company_id = :c AND deleted_at IS NULL ORDER BY start_date DESC', ['c' => $companyId]);
+        $accounts = DB::select(
+            'SELECT code, name FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p ORDER BY code',
+            ['c' => $companyId, 'p' => $periodId]
+        );
+        $lines = DB::select(
+            'SELECT a.code AS account_code, el.debit, el.credit FROM accounting_entry_lines el
+              JOIN accounting_accounts a ON a.id = el.account_id WHERE el.entry_id = :id ORDER BY el.id',
+            ['id' => $id]
+        );
+
+        return $this->view('app.accounting.entry-create', [
+            'layout' => 'layouts.app',
+            'companies' => $companies, 'companyId' => $companyId,
+            'periods' => $periods, 'periodId' => $periodId,
+            'accounts' => $accounts,
+            'voucherType' => $entry['voucher_type'],
+            'entry' => $entry,
+            'entryLines' => $lines,
+        ]);
+    }
+
+    /** Yevmiye fişi güncelle (satırları yeniden dengeli şekilde yaz). */
+    public function updateEntry(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.update');
+        $id = (int) $id;
+        $tenantId = Auth::tenantId();
+        $entry = DB::first('SELECT * FROM accounting_entries WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => $tenantId]);
+        if (!$entry) {
+            return Response::redirect('/app/accounting/journal');
+        }
+        $companyId = (int) $entry['company_id'];
+        $periodId = (int) $entry['fiscal_period_id'];
+
+        $lines = [];
+        foreach ((array) $request->input('lines', []) as $l) {
+            $code = trim((string) ($l['account_code'] ?? ''));
+            $debit = (float) ($l['debit'] ?? 0);
+            $credit = (float) ($l['credit'] ?? 0);
+            if ($code === '' || ($debit <= 0 && $credit <= 0)) {
+                continue;
+            }
+            $lines[] = ['account_code' => $code, 'debit' => $debit, 'credit' => $credit];
+        }
+
+        // Resolve accounts & prepare lines.
+        $prepared = [];
+        $totalDebit = 0.0;
+        $totalCredit = 0.0;
+        foreach ($lines as $ln) {
+            $acc = DB::first('SELECT id FROM accounting_accounts WHERE company_id = :c AND code = :code', ['c' => $companyId, 'code' => $ln['account_code']]);
+            if (!$acc) {
+                Session::set('_form_errors', [__('accounting.account_not_found', ['code' => $ln['account_code']])]);
+                return Response::redirect('/app/accounting/entry/' . $id . '/edit');
+            }
+            $totalDebit += $ln['debit'];
+            $totalCredit += $ln['credit'];
+            $prepared[] = ['account_id' => (int) $acc['id'], 'debit' => $ln['debit'], 'credit' => $ln['credit'], 'account_code' => $ln['account_code']];
+        }
+        if (empty($prepared) || abs($totalDebit - $totalCredit) > 0.009 || $totalDebit <= 0) {
+            Session::set('_form_errors', [__('accounting.not_balanced')]);
+            return Response::redirect('/app/accounting/entry/' . $id . '/edit');
+        }
+
+        $voucherType = in_array($request->input('voucher_type', 'journal'), ['journal', 'transfer', 'opening', 'closing', 'carry_forward'], true)
+            ? $request->input('voucher_type', 'journal')
+            : 'journal';
+
+        DB::transaction(function () use ($id, $entry, $request, $prepared, $totalDebit, $totalCredit, $voucherType, $tenantId, $companyId, $periodId) {
+            DB::execute('DELETE FROM accounting_entry_lines WHERE entry_id = :id', ['id' => $id]);
+            DB::execute(
+                'UPDATE accounting_entries SET voucher_type = :vt, date = :d, description = :de,
+                        debit_total = :td, credit_total = :tc, updated_at = NOW() WHERE id = :id',
+                [
+                    'vt' => $voucherType, 'd' => $request->input('date') ?: $entry['date'],
+                    'de' => $request->input('description') ?: __('accounting.manual_entry'),
+                    'td' => $totalDebit, 'tc' => $totalCredit, 'id' => $id,
+                ]
+            );
+            $rows = [];
+            foreach ($prepared as $ln) {
+                $rows[] = [
+                    'tenant_id' => $tenantId, 'company_id' => $companyId, 'entry_id' => $id,
+                    'account_id' => $ln['account_id'], 'debit' => $ln['debit'], 'credit' => $ln['credit'],
+                    'created_at' => now(), 'updated_at' => now(),
+                ];
+            }
+            DB::insertMany('accounting_entry_lines', $rows);
+        });
+        Session::flash('success', __('accounting.entry_updated'));
+        return Response::redirect('/app/accounting/journal?company_id=' . $companyId . '&period_id=' . $periodId);
+    }
+
     /** Yevmiye fişi sil. */
     public function destroyEntry(Request $request, $id): Response
     {

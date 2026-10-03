@@ -25,7 +25,7 @@ $active = 'journal';
                 <th class="px-5 py-2"><?= e(__('accounting.description')) ?></th>
                 <th class="px-5 py-2 text-right"><?= e(__('accounting.debit')) ?></th>
                 <th class="px-5 py-2 text-right"><?= e(__('accounting.credit')) ?></th>
-                <?php if (Auth::can('accounting.delete')): ?><th class="px-5 py-2 text-right"></th><?php endif; ?>
+                <?php if (Auth::can('accounting.update') || Auth::can('accounting.delete')): ?><th class="px-5 py-2 text-right"></th><?php endif; ?>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
@@ -41,12 +41,17 @@ $active = 'journal';
                 </td>
                 <td class="px-5 py-2.5 text-right text-slate-700 font-medium"><?= e(money($e['debit_total'])) ?></td>
                 <td class="px-5 py-2.5 text-right text-slate-700 font-medium"><?= e(money($e['credit_total'])) ?></td>
-                <?php if (Auth::can('accounting.delete')): ?>
-                <td class="px-5 py-2.5 text-right">
-                    <form method="post" action="<?= e(url('/app/accounting/entry/' . (int)$e['id'] . '/delete')) ?>" onsubmit="return confirm('<?= e(__('accounting.delete_entry')) ?>?')">
+                <?php if (Auth::can('accounting.update') || Auth::can('accounting.delete')): ?>
+                <td class="px-5 py-2.5 text-right space-x-2 whitespace-nowrap">
+                    <?php if (Auth::can('accounting.update')): ?>
+                    <a href="<?= e(url('/app/accounting/entry/' . (int)$e['id'] . '/edit')) ?>" class="text-brand-600 hover:underline text-xs"><?= e(__('accounting.edit_entry')) ?></a>
+                    <?php endif; ?>
+                    <?php if (Auth::can('accounting.delete')): ?>
+                    <form method="post" action="<?= e(url('/app/accounting/entry/' . (int)$e['id'] . '/delete')) ?>" class="inline" onsubmit="return confirm('<?= e(__('accounting.delete_entry')) ?>?')">
                         <?= csrf_field() ?>
-                        <button class="text-slate-400 hover:text-red-500" title="<?= e(__('common.delete')) ?>"><?= e(__('common.delete')) ?></button>
+                        <button class="text-slate-400 hover:text-red-500 text-xs" title="<?= e(__('common.delete')) ?>"><?= e(__('common.delete')) ?></button>
                     </form>
+                    <?php endif; ?>
                 </td>
                 <?php endif; ?>
             </tr>

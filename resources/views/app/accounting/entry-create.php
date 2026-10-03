@@ -1,18 +1,20 @@
 <?php
-/** @var array $companies @var int $companyId @var array $periods @var int $periodId @var array $accounts @var string $voucherType */
+/** @var array $companies @var int $companyId @var array $periods @var int $periodId @var array $accounts @var string $voucherType @var array|null $entry @var array $entryLines */
 use Muh\Core\Session;
 use Muh\Core\Translator;
 $locale = Translator::instance()->locale();
 $errors = Session::get('_form_errors', []);
 Session::forget('_form_errors');
+$isEdit = !empty($entry);
 ?>
 <div class="max-w-5xl">
     <div class="mb-6">
         <a href="<?= e(url('/app/accounting/journal')) ?>" class="text-sm text-brand-600 hover:underline">← <?= e(__('accounting.journal')) ?></a>
-        <h1 class="text-2xl font-bold text-slate-900 mt-1"><?= e(__('accounting.new_entry')) ?></h1>
+        <h1 class="text-2xl font-bold text-slate-900 mt-1"><?= e(__($isEdit ? 'accounting.edit_entry' : 'accounting.new_entry')) ?></h1>
+        <?php if ($isEdit): ?><p class="text-sm text-slate-500 mt-1"><?= e(__('accounting.number')) ?>: <?= e($entry['number']) ?></p><?php endif; ?>
     </div>
 
-    <form method="post" action="<?= e(url('/app/accounting/entry')) ?>" id="entryForm">
+    <form method="post" action="<?= e(url($isEdit ? '/app/accounting/entry/' . (int)$entry['id'] : '/app/accounting/entry')) ?>" id="entryForm">
         <?= csrf_field() ?>
 
         <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
@@ -30,13 +32,13 @@ Session::forget('_form_errors');
             </div>
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.title')) ?> / <?= e(__('common.company')) ?> *</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('invoice.company')) ?> *</label>
                     <select name="company_id" required class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
                         <?php foreach ($companies as $c): ?><option value="<?= e($c['id']) ?>" <?= (int)$companyId===(int)$c['id']?'selected':'' ?>><?= e($c['name']) ?></option><?php endforeach; ?>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.title')) ?> / <?= e(__('accounting.chart_of_accounts')) ?></label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.chart_of_accounts')) ?></label>
                     <select name="period_id" required class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
                         <?php foreach ($periods as $p): ?><option value="<?= e($p['id']) ?>" <?= (int)$periodId===(int)$p['id']?'selected':'' ?>><?= e($p['name']) ?></option><?php endforeach; ?>
                     </select>
@@ -46,11 +48,11 @@ Session::forget('_form_errors');
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.date')) ?> *</label>
-                    <input type="date" name="date" value="<?= date('Y-m-d') ?>" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                    <input type="date" name="date" value="<?= e($isEdit ? $entry['date'] : date('Y-m-d')) ?>" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.description')) ?></label>
-                    <input name="description" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                    <input name="description" value="<?= e($isEdit ? $entry['description'] : '') ?>" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
                 </div>
             </div>
         </div>
@@ -79,20 +81,22 @@ Session::forget('_form_errors');
 
 <script>
 const hasAccounts = <?= json_encode(!empty($accounts)) ?>;
+const initialLines = <?= json_encode($entryLines ?? [], JSON_UNESCAPED_UNICODE) ?>;
 let lineCount = 0;
-function addLine(){
+function addLine(values){
+    values = values || {account_code:'', debit:'0', credit:'0'};
     const i = lineCount++;
     const div = document.createElement('div');
     div.className = 'line grid grid-cols-12 gap-2 items-center bg-slate-50 border border-slate-100 rounded-xl p-2';
     div.innerHTML = `
         <div class="col-span-5">
-            <input list="accountList" name="lines[${i}][account_code]" placeholder="${hasAccounts ? '' : '<?= e(__('accounting.account_code')) ?> *'}" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+            <input list="accountList" name="lines[${i}][account_code]" value="${String(values.account_code||'').replace(/"/g,'&quot;')}" placeholder="${hasAccounts ? '' : '<?= e(__('accounting.account_code')) ?> *'}" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
         </div>
         <div class="col-span-2">
-            <input type="number" name="lines[${i}][debit]" step="0.01" min="0" value="0" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+            <input type="number" name="lines[${i}][debit]" step="0.01" min="0" value="${values.debit}" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
         </div>
         <div class="col-span-2">
-            <input type="number" name="lines[${i}][credit]" step="0.01" min="0" value="0" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+            <input type="number" name="lines[${i}][credit]" step="0.01" min="0" value="${values.credit}" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
         </div>
         <div class="col-span-2 text-right text-sm text-slate-500 line-balance">0.00</div>
         <div class="col-span-1 text-right">
@@ -123,6 +127,10 @@ function recalc(){
     function formatDiff(x){ return x.toLocaleString('<?= $locale === 'tr' ? 'tr-TR' : 'en-US' ?>',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 }
 document.addEventListener('input', recalc);
-addLine(); addLine();
+if(initialLines.length){
+    initialLines.forEach(l => addLine({account_code: l.account_code, debit: l.debit, credit: l.credit}));
+} else {
+    addLine(); addLine();
+}
+recalc();
 </script>
-<EOF>

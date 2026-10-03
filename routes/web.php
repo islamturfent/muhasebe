@@ -91,6 +91,8 @@ return function (Router $router): void {
         $g->get('/app/accounting/entry/create', [\Muh\Controllers\AccountingController::class, 'createEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/entry', [\Muh\Controllers\AccountingController::class, 'storeEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/entry/{id}/delete', [\Muh\Controllers\AccountingController::class, 'destroyEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/accounting/entry/{id}/edit', [\Muh\Controllers\AccountingController::class, 'editEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/accounting/entry/{id}', [\Muh\Controllers\AccountingController::class, 'updateEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/chart', [\Muh\Controllers\AccountingController::class, 'chart'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/chart/create', [\Muh\Controllers\AccountingController::class, 'createChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/chart', [\Muh\Controllers\AccountingController::class, 'storeChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);

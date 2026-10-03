@@ -72,4 +72,6 @@ return [
     'voucher_type' => 'Voucher Type',
     'balance_status_ok' => 'Opening balances are balanced (debit = credit)',
     'balance_status_diff' => 'Opening balances are unbalanced — difference: :diff',
+    'edit_entry' => 'Edit Entry',
+    'entry_updated' => 'Entry updated.',
 ];
