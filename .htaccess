@@ -1,0 +1,17 @@
+# MUH — XAMPP root .htaccess
+# Serves the application through its public/ web-root so you can access it
+# directly at  http://localhost/muh/  (instead of ... /muh/public/).
+#
+# The public/.htaccess inside public/ then routes non-file requests to index.php.
+
+RewriteEngine On
+
+# Directory request to the project root -> public/
+RewriteRule ^$ public/ [L]
+
+# Everything that is not already inside public/ and is not a real file/dir is
+# forwarded into public/ (a single clean entry point for XAMPP).
+RewriteCond %{REQUEST_URI} !/muh/public/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/$1 [L]

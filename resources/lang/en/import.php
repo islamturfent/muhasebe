@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'title' => 'Import / Export',
+    'import' => 'Import',
+    'choose_type' => 'Choose data type to import',
+    'type_cari' => 'Current Accounts',
+    'type_stock' => 'Stock / Products',
+    'file' => 'CSV File',
+    'upload' => 'Upload & Map Columns',
+    'upload_desc' => 'Choose your CSV file (savable from Excel). Then map columns, preview, and import.',
+    'file_required' => 'Choose a file.',
+    'empty_file' => 'File is empty or unreadable.',
+    'company' => 'Company',
+    'mapping' => 'Column Mapping',
+    'preview' => 'Preview',
+    'run_import' => 'Import',
+    'imported' => ':count records imported.',
+    'errors_title' => 'Errors (:count)',
+    'line' => 'Line',
+    'message' => 'Error',
+    'invalid_row' => 'Invalid row.',
+    'back' => 'Back',
+    'select_column' => '— not selected —',
+    'download_template' => 'Download Template',
+    'export' => 'Export',
+];

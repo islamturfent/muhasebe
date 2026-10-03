@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'title' => 'Cash',
+    'new_account' => 'New Cash Account',
+    'account_name' => 'Cash Register Name',
+    'code' => 'Cash Code',
+    'name' => 'Cash Name',
+    'balance' => 'Balance',
+    'currency' => 'Currency',
+    'company' => 'Company',
+    'transactions' => 'Cash Transactions',
+    'add_transaction' => 'Add Cash Transaction',
+    'type' => 'Type',
+    'type_collection' => 'Collection (+)',
+    'type_payment' => 'Payment (-)',
+    'type_transfer' => 'Transfer',
+    'type_opening' => 'Opening',
+    'amount' => 'Amount',
+    'description' => 'Description',
+    'date' => 'Date',
+    'created_account' => 'Cash account created.',
+    'created_transaction' => 'Cash transaction recorded.',
+    'no_accounts' => 'No cash accounts found.',
+    'no_transactions' => 'No transactions yet.',
+    'back' => 'Cash',
+    'new_transaction' => 'New Transaction',
+];

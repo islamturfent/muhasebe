@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'title' => 'Kasa',
+    'new_account' => 'Yeni Kasa Hesabı',
+    'account_name' => 'Kasa Adı',
+    'code' => 'Kasa Kodu',
+    'name' => 'Kasa Adı',
+    'balance' => 'Bakiye',
+    'currency' => 'Para Birimi',
+    'company' => 'Firma',
+    'transactions' => 'Kasa Hareketleri',
+    'add_transaction' => 'Kasa İşlemi Ekle',
+    'type' => 'İşlem Türü',
+    'type_collection' => 'Tahsilat (+)',
+    'type_payment' => 'Ödeme (-)',
+    'type_transfer' => 'Virman',
+    'type_opening' => 'Açılış',
+    'amount' => 'Tutar',
+    'description' => 'Açıklama',
+    'date' => 'Tarih',
+    'created_account' => 'Kasa hesabı oluşturuldu.',
+    'created_transaction' => 'Kasa işlemi kaydedildi.',
+    'no_accounts' => 'Kasa hesabı bulunamadı.',
+    'no_transactions' => 'Henüz hareket yok.',
+    'back' => 'Kasa',
+    'new_transaction' => 'Yeni İşlem',
+];

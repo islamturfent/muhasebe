@@ -1,0 +1,111 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * CLI entry point. Usage:
+ *   php bin/muh migrate [--fresh]
+ *   php bin/muh seed
+ *   php bin/muh migrate --fresh && php bin/muh seed
+ */
+
+require __DIR__ . '/../app/bootstrap.php';
+
+use Muh\Core\DB;
+use Muh\Database\Migrator;
+use Muh\Database\Seeder;
+
+$args = $argv;
+array_shift($args);
+$command = $args[0] ?? 'help';
+
+switch ($command) {
+    case 'migrate':
+        $fresh = in_array('--fresh', $args, true);
+        if ($fresh) {
+            echo "Dropping all tables (fresh)...\n";
+            DB::execute('SET FOREIGN_KEY_CHECKS = 0');
+            foreach (DB::select('SHOW TABLES') as $row) {
+                $table = reset($row);
+                DB::execute('DROP TABLE IF EXISTS `' . $table . '`');
+            }
+            DB::execute('SET FOREIGN_KEY_CHECKS = 1');
+            echo "Dropped.\n";
+        }
+        (new Migrator())->run(dirname(__DIR__) . '/database/migrations');
+        echo "Migration complete.\n";
+        break;
+
+    case 'seed':
+        (new Seeder())->run(dirname(__DIR__) . '/database/seeders');
+        echo "Seed complete.\n";
+        break;
+
+    case 'drop':
+        DB::execute('SET FOREIGN_KEY_CHECKS = 0');
+        foreach (DB::select('SHOW TABLES') as $row) {
+            $table = reset($row);
+            DB::execute('DROP TABLE IF EXISTS `' . $table . '`');
+        }
+        DB::execute('SET FOREIGN_KEY_CHECKS = 1');
+        echo "All tables dropped.\n";
+        break;
+
+    case 'test':
+        $results = (new \Muh\Core\AppTester())->run();
+        $pass = 0;
+        $fail = 0;
+        foreach ($results as $r) {
+            $mark = $r['ok'] ? 'PASS' : 'FAIL';
+            $r['ok'] ? $pass++ : $fail++;
+            echo "  [{$mark}] {$r['name']} — {$r['detail']}\n";
+        }
+        echo "\n{$pass} passed, {$fail} failed\n";
+        exit($fail > 0 ? 1 : 0);
+        break;
+
+    case 'backup':
+        $file = (new \Muh\Database\Backup())->run();
+        echo "Backup saved: {$file}\n";
+        break;
+
+    case 'key:generate':
+        // Generate a random base64 key (used for APP_KEY in .env).
+        $key = 'base64:' . base64_encode(random_bytes(32));
+        echo "$key\n";
+        echo "APP_KEY=$key\n";
+        break;
+
+    case 'admin:make':
+        // Promote (or find) a user by e-mail to super admin. Owner-level action.
+        $email = strtolower(trim($args[1] ?? ''));
+        if ($email === '') {
+            echo "Usage: php bin/muh admin:make <email>\n";
+            exit(1);
+        }
+        $user = DB::first('SELECT id, name, is_system_admin FROM users WHERE email = :e AND deleted_at IS NULL', ['e' => $email]);
+        if (!$user) {
+            echo "No user found with e-mail: {$email}\n";
+            exit(1);
+        }
+        if ($user['is_system_admin']) {
+            echo "Already a super admin: {$email}\n";
+        } else {
+            DB::execute('UPDATE users SET is_system_admin = 1, updated_at = :n WHERE id = :id', ['n' => now(), 'id' => (int) $user['id']]);
+            echo "Promoted to super admin: {$email} ({$user['name']})\n";
+        }
+        break;
+
+    case 'security':
+        exit((new \Muh\Core\SecurityChecker())->run());
+
+    case 'test-db':
+        echo "Driver: " . DB::driver() . "\n";
+        break;
+
+    default:
+        echo "MUH CLI\n";
+        echo "  php bin/muh migrate [--fresh]\n";
+        echo "  php bin/muh seed\n";
+        echo "  php bin/muh drop\n";
+}

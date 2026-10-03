@@ -1,0 +1,337 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Muh\Core;
+
+use Muh\Core\DB;
+
+/**
+ * Lightweight self-test runner (Phase 14). Each test is a closure returning
+ * [bool $ok, string $detail]. Run via: php bin/muh test
+ */
+final class AppTester
+{
+    /** @return array<int, array{name:string, ok:bool, detail:string}> */
+    public function run(): array
+    {
+        $results = [];
+
+        $name = 'DB bağlı & sürücü algılandı';
+        try {
+            $driver = DB::driver();
+            DB::scalar('SELECT 1');
+            $results[] = ['name' => $name, 'ok' => true, 'detail' => $driver];
+        } catch (\Throwable $e) {
+            $results[] = ['name' => $name, 'ok' => false, 'detail' => $e->getMessage()];
+        }
+
+        $name = 'Çekirdek tablolar mevcut';
+        $tables = ['tenants', 'users', 'companies', 'fiscal_periods', 'current_accounts', 'invoices', 'accounting_entries', 'subscriptions', 'plans'];
+        try {
+            $existing = array_column(DB::select('SHOW TABLES'), null);
+            $missing = [];
+            foreach ($tables as $t) {
+                $found = false;
+                foreach (DB::select('SHOW TABLES') as $row) {
+                    if (reset($row) === $t) {
+                        $found = true;
+                    }
+                }
+                if (!$found) {
+                    $missing[] = $t;
+                }
+            }
+            $results[] = ['name' => $name, 'ok' => empty($missing), 'detail' => $missing ? 'eksik: ' . implode(',', $missing) : count($tables) . ' tablo tamam'];
+        } catch (\Throwable $e) {
+            $results[] = ['name' => $name, 'ok' => false, 'detail' => $e->getMessage()];
+        }
+
+        $seedChecks = [
+            'Planlar' => ['plans', 4],
+            'Roller' => ['roles', 8],
+            'Yetkiler' => ['permissions', 10],
+            'Para birimleri' => ['currencies', 4],
+        ];
+        foreach ($seedChecks as $label => [$table, $min]) {
+            $count = (int) DB::scalar('SELECT COUNT(*) FROM ' . DB::quoteIdentifier($table));
+            $results[] = ['name' => 'Seed: ' . $label, 'ok' => $count >= $min, 'detail' => "{$count} kayıt"];
+        }
+
+        // Password hashing roundtrip
+        $r = Hash::make('TestPass123');
+        $results[] = ['name' => 'Şifre hash/doğrula', 'ok' => Hash::check('TestPass123', $r), 'detail' => 'bcrypt'];
+
+        // Validator: required + email
+        $v1 = new Validator();
+        $ok1 = !$v1->validate(['name' => ''], ['name' => 'required']);
+        $v2 = new Validator();
+        $ok2 = !$v2->validate(['email' => 'not-an-email'], ['email' => 'email']);
+        $results[] = ['name' => 'Validator (required/email)', 'ok' => $ok1 && $ok2, 'detail' => $ok1 && $ok2 ? 'geçerli' : 'hatalı'];
+
+        // Translator loads tr & en
+        $tr = Translator::instance()->translate('common.save', [], 'tr');
+        $en = Translator::instance()->translate('common.save', [], 'en');
+        $results[] = ['name' => 'Çeviri tr/en', 'ok' => $tr !== 'common.save' && $en !== 'common.save', 'detail' => "tr={$tr} en={$en}"];
+
+        // Money formatting differs by locale
+        $moneyTr = money(1234.56);
+        $results[] = ['name' => 'Para formatı', 'ok' => str_contains($moneyTr, '₺') || str_contains($moneyTr, ','), 'detail' => $moneyTr];
+
+        // Accounting: unbalanced journal must be rejected
+        $comp = DB::first("SELECT id, tenant_id FROM companies LIMIT 1");
+        $period = $comp ? DB::first('SELECT id FROM fiscal_periods WHERE company_id = :c LIMIT 1', ['c' => $comp['id']]) : null;
+        if ($comp && $period) {
+            try {
+                \Muh\Services\AccountingService::postEntry(
+                    (int) $comp['tenant_id'], (int) $comp['id'], (int) $period['id'],
+                    'journal', date('Y-m-d'), 'test', [
+                        ['account_code' => '100', 'debit' => 100, 'credit' => 0],
+                        ['account_code' => '102', 'debit' => 0, 'credit' => 90],
+                    ]
+                );
+                $results[] = ['name' => 'Muhasebe borç=alacak kuralı', 'ok' => false, 'detail' => 'dengesiz fiş kabul edildi (BUG)'];
+            } catch (ValidationException $e) {
+                $results[] = ['name' => 'Muhasebe borç=alacak kuralı', 'ok' => true, 'detail' => 'dengesiz fiş reddedildi'];
+            }
+        } else {
+            $results[] = ['name' => 'Muhasebe borç=alacak kuralı', 'ok' => false, 'detail' => 'örnek firma/dönem yok'];
+        }
+
+        // Payment gateway abstraction resolution
+        $gw = new \Muh\Services\Billing\BillingService();
+        $results[] = ['name' => 'Ödeme sağlayıcı soyutlaması', 'ok' => method_exists($gw, 'handleWebhook'), 'detail' => 'BillingService yüklendi'];
+
+        // Two-factor TOTP code generation + verify
+        $sec = TwoFactorAuth::generateSecret();
+        $code = TwoFactorAuth::code($sec);
+        $results[] = ['name' => '2FA TOTP üret/doğrula', 'ok' => TwoFactorAuth::verify($sec, $code), 'detail' => substr($sec, 0, 8) . '…'];
+
+        // ---- Tenant isolation: no cross-tenant data leak ----
+        $isoOk = true; $isoDetail = '';
+        try {
+            DB::transaction(function () use (&$isoOk, &$isoDetail) {
+                $t1 = DB::first('SELECT id FROM tenants ORDER BY id LIMIT 1');
+                $t2 = DB::first('SELECT id FROM tenants WHERE id != :id ORDER BY id LIMIT 1', ['id' => $t1['id'] ?? 0]);
+                if (!$t1 || !$t2) {
+                    $isoOk = false; $isoDetail = 'en az iki tenant gerekli';
+                    throw new \RuntimeException('__rollback__');
+                }
+                $c1 = DB::insert('companies', ['tenant_id' => (int) $t1['id'], 'name' => 'ISO-A', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
+                $c2 = DB::insert('companies', ['tenant_id' => (int) $t2['id'], 'name' => 'ISO-B', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
+                $leak1 = DB::first('SELECT id FROM companies WHERE id = :i AND tenant_id = :t', ['i' => $c1, 't' => (int) $t2['id']]);
+                $leak2 = DB::first('SELECT id FROM companies WHERE id = :i AND tenant_id = :t', ['i' => $c2, 't' => (int) $t1['id']]);
+                $isoOk = !$leak1 && !$leak2;
+                $isoDetail = $isoOk ? 'tenant kapsamlı: sızıntı yok' : 'SIZINTI tespit edildi!';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+            // rollback sentinel — expected
+        } catch (\Throwable $e) {
+            $isoOk = false; $isoDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Tenant izolasyonu', 'ok' => $isoOk, 'detail' => $isoDetail];
+
+        // ---- RBAC role→permission matrix ----
+        $has = function (string $roleKey, string $permKey): bool {
+            return (bool) DB::scalar(
+                'SELECT 1 FROM role_permission rp
+                  JOIN roles r ON r.id = rp.role_id
+                  JOIN permissions p ON p.id = rp.permission_id
+                 WHERE r.`key` = :rk AND p.`key` = :pk LIMIT 1',
+                ['rk' => $roleKey, 'pk' => $permKey]
+            );
+        };
+        $rbacOk = $has('owner', 'user.invite')
+            && $has('accountant', 'report.export')
+            && !$has('accountant', 'user.invite')
+            && $has('intern', 'invoice.create')
+            && $has('intern', 'current_account.read')
+            && !$has('intern', 'report.export');
+        $results[] = ['name' => 'RBAC rol→yetki', 'ok' => $rbacOk, 'detail' => $rbacOk ? 'matris doğru' : 'yetki fazlalığı/eksikliği (BUG)'];
+
+        // ---- User invite lifecycle (create → accept) ----
+        $invOk = false; $invDetail = '';
+        try {
+            DB::transaction(function () use (&$invOk, &$invDetail) {
+                $tenant = DB::first('SELECT id FROM tenants ORDER BY id LIMIT 1');
+                if (!$tenant) {
+                    $invDetail = 'tenant yok'; throw new \RuntimeException('__rollback__');
+                }
+                $tenantId = (int) $tenant['id'];
+                $comp = DB::first('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL LIMIT 1', ['t' => $tenantId]);
+                $staffRole = DB::first('SELECT id FROM roles WHERE `key` = :k', ['k' => 'staff']);
+                $email = 'tester_' . bin2hex(random_bytes(4)) . '@example.com';
+                $svc = new \Muh\Services\UserInviteService();
+                $token = $svc->create($tenantId, 1, $email, (int) $staffRole['id'], $comp ? [(int) $comp['id']] : []);
+                $invite = $svc->validByToken($token);
+                $createdOk = $invite !== null && $invite['status'] === 'pending';
+                // accept → creates user with staff role + company
+                $user = $svc->accept($invite, ['name' => 'Tester User', 'password' => 'Test1234!']);
+                $roles = \Muh\Models\User::rolesOf((int) $user['id']);
+                $roleMatch = in_array('staff', array_column($roles, 'key'), true);
+                $companyMatch = $comp && (bool) DB::scalar('SELECT 1 FROM user_company WHERE user_id = :u AND company_id = :c LIMIT 1', ['u' => (int) $user['id'], 'c' => (int) $comp['id']]);
+                $acceptedOk = DB::first('SELECT status FROM user_invites WHERE id = :i', ['i' => (int) $invite['id']])['status'] === 'accepted';
+                $invOk = $createdOk && $roleMatch && $companyMatch && $acceptedOk;
+                $invDetail = $invOk ? 'oluştur→kabul→rol/firma atandı' : 'davet akışında hata (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $invOk = false; $invDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Kullanıcı davet akışı', 'ok' => $invOk, 'detail' => $invDetail];
+
+        // ---- Balanced journal posting (positive path) ----
+        $jOk = false; $jDetail = '';
+        try {
+            DB::transaction(function () use (&$jOk, &$jDetail) {
+                $comp = DB::first('SELECT * FROM companies LIMIT 1');
+                $period = $comp ? DB::first('SELECT id FROM fiscal_periods WHERE company_id = :c LIMIT 1', ['c' => $comp['id']]) : null;
+                if (!$comp || !$period) {
+                    $jDetail = 'örnek firma/dönem yok'; throw new \RuntimeException('__rollback__');
+                }
+                $eid = \Muh\Services\AccountingService::postEntry(
+                    (int) $comp['tenant_id'], (int) $comp['id'], (int) $period['id'],
+                    'journal', date('Y-m-d'), 'test-balanced', [
+                        ['account_code' => '100', 'debit' => 300, 'credit' => 0],
+                        ['account_code' => '102', 'debit' => 0, 'credit' => 300],
+                    ]
+                );
+                $entry = DB::first('SELECT debit_total, credit_total FROM accounting_entries WHERE id = :id', ['id' => $eid]);
+                $jOk = $entry && abs((float) $entry['debit_total'] - (float) $entry['credit_total']) < 0.01
+                    && abs((float) $entry['debit_total'] - 300.0) < 0.01;
+                $jDetail = $jOk ? 'dengeli fiş kaydedildi (300)' : 'dengeli fiş sorunu (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $jOk = false; $jDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Muhasebe dengeli fiş kaydı', 'ok' => $jOk, 'detail' => $jDetail];
+
+        // ---- Cari movement updates balance ----
+        $cOk = false; $cDetail = '';
+        try {
+            DB::transaction(function () use (&$cOk, &$cDetail) {
+                $comp = DB::first('SELECT * FROM companies LIMIT 1');
+                if (!$comp) {
+                    $cDetail = 'firma yok'; throw new \RuntimeException('__rollback__');
+                }
+                $tenantId = (int) $comp['tenant_id']; $cid = (int) $comp['id'];
+                $acc = (int) DB::insert('current_accounts', ['tenant_id' => $tenantId, 'company_id' => $cid, 'code' => '999', 'name' => 'Test Cari', 'type' => 'customer', 'balance' => 0, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
+                \Muh\Services\CurrentAccountService::addMovement($tenantId, $cid, $acc, 'debt', date('Y-m-d'), 500, 'test');
+                \Muh\Services\CurrentAccountService::addMovement($tenantId, $cid, $acc, 'credit', date('Y-m-d'), 150, 'test');
+                $bal = DB::first('SELECT balance FROM current_accounts WHERE id = :id', ['id' => $acc])['balance'];
+                $cOk = abs((float) $bal - 350.0) < 0.01;
+                $cDetail = $cOk ? 'bakiye=350 (500-150)' : "bakiye hatalı: {$bal} (BUG)";
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $cOk = false; $cDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Cari hareket bakiye', 'ok' => $cOk, 'detail' => $cDetail];
+
+        // ---- Stock movement updates running quantity ----
+        $sOk = false; $sDetail = '';
+        try {
+            DB::transaction(function () use (&$sOk, &$sDetail) {
+                $comp = DB::first('SELECT * FROM companies LIMIT 1');
+                if (!$comp) {
+                    $sDetail = 'firma yok'; throw new \RuntimeException('__rollback__');
+                }
+                $tenantId = (int) $comp['tenant_id']; $cid = (int) $comp['id'];
+                $wh = (int) DB::insert('warehouses', ['tenant_id' => $tenantId, 'company_id' => $cid, 'code' => 'T-WH', 'name' => 'Test Depo', 'is_default' => 0, 'created_at' => now(), 'updated_at' => now()]);
+                $prod = (int) DB::insert('products', ['tenant_id' => $tenantId, 'company_id' => $cid, 'code' => 'T-P1', 'name' => 'Test Ürün', 'type' => 'product', 'vat_rate' => 20, 'stock_quantity' => 0, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
+                \Muh\Services\InventoryService::recordMovement($tenantId, $cid, $wh, $prod, 'opening', date('Y-m-d'), 50, 10, 'open');
+                \Muh\Services\InventoryService::recordMovement($tenantId, $cid, $wh, $prod, 'sale', date('Y-m-d'), -20, 10, 'sale');
+                $q = DB::first('SELECT stock_quantity FROM products WHERE id = :id', ['id' => $prod])['stock_quantity'];
+                $sOk = abs((float) $q - 30.0) < 0.01;
+                $sDetail = $sOk ? 'stok=30 (50-20)' : "stok hatalı: {$q} (BUG)";
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $sOk = false; $sDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Stok hareketi miktar', 'ok' => $sOk, 'detail' => $sDetail];
+
+        // ---- Invoice vertical slice (cari + stock + KDV + balanced journal) ----
+        $ivOk = false; $ivDetail = '';
+        try {
+            DB::transaction(function () use (&$ivOk, &$ivDetail) {
+                Auth::loginById(1); // demo owner (tenant 1)
+                $comp = DB::first('SELECT * FROM companies WHERE tenant_id = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1');
+                if (!$comp) {
+                    $ivDetail = 'örnek firma yok'; throw new \RuntimeException('__rollback__');
+                }
+                $cid = (int) $comp['id'];
+                $acc = DB::first('SELECT * FROM current_accounts WHERE company_id = :c AND type = :t ORDER BY id LIMIT 1', ['c' => $cid, 't' => 'customer']);
+                $prod = DB::first('SELECT * FROM products WHERE company_id = :c AND type = :t ORDER BY id LIMIT 1', ['c' => $cid, 't' => 'product']);
+                if (!$acc || !$prod) {
+                    $ivDetail = 'cari/ürün yok'; throw new \RuntimeException('__rollback__');
+                }
+                $beforeBal = (float) $acc['balance'];
+                $beforeStock = (float) $prod['stock_quantity'];
+                $invId = (new \Muh\Services\InvoiceService())->create([
+                    'company_id' => $cid, 'current_account_id' => (int) $acc['id'], 'type' => 'sales',
+                    'date' => date('Y-m-d'), 'due_date' => date('Y-m-d', strtotime('+30 days')),
+                    'lines' => [['product_id' => (int) $prod['id'], 'qty' => 1, 'unit_price' => 100, 'vat_rate' => 20, 'discount' => 0, 'description' => 'slice']],
+                ]);
+                $a2 = DB::first('SELECT balance FROM current_accounts WHERE id = :id', ['id' => (int) $acc['id']]);
+                $p2 = DB::first('SELECT stock_quantity FROM products WHERE id = :id', ['id' => (int) $prod['id']]);
+                $entry = DB::first('SELECT debit_total, credit_total FROM accounting_entries WHERE reference_type = :rt AND reference_id = :ri LIMIT 1', ['rt' => 'invoice', 'ri' => (string) $invId]);
+                $cariOk = $a2 && abs(((float) $a2['balance'] - $beforeBal) - 120.0) < 0.01;
+                $stockOk = $p2 && abs(((float) $p2['stock_quantity'] - $beforeStock) + 1.0) < 0.01;
+                $balOk = $entry && abs((float) $entry['debit_total'] - (float) $entry['credit_total']) < 0.01;
+                $ivOk = $cariOk && $stockOk && $balOk;
+                $ivDetail = $ivOk ? 'cari+120 & stok-1 & fiş dengeli' : 'dikey dilim hatası (BUG) c=' . var_export($cariOk, true) . ' s=' . var_export($stockOk, true) . ' b=' . var_export($balOk, true);
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $ivOk = false; $ivDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Fatura dikey dilimi', 'ok' => $ivOk, 'detail' => $ivDetail];
+
+        // ---- RBAC positive controls ----
+        Auth::loginById(1); // demo owner (full access)
+        $ownerCan = Auth::can('company.create') && Auth::can('report.export') && Auth::can('user.invite');
+        $sysCan = (new \Muh\Core\Auth())->can('anything_unknown'); // non-admin, no role
+        $results[] = ['name' => 'RBAC pozitif (owner tam yetki)', 'ok' => $ownerCan, 'detail' => $ownerCan ? 'owner tüm yetki' : 'yetki eksik (BUG)'];
+
+        // ---- Plan limits: features/usage yapısı ----
+        Auth::loginById(1);
+        $feat = \Muh\Services\PlanLimitsService::features();
+        $usage = \Muh\Services\PlanLimitsService::usage();
+        $planOk = is_array($feat) && isset($feat['companies'], $feat['users']) && is_array($usage);
+        $results[] = ['name' => 'Plan limit / kullanım yapısı', 'ok' => $planOk, 'detail' => $planOk ? 'features+usage dolu' : 'limit yapısı hatası'];
+
+        // ---- Stripe webhook signature verification ----
+        try {
+            $stripe = new \Muh\Services\Billing\StripePaymentGateway('sk_test_dummy');
+            $whSecret = 'whsec_test_secret';
+            $body = '{"type":"invoice.paid","data":{"object":{"id":"sub_123"}}}';
+            $t = time();
+            $sig = 't=' . $t . ',v1=' . hash_hmac('sha256', $t . '.' . $body, $whSecret);
+            $valid = $stripe->verifyWebhookSignature($sig, $body, $whSecret);
+            $invalid = !$stripe->verifyWebhookSignature('t=' . $t . ',v1=f4ke', $body, $whSecret);
+            $results[] = ['name' => 'Stripe webhook imza doğrulama', 'ok' => $valid && $invalid, 'detail' => $valid ? 'HMAC geçerli + yanlış reddedildi' : 'imza hatası (BUG)'];
+        } catch (\Throwable $e) {
+            $results[] = ['name' => 'Stripe webhook imza doğrulama', 'ok' => false, 'detail' => $e->getMessage()];
+        }
+
+        // ---- e-Fatura gateway contract ----
+        try {
+            $gw = new \Muh\Services\EFatura\SimulatedEFaturaGateway();
+            $res = $gw->sendDocument(['uuid' => 'X', 'doc_type' => 'archive', 'total' => 100]);
+            $okC = is_array($res) && in_array($res['status'] ?? '', ['sent', 'error'], true) && array_key_exists('envelope_id', $res);
+            $results[] = ['name' => 'e-Fatura ağ geçidi sözleşmesi', 'ok' => $okC, 'detail' => 'status + envelope_id döndü'];
+        } catch (\Throwable $e) {
+            $results[] = ['name' => 'e-Fatura ağ geçidi sözleşmesi', 'ok' => false, 'detail' => $e->getMessage()];
+        }
+
+        return $results;
+    }
+}

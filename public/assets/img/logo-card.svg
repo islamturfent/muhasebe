@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Hesap360 — account card concept">
+  <defs>
+    <linearGradient id="hg-card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b6cff"/>
+      <stop offset="1" stop-color="#1f3fa8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge -->
+  <rect x="2" y="2" width="116" height="116" rx="26" fill="url(#hg-card)"/>
+
+  <!-- Account card silhouette -->
+  <g transform="rotate(-8 60 60)">
+    <rect x="24" y="34" width="72" height="50" rx="9" fill="#ffffff"/>
+    <!-- chip -->
+    <rect x="32" y="42" width="14" height="11" rx="3" fill="#c7d5ff"/>
+    <!-- magnetic stripe -->
+    <rect x="34" y="60" width="52" height="3" rx="1.5" fill="#e2e8f0"/>
+  </g>
+
+  <!-- 360 orbit ring (completeness / rotation) -->
+  <circle cx="34" cy="86" r="16" fill="none" stroke="#ffffff" stroke-width="3.5"/>
+  <path d="M 22 84 A 16 16 0 0 1 46 86" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- arrow head of the ring -->
+  <path d="M 20 74 L 18 80 L 23 80" fill="#ffffff"/>
+
+  <!-- "H" on the card -->
+  <g fill="#2b55e0">
+    <rect x="58" y="38" width="7" height="16" rx="3.5"/>
+    <rect x="72" y="38" width="7" height="16" rx="3.5"/>
+    <rect x="58" y="45" width="21" height="6" rx="3"/>
+  </g>
+
+  <!-- green check for finance -->
+  <circle cx="74" cy="84" r="12" fill="#34d399" stroke="#ffffff" stroke-width="2"/>
+  <path d="M 69.5 84 L 72.5 87.5 L 79 80" fill="none" stroke="#062c1d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

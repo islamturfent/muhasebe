@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'title' => 'İçe/Dışa Aktarım',
+    'import' => 'İçe Aktar',
+    'choose_type' => 'Aktarılacak veri türünü seçin',
+    'type_cari' => 'Cari Hesaplar',
+    'type_stock' => 'Stok / Ürünler',
+    'file' => 'CSV Dosyası',
+    'upload' => 'Yükle ve Kolon Eşle',
+    'upload_desc' => 'CSV dosyanızı seçin (Excel ile kaydedilebilir). Ardından sütunları eşleyip önizleyip içe aktarın.',
+    'file_required' => 'Bir dosya seçin.',
+    'empty_file' => 'Dosya boş veya okunamadı.',
+    'company' => 'Firma',
+    'mapping' => 'Kolon Eşleme',
+    'preview' => 'Önizleme',
+    'run_import' => 'İçe Aktar',
+    'imported' => ':count kayıt içe aktarıldı.',
+    'errors_title' => 'Hatalar (:count)',
+    'line' => 'Satır',
+    'message' => 'Hata',
+    'invalid_row' => 'Geçersiz satır.',
+    'back' => 'Geri',
+    'select_column' => '— seçilmedi —',
+    'download_template' => 'Şablon İndir',
+    'export' => 'Dışa Aktar',
+];

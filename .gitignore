@@ -1,0 +1,25 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs & runtime writes
+storage/logs/*
+storage/backups/*
+storage/documents/*
+storage/framework/*
+!storage/logs/.gitkeep
+!storage/documents/.gitkeep
+!storage/backups/.gitkeep
+!storage/framework/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Composer / vendor
+/vendor/
+composer.lock
