@@ -112,17 +112,30 @@ final class DashboardController extends Controller
             ?: DB::first('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY id LIMIT 1', ['c' => $cid]);
         $periodId = $period ? (int) $period['id'] : 0;
 
-        $num = function (string $sql) : float { return (float) (DB::scalar($sql) ?? 0); };
+        // Single batched query for all balance/sum KPIs (fewer round-trips).
+        // Positional params (repeated ?) work with native prepared statements.
+        $c = $cid;
+        $row = DB::first(
+            'SELECT
+                (SELECT COALESCE(SUM(balance),0) FROM cash_accounts    WHERE company_id = ? AND deleted_at IS NULL) AS cash,
+                (SELECT COALESCE(SUM(balance),0) FROM bank_accounts    WHERE company_id = ? AND deleted_at IS NULL) AS bank,
+                (SELECT COALESCE(SUM(balance),0) FROM current_accounts WHERE company_id = ? AND balance > 0 AND deleted_at IS NULL) AS receivable,
+                (SELECT COALESCE(SUM(-balance),0) FROM current_accounts WHERE company_id = ? AND balance < 0 AND deleted_at IS NULL) AS payable,
+                (SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = ? AND type = \'sales\' AND status = \'posted\' AND deleted_at IS NULL) AS sales,
+                (SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = ? AND type = \'purchase\' AND status = \'posted\' AND deleted_at IS NULL) AS purchase,
+                (SELECT COALESCE(SUM(stock_quantity * purchase_price),0) FROM products WHERE company_id = ? AND deleted_at IS NULL) AS stock',
+            array_fill(0, 7, $c)
+        );
         $kpis = [
-            'cash'      => $num("SELECT COALESCE(SUM(balance),0) FROM cash_accounts WHERE company_id = {$cid} AND deleted_at IS NULL"),
-            'bank'      => $num("SELECT COALESCE(SUM(balance),0) FROM bank_accounts WHERE company_id = {$cid} AND deleted_at IS NULL"),
-            'receivable'=> $num("SELECT COALESCE(SUM(balance),0) FROM current_accounts WHERE company_id = {$cid} AND balance > 0 AND deleted_at IS NULL"),
-            'payable'   => $num("SELECT COALESCE(SUM(-balance),0) FROM current_accounts WHERE company_id = {$cid} AND balance < 0 AND deleted_at IS NULL"),
-            'sales'     => $num("SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = {$cid} AND type = 'sales' AND status = 'posted' AND deleted_at IS NULL"),
-            'purchase'  => $num("SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = {$cid} AND type = 'purchase' AND status = 'posted' AND deleted_at IS NULL"),
-            'stock'     => $num("SELECT COALESCE(SUM(stock_quantity * purchase_price),0) FROM products WHERE company_id = {$cid} AND deleted_at IS NULL"),
+            'cash'       => (float) ($row['cash'] ?? 0),
+            'bank'       => (float) ($row['bank'] ?? 0),
+            'receivable' => (float) ($row['receivable'] ?? 0),
+            'payable'    => (float) ($row['payable'] ?? 0),
+            'sales'      => (float) ($row['sales'] ?? 0),
+            'purchase'   => (float) ($row['purchase'] ?? 0),
+            'stock'      => (float) ($row['stock'] ?? 0),
         ];
-        $kpis['products'] = (int) DB::scalar("SELECT COUNT(*) FROM products WHERE company_id = {$cid} AND deleted_at IS NULL");
+        $kpis['products'] = (int) DB::scalar('SELECT COUNT(*) FROM products WHERE company_id = ? AND deleted_at IS NULL', [$c]);
 
         $inc = AccountingService::incomeStatement($cid, $periodId);
         $revenue = 0.0;

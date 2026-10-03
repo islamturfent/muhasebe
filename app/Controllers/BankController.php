@@ -57,7 +57,10 @@ final class BankController extends Controller
         if (!$account) {
             return Response::redirect('/app/bank');
         }
-        $trx = $service->transactions($id);
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+        $type = $request->query('type') ?: null;
+        $trx = $service->transactions($id, $from, $to, $type);
         return $this->view('app.bank.show', [
             'layout' => 'layouts.app',
             'account' => $account,
@@ -65,6 +68,9 @@ final class BankController extends Controller
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],
+            'from' => $from,
+            'to' => $to,
+            'type' => $type,
         ]);
     }
 

@@ -72,12 +72,23 @@ final class CashService
         return $id;
     }
 
-    public function transactions(int $cashAccountId): array
+    public function transactions(int $cashAccountId, ?string $from = null, ?string $to = null, ?string $type = null): array
     {
-        return paginate(
-            'SELECT * FROM cash_transactions WHERE cash_account_id = :id ORDER BY date DESC, id DESC',
-            ['id' => $cashAccountId],
-            50
-        );
+        $sql = 'SELECT * FROM cash_transactions WHERE cash_account_id = :id';
+        $params = ['id' => $cashAccountId];
+        if ($from) {
+            $sql .= ' AND date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND date <= :to';
+            $params['to'] = $to;
+        }
+        if ($type) {
+            $sql .= ' AND type = :type';
+            $params['type'] = $type;
+        }
+        $sql .= ' ORDER BY date DESC, id DESC';
+        return paginate($sql, $params, 50);
     }
 }

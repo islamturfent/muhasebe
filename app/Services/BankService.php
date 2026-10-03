@@ -71,12 +71,23 @@ final class BankService
         return $id;
     }
 
-    public function transactions(int $bankAccountId): array
+    public function transactions(int $bankAccountId, ?string $from = null, ?string $to = null, ?string $type = null): array
     {
-        return paginate(
-            'SELECT * FROM bank_transactions WHERE bank_account_id = :id ORDER BY date DESC, id DESC',
-            ['id' => $bankAccountId],
-            50
-        );
+        $sql = 'SELECT * FROM bank_transactions WHERE bank_account_id = :id';
+        $params = ['id' => $bankAccountId];
+        if ($from) {
+            $sql .= ' AND date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND date <= :to';
+            $params['to'] = $to;
+        }
+        if ($type) {
+            $sql .= ' AND type = :type';
+            $params['type'] = $type;
+        }
+        $sql .= ' ORDER BY date DESC, id DESC';
+        return paginate($sql, $params, 50);
     }
 }

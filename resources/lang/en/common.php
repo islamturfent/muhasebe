@@ -51,4 +51,8 @@ return [
     'records' => 'records',
     'debit' => 'Debit',
     'credit' => 'Credit',
+    'from' => 'From',
+    'to' => 'To',
+    'filter' => 'Filter',
+    'reset' => 'Reset',
 ];

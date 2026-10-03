@@ -41,6 +41,18 @@
 
         <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('bank.extract')) ?></div>
+            <form method="get" action="<?= e(url('/app/bank/' . $account['id'])) ?>" class="px-5 py-3 border-b border-slate-100 flex flex-wrap items-end gap-2 text-sm">
+                <label class="text-xs text-slate-500"><?= e(__('common.from')) ?> <input type="date" name="from" value="<?= e($from ?? '') ?>" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200"></label>
+                <label class="text-xs text-slate-500"><?= e(__('common.to')) ?> <input type="date" name="to" value="<?= e($to ?? '') ?>" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200"></label>
+                <label class="text-xs text-slate-500"><?= e(__('bank.type')) ?>
+                    <select name="type" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200">
+                        <option value="">—</option>
+                        <?php foreach (['deposit','withdrawal','transfer','interest','expense'] as $bt): ?><option value="<?= $bt ?>" <?= $type===$bt?'selected':'' ?>><?= e(__('bank.type_' . $bt)) ?></option><?php endforeach; ?>
+                    </select>
+                </label>
+                <button class="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold"><?= e(__('common.filter')) ?></button>
+                <a href="<?= e(url('/app/bank/' . $account['id'])) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 text-xs"><?= e(__('common.reset')) ?></a>
+            </form>
             <table class="w-full text-sm">
                 <thead class="text-left text-xs text-slate-400 uppercase bg-slate-50">
                     <tr><th class="px-5 py-2"><?= e(__('bank.date')) ?></th><th class="px-5 py-2"><?= e(__('bank.type')) ?></th><th class="px-5 py-2"><?= e(__('common.description')) ?></th><th class="px-5 py-2 text-right"><?= e(__('bank.amount')) ?></th></tr>

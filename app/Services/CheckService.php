@@ -17,7 +17,7 @@ final class CheckService
     private const STATUSES = ['in_portfolio', 'banked', 'collected', 'endorsed', 'returned', 'unpaid', 'cancelled'];
 
     /** @param string $kind 'check'|'note' */
-    public function list(?int $companyId = null, string $kind = 'check'): array
+    public function list(?int $companyId = null, string $kind = 'check', ?string $from = null, ?string $to = null, ?string $status = null): array
     {
         $table = $kind === 'check' ? 'checks' : 'promissory_notes';
         $sql = 'SELECT t.*, c.name AS company_name, ca.name AS account_name
@@ -29,6 +29,18 @@ final class CheckService
         if ($companyId) {
             $sql .= ' AND t.company_id = :c';
             $params['c'] = $companyId;
+        }
+        if ($from) {
+            $sql .= ' AND t.due_date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND t.due_date <= :to';
+            $params['to'] = $to;
+        }
+        if ($status) {
+            $sql .= ' AND t.status = :status';
+            $params['status'] = $status;
         }
         $sql .= ' ORDER BY t.due_date ASC';
         return paginate($sql, $params, 25);

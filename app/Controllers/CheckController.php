@@ -24,9 +24,12 @@ final class CheckController extends Controller
     {
         Auth::requireCan('check.read');
         $companyId = (int) ($request->query('company_id') ?? 0);
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+        $status = $request->query('status') ?: null;
         $service = new CheckService();
         $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
-        $page = $service->list($companyId ?: null, $kind);
+        $page = $service->list($companyId ?: null, $kind, $from, $to, $status);
         return $this->view($this->viewName($kind), [
             'layout' => 'layouts.app',
             'kind' => $kind,
@@ -36,6 +39,9 @@ final class CheckController extends Controller
             'page' => $page['page'],
             'lastPage' => $page['lastPage'],
             'total' => $page['total'],
+            'from' => $from,
+            'to' => $to,
+            'status' => $status,
         ]);
     }
 

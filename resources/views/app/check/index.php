@@ -17,12 +17,21 @@ $statuses = ['in_portfolio','banked','collected','endorsed','returned','unpaid',
     <a href="<?= e(url('/app/checks/' . ($isNote ? 'notes/' : '') . 'create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('check.new')) ?></a>
 </div>
 
-<form method="get" action="<?= e(url($isNote ? '/app/checks/notes' : '/app/checks')) ?>" class="mb-4 bg-white border border-slate-200 rounded-2xl p-3 flex gap-2">
+<form method="get" action="<?= e(url($isNote ? '/app/checks/notes' : '/app/checks')) ?>" class="mb-4 bg-white border border-slate-200 rounded-2xl p-3 flex flex-wrap items-end gap-2">
     <select name="company_id" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand-500 outline-none">
         <option value=""><?= e(__('check.company')) ?></option>
         <?php foreach ($companies as $c): ?><option value="<?= e($c['id']) ?>" <?= (int)$companyId===(int)$c['id']?'selected':'' ?>><?= e($c['name']) ?></option><?php endforeach; ?>
     </select>
-    <button class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('common.search')) ?></button>
+    <label class="text-xs text-slate-500"><?= e(__('common.from')) ?> <input type="date" name="from" value="<?= e($from ?? '') ?>" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200"></label>
+    <label class="text-xs text-slate-500"><?= e(__('common.to')) ?> <input type="date" name="to" value="<?= e($to ?? '') ?>" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200"></label>
+    <label class="text-xs text-slate-500"><?= e(__('check.status')) ?>
+        <select name="status" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200">
+            <option value="">—</option>
+            <?php foreach ($statuses as $s): ?><option value="<?= $s ?>" <?= $status===$s?'selected':'' ?>><?= e(__('check.status_' . $s)) ?></option><?php endforeach; ?>
+        </select>
+    </label>
+    <button class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('common.filter')) ?></button>
+    <a href="<?= e(url($isNote ? '/app/checks/notes' : '/app/checks')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-sm"><?= e(__('common.reset')) ?></a>
 </form>
 
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">

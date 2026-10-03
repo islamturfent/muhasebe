@@ -46,22 +46,38 @@ final class AdminController extends Controller
     public function tenants(Request $request): Response
     {
         $search = trim((string) $request->query('search'));
+
+        $where = '';
+        $params = [];
+        if ($search !== '') {
+            // Positional params (repeated ?) because the name is used 3x and
+            // native prepared statements reject repeated named placeholders.
+            $where = ' WHERE t.name LIKE ? OR t.slug LIKE ? OR t.email LIKE ?';
+            $params = ['%' . $search . '%', '%' . $search . '%', '%' . $search . '%'];
+        }
+
+        // Manual pagination (the SELECT uses correlated subqueries, so the
+        // generic paginate() COUNT rewrite would be wrong).
+        $perPage = 25;
+        $page = max(1, (int) ($request->query('page') ?? 1));
+        $total = (int) DB::scalar('SELECT COUNT(*) FROM tenants t' . $where, $params);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $lastPage);
+        $offset = ($page - 1) * $perPage;
+
         $sql = 'SELECT t.*,
                        (SELECT COUNT(*) FROM companies c WHERE c.tenant_id = t.id AND c.deleted_at IS NULL) AS companies,
                        (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id AND u.deleted_at IS NULL) AS members
-                  FROM tenants t';
-        $params = [];
-        if ($search !== '') {
-            $sql .= ' WHERE t.name LIKE :q OR t.slug LIKE :q OR t.email LIKE :q';
-            $params['q'] = '%' . $search . '%';
-        }
-        $sql .= ' ORDER BY t.id DESC';
+                  FROM tenants t' . $where . ' ORDER BY t.id DESC LIMIT ' . $offset . ', ' . $perPage;
         $tenants = DB::select($sql, $params);
 
         return $this->view('admin.tenants', [
             'layout' => 'layouts.admin',
             'tenants' => $tenants,
             'search' => $search,
+            'page' => $page,
+            'lastPage' => $lastPage,
+            'total' => $total,
         ]);
     }
 

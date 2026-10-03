@@ -51,4 +51,8 @@ return [
     'records' => 'kayıt',
     'debit' => 'Borç',
     'credit' => 'Alacak',
+    'from' => 'Başlangıç',
+    'to' => 'Bitiş',
+    'filter' => 'Filtrele',
+    'reset' => 'Sıfırla',
 ];

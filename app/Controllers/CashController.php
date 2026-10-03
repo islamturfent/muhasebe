@@ -61,7 +61,10 @@ final class CashController extends Controller
             return Response::redirect('/app/cash');
         }
         $company = DB::first('SELECT id, name FROM companies WHERE id = :id', ['id' => $account['company_id']]);
-        $trx = $service->transactions($id);
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+        $type = $request->query('type') ?: null;
+        $trx = $service->transactions($id, $from, $to, $type);
         return $this->view('app.cash.show', [
             'layout' => 'layouts.app',
             'account' => $account,
@@ -70,6 +73,9 @@ final class CashController extends Controller
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],
+            'from' => $from,
+            'to' => $to,
+            'type' => $type,
         ]);
     }
 

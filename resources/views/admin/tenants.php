@@ -43,5 +43,6 @@ use Muh\Core\Translator;
                 <?php if (!$tenants): ?><tr><td colspan="6" class="px-5 py-8 text-center text-slate-400"><?= e(__('admin.no_tenants')) ?></td></tr><?php endif; ?>
             </tbody>
         </table>
+        <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
     </div>
 </div>
