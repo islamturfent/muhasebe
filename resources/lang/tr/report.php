@@ -66,4 +66,11 @@ return [
     'stock_sub' => 'Stok miktarı, kritik seviye ve maliyet değeri',
     'profit_sub' => 'Dönem gelir, gider ve net kâr/zarar özeti',
     'vat_summary_sub' => 'Dönem KDV özeti (matrah, KDV, tevkifat)',
+    'upcoming_liabilities' => 'Yaklaşan Yükümlülükler / Ödenmemiş Faturalar',
+    'upcoming_sub' => 'Vadesi geçmiş ve yaklaşan ödenmemiş faturalar',
+    'due_date' => 'Vade',
+    'outstanding' => 'Kalan Tutar',
+    'upcoming_status' => 'Durum',
+    'upcoming_overdue' => 'Vadesi Geçmiş',
+    'upcoming_upcoming' => 'Yaklaşan',
 ];

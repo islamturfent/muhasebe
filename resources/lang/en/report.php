@@ -66,4 +66,11 @@ return [
     'stock_sub' => 'Stock quantities, critical levels and cost value',
     'profit_sub' => 'Period income, expenses and net profit/loss summary',
     'vat_summary_sub' => 'Periodic VAT summary (base, VAT, withholding)',
+    'upcoming_liabilities' => 'Upcoming Liabilities / Unpaid Invoices',
+    'upcoming_sub' => 'Overdue and upcoming unpaid invoices',
+    'due_date' => 'Due Date',
+    'outstanding' => 'Outstanding',
+    'upcoming_status' => 'Status',
+    'upcoming_overdue' => 'Overdue',
+    'upcoming_upcoming' => 'Upcoming',
 ];

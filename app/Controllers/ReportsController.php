@@ -833,4 +833,64 @@ final class ReportsController extends Controller
             'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
         ]);
     }
+
+    // ---- Yaklaşan yükümlülükler (unpaid invoices / upcoming & overdue) ----
+
+    private function upcomingData(Request $request): array
+    {
+        $companyId = (int) ($request->query('company_id') ?? 0);
+        $sql = "SELECT i.number, i.date, i.due_date, i.total, i.paid, i.type, c.name AS company_name, ca.name AS cari
+                  FROM invoices i
+                  JOIN companies c ON c.id = i.company_id
+                  LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+                 WHERE i.tenant_id = :t AND i.deleted_at IS NULL AND i.status = 'posted' AND i.total > i.paid";
+        $params = ['t' => Auth::tenantId()];
+        if ($companyId) {
+            $sql .= ' AND i.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        $sql .= ' ORDER BY (i.due_date IS NULL), i.due_date ASC, i.id ASC';
+        return DB::select($sql, $params);
+    }
+
+    public function upcoming(Request $request): Response
+    {
+        Auth::requireCan('report.export');
+        $format = $request->query('format', 'csv');
+        $today = date('Y-m-d');
+        $rows = $this->upcomingData($request);
+        $headers = [__('accounting.number'), __('common.date'), __('current_account.name'), __('invoice.company'), __('report.due_date'), __('report.outstanding'), __('report.upcoming_status')];
+        $out = [];
+        foreach ($rows as $r) {
+            $due = (float) $r['total'] - (float) $r['paid'];
+            $days = !empty($r['due_date']) ? (int) floor((strtotime($today) - strtotime($r['due_date'])) / 86400) : 0;
+            $status = $days > 0 ? __('report.upcoming_overdue') : __('report.upcoming_upcoming');
+            $out[] = [$r['number'], format_date($r['date']), $r['cari'] ?? '', $r['company_name'], $r['due_date'] ? format_date($r['due_date']) : '—', number_format($due, 2, ',', '.'), $status];
+        }
+        return $this->export($format, __('report.upcoming_liabilities'), '', $headers, $out, 'yuklumlulukler');
+    }
+
+    public function upcomingScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $today = date('Y-m-d');
+        $rows = $this->upcomingData($request);
+        $headers = [__('accounting.number'), __('common.date'), __('current_account.name'), __('invoice.company'), __('report.due_date'), __('report.outstanding'), __('report.upcoming_status')];
+        $out = [];
+        $totalOut = 0.0;
+        foreach ($rows as $r) {
+            $due = (float) $r['total'] - (float) $r['paid'];
+            $totalOut += $due;
+            $days = !empty($r['due_date']) ? (int) floor((strtotime($today) - strtotime($r['due_date'])) / 86400) : 0;
+            $status = $days > 0 ? __('report.upcoming_overdue') : __('report.upcoming_upcoming');
+            $out[] = [$r['number'], format_date($r['date']), $r['cari'] ?? '', $r['company_name'], $r['due_date'] ? format_date($r['due_date']) : '—', number_format($due, 2, ',', '.'), $status];
+        }
+        $out[] = [__('common.total'), '', '', '', '', number_format($totalOut, 2, ',', '.'), ''];
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.upcoming_liabilities'), 'subtitle' => __('report.upcoming_sub'),
+            'headers' => $headers, 'rows' => $out, 'exportSlug' => 'yuklumlulukler',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
 }

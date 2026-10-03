@@ -33,13 +33,14 @@ $reports = [
     ['banka-mutabakat', 'report.bank_reconciliation'],
     ['kdv-detay', 'report.vat_detail'],
     ['efatura', 'report.efatura_status'],
+    ['yuklumlulukler', 'report.upcoming_liabilities'],
     ['karlilik', 'report.profitability'],
     ['borc-alacak', 'report.receivables_payables'],
 ];
 ?>
 <div class="grid md:grid-cols-2 gap-4">
     <?php
-    $screenable = ['yaslandirma' => true, 'stok' => true, 'karlilik' => true, 'kdv' => true, 'kdv-beyanname' => true];
+    $screenable = ['yaslandirma' => true, 'stok' => true, 'karlilik' => true, 'kdv' => true, 'kdv-beyanname' => true, 'yuklumlulukler' => true];
     foreach ($reports as [$slug, $label]): ?>
     <div class="bg-white border border-slate-200 rounded-2xl p-5">
         <div class="flex items-center gap-3 mb-4">
