@@ -88,6 +88,22 @@ $user = Auth::user();
 </div>
 <?php endif; ?>
 
+<?php $alerts = $alerts ?? []; ?>
+<?php if (!empty($alerts)): ?>
+<!-- Uyarı panosu -->
+<div class="mt-6 bg-white border border-amber-200 rounded-2xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-amber-100 bg-amber-50 font-semibold text-amber-800 text-sm">⚠ <?= e(__('dashboard.alerts')) ?></div>
+    <div class="divide-y divide-amber-50">
+        <?php foreach ($alerts as $a): ?>
+        <a href="<?= e(url($a['url'])) ?>" class="px-5 py-2.5 flex gap-2 text-sm hover:bg-amber-50">
+            <span class="<?= $a['kind']==='stock' ? 'text-orange-500' : ($a['kind']==='efatura' ? 'text-red-500' : 'text-amber-600') ?>">•</span>
+            <span class="text-slate-700"><?= e($a['msg']) ?></span>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="grid lg:grid-cols-3 gap-6 mt-6">
     <!-- Recent companies -->
     <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl overflow-hidden">

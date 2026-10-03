@@ -24,6 +24,10 @@ $locale = Translator::instance()->locale();
                 <?php if (!empty($invoice['efatura_envelope_id'])): ?><br><span class="font-normal"><?= e(__('efatura.envelope_id') . ': ' . $invoice['efatura_envelope_id']) ?></span><?php endif; ?>
             </span>
             <a href="<?= e(url('/app/invoices/' . $invoice['id'] . '/print')) ?>" target="_blank" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">🖨 <?= e(__('invoice.print')) ?></a>
+            <form method="post" action="<?= e(url('/app/invoices/' . $invoice['id'] . '/email')) ?>">
+                <?= csrf_field() ?>
+                <button class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">✉ <?= e(__('invoice.send_email')) ?></button>
+            </form>
         </div>
     </div>
 

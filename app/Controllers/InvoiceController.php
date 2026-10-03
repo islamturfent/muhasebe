@@ -148,6 +148,12 @@ final class InvoiceController extends Controller
         Auth::requireCan('invoice.create');
         $service = new InvoiceService();
         try {
+            // Cari risk limiti kontrolü (müşteri alacakları için).
+            $risk = $this->riskLimitWarning($request->all());
+            if ($risk !== null) {
+                Session::set('_form_errors', ['risk_limit' => $risk]);
+                return Response::redirect('/app/invoices/create?company_id=' . (int) $request->input('company_id'));
+            }
             $id = $service->create($request->all(), $request);
         } catch (ValidationException $e) {
             Session::set('_form_errors', $e->errors);
@@ -155,6 +161,47 @@ final class InvoiceController extends Controller
         }
         Session::flash('success', __('invoice.created'));
         return Response::redirect('/app/invoices/' . $id);
+    }
+
+    /**
+     * Return a blocking warning when the invoice would exceed the current
+     * account's risk limit (risk_limit > 0). Applies to customer receivables.
+     */
+    private function riskLimitWarning(array $data): ?string
+    {
+        $type = $data['type'] ?? '';
+        if (!in_array($type, ['sales', 'sales_return'], true)) {
+            return null;
+        }
+        $accountId = (int) ($data['current_account_id'] ?? 0);
+        $acc = DB::first('SELECT id, balance, risk_limit, type FROM current_accounts WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $accountId, 't' => Auth::tenantId()]);
+        if (!$acc || (float) $acc['risk_limit'] <= 0) {
+            return null;
+        }
+        // Projected receivable change for this invoice (net of withholding).
+        $total = 0.0;
+        $withholding = 0.0;
+        foreach ((array) ($data['lines'] ?? []) as $l) {
+            $qty = (float) ($l['qty'] ?? 0);
+            $price = (float) ($l['unit_price'] ?? 0);
+            $vat = (float) ($l['vat_rate'] ?? 0);
+            $disc = (float) ($l['discount'] ?? 0);
+            $net = $qty * $price;
+            $netAfterDiscount = $net - ($net * $disc / 100);
+            $tax = $netAfterDiscount * $vat / 100;
+            $wr = (float) ($l['withholding_rate'] ?? 0);
+            $withholding += $tax * $wr / 100;
+            $total += $netAfterDiscount + $tax;
+        }
+        $sign = $type === 'sales' ? 1 : -1;
+        $projected = (float) $acc['balance'] + ($sign * ($total - $withholding));
+        if ($projected > (float) $acc['risk_limit']) {
+            return __('invoice.risk_limit_warning', [
+                'limit' => money((float) $acc['risk_limit']),
+                'projected' => money($projected),
+            ]);
+        }
+        return null;
     }
 
     public function show(Request $request, $id): Response
@@ -232,6 +279,44 @@ final class InvoiceController extends Controller
             return Response::redirect('/app/invoices/' . $id);
         }
         Session::flash('success', __('efatura.sent_ok') . ' (' . __('efatura.st_' . $status) . ')');
+        return Response::redirect('/app/invoices/' . $id);
+    }
+
+    /** Faturayı cari e-posta adresine gönderir (PDF/yazdır çıktısı ekli). */
+    public function email(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('invoice.read');
+        $invoice = DB::first(
+            'SELECT i.*, c.name AS company_name, c.email AS company_email, ca.name AS account_name, ca.email AS account_email
+               FROM invoices i
+               JOIN companies c ON c.id = i.company_id
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.id = :id AND i.tenant_id = :t AND i.deleted_at IS NULL',
+            ['id' => $id, 't' => Auth::tenantId()]
+        );
+        if (!$invoice) {
+            return Response::redirect('/app/invoices');
+        }
+        $items = DB::select(
+            'SELECT ii.*, p.name AS product_name FROM invoice_items ii
+              LEFT JOIN products p ON p.id = ii.product_id WHERE ii.invoice_id = :id ORDER BY ii.id',
+            ['id' => $id]
+        );
+
+        $to = trim((string) ($invoice['account_email'] ?? '')) ?: trim((string) ($invoice['company_email'] ?? ''));
+        if (!$to) {
+            Session::flash('error', __('invoice.no_email'));
+            return Response::redirect('/app/invoices/' . $id);
+        }
+
+        $html = \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items]);
+        $subject = __('invoice.email_subject', ['no' => $invoice['number'], 'company' => $invoice['company_name']]);
+
+        $ok = (new \Muh\Services\Mailer())->send($to, $subject, $html);
+        \Muh\Services\AuditLogService::record('invoice.email', 'invoice', 'invoices', (string) $id, null, ['to' => $to], (int) $invoice['company_id'], (int) Auth::tenantId());
+
+        Session::flash('success', $ok ? __('invoice.email_sent') : __('invoice.email_failed'));
         return Response::redirect('/app/invoices/' . $id);
     }
 }

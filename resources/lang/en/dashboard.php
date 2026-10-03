@@ -42,4 +42,9 @@ return [
     'amount' => 'Amount',
     'type' => 'Type',
     'status' => 'Status',
+    'alerts' => 'Alerts',
+    'alert_critical_stock' => 'Critical stock: :name (:company) — :stock pcs',
+    'alert_overdue' => 'Overdue: :no (:cari)',
+    'alert_efatura' => 'e-Invoice error: :no',
+    'no_alerts' => 'Great, no alerts.',
 ];

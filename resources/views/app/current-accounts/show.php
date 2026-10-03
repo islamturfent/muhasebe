@@ -44,6 +44,10 @@ $running = $balance; // walk transactions newest-first is misleading; compute op
     </div>
 </div>
 
+<?php if ((float) $account['risk_limit'] > 0 && $balance > (float) $account['risk_limit']): ?>
+<div class="mb-6 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm">⚠ <?= e(__('current_account.risk_exceeded')) ?> · <?= e(money($balance)) ?> / <?= e(money($account['risk_limit'])) ?></div>
+<?php endif; ?>
+
 <?php if (!empty($statement)): ?>
 <!-- Ekstre özeti (opening/closing) + export -->
 <div class="mb-6 bg-white border border-slate-200 rounded-2xl p-5">

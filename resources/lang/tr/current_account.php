@@ -52,4 +52,5 @@ return [
     'payment_done' => 'Ödeme kaydedildi ve muhasebeleştirildi.',
     'apply_to_invoice' => 'Faturaya uygula (opsiyonel)',
     'select_target' => 'Hesap seçin',
+    'risk_exceeded' => 'Cari risk limiti aşıldı',
 ];

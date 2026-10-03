@@ -99,6 +99,37 @@ final class DashboardController extends Controller
             );
         }
 
+        // Uyan panosu: kritik stok + vadesi geçen + e-fatura hatası.
+        $alerts = [];
+        $crit = DB::select(
+            "SELECT p.id, p.name, p.stock_quantity, p.critical_stock, c.name AS company_name
+               FROM products p JOIN companies c ON c.id = p.company_id
+              WHERE p.tenant_id = :t AND p.type = 'product' AND p.deleted_at IS NULL
+                AND p.critical_stock > 0 AND p.stock_quantity <= p.critical_stock" . $companyFilter,
+            ['t' => $tenantId]
+        );
+        foreach ($crit as $p) {
+            $alerts[] = ['kind' => 'stock', 'url' => '/app/inventory', 'msg' => __('dashboard.alert_critical_stock', ['name' => $p['name'], 'company' => $p['company_name'], 'stock' => $p['stock_quantity']])];
+        }
+        $over = DB::select(
+            "SELECT i.id, i.number, ca.name AS cari FROM invoices i
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.tenant_id = :t AND i.status = 'posted' AND i.due_date <= :today
+                AND i.paid < i.total AND i.deleted_at IS NULL" . $companyFilter . " ORDER BY i.due_date LIMIT 6",
+            ['t' => $tenantId, 'today' => $today]
+        );
+        foreach ($over as $o) {
+            $alerts[] = ['kind' => 'overdue', 'url' => '/app/invoices/' . $o['id'], 'msg' => __('dashboard.alert_overdue', ['no' => $o['number'], 'cari' => $o['cari'] ?? '—'])];
+        }
+        $eferr = DB::select(
+            "SELECT i.id, i.number FROM invoices i
+              WHERE i.tenant_id = :t AND i.efatura_status IN ('error','rejected') AND i.deleted_at IS NULL" . $companyFilter . " ORDER BY i.id DESC LIMIT 6",
+            ['t' => $tenantId]
+        );
+        foreach ($eferr as $e) {
+            $alerts[] = ['kind' => 'efatura', 'url' => '/app/invoices/' . $e['id'], 'msg' => __('dashboard.alert_efatura', ['no' => $e['number']])];
+        }
+
         // e-Fatura status distribution across the office.
         $efaturaCounts = [];
         foreach (DB::select(
@@ -116,6 +147,7 @@ final class DashboardController extends Controller
             'upcoming' => $upcoming,
             'chart' => $chart,
             'efaturaCounts' => $efaturaCounts,
+            'alerts' => $alerts,
         ]);
     }
 
@@ -231,6 +263,32 @@ final class DashboardController extends Controller
             ['c' => $cid]
         );
 
+        // Firm-level alerts: critical stock + overdue + e-fatura errors.
+        $alerts = [];
+        $crit = DB::select(
+            'SELECT id, name, stock_quantity, critical_stock FROM products WHERE company_id = :c AND type = \'product\' AND deleted_at IS NULL AND critical_stock > 0 AND stock_quantity <= critical_stock',
+            ['c' => $cid]
+        );
+        foreach ($crit as $p) {
+            $alerts[] = ['kind' => 'stock', 'url' => '/app/inventory', 'msg' => __('dashboard.alert_critical_stock', ['name' => $p['name'], 'company' => $company['name'], 'stock' => $p['stock_quantity']])];
+        }
+        $over = DB::select(
+            "SELECT i.id, i.number, ca.name AS cari FROM invoices i
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.company_id = :c AND i.status = 'posted' AND i.due_date <= :today AND i.paid < i.total AND i.deleted_at IS NULL ORDER BY i.due_date LIMIT 6",
+            ['c' => $cid, 'today' => date('Y-m-d')]
+        );
+        foreach ($over as $o) {
+            $alerts[] = ['kind' => 'overdue', 'url' => '/app/invoices/' . $o['id'], 'msg' => __('dashboard.alert_overdue', ['no' => $o['number'], 'cari' => $o['cari'] ?? '—'])];
+        }
+        $eferr = DB::select(
+            "SELECT id, number FROM invoices WHERE company_id = :c AND efatura_status IN ('error','rejected') AND deleted_at IS NULL ORDER BY id DESC LIMIT 6",
+            ['c' => $cid]
+        );
+        foreach ($eferr as $e) {
+            $alerts[] = ['kind' => 'efatura', 'url' => '/app/invoices/' . $e['id'], 'msg' => __('dashboard.alert_efatura', ['no' => $e['number']])];
+        }
+
         return $this->view('app.company-dashboard', [
             'layout' => 'layouts.app',
             'company' => $company,
@@ -239,6 +297,7 @@ final class DashboardController extends Controller
             'chart' => $chart,
             'recentInvoices' => $recentInvoices,
             'recentCollections' => $recentCollections,
+            'alerts' => $alerts,
             'periodId' => $periodId,
         ]);
     }

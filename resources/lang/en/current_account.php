@@ -52,4 +52,5 @@ return [
     'payment_done' => 'Payment recorded and posted.',
     'apply_to_invoice' => 'Apply to invoice (optional)',
     'select_target' => 'Select account',
+    'risk_exceeded' => 'Account risk limit exceeded',
 ];

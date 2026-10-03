@@ -38,6 +38,20 @@ $locale = Translator::instance()->locale();
         </div>
     </div>
 
+    <?php $alerts = $alerts ?? []; if (!empty($alerts)): ?>
+    <div class="bg-white border border-amber-200 rounded-2xl overflow-hidden">
+        <div class="px-5 py-3 border-b border-amber-100 bg-amber-50 font-semibold text-amber-800 text-sm">⚠ <?= e(__('dashboard.alerts')) ?></div>
+        <div class="divide-y divide-amber-50">
+            <?php foreach ($alerts as $a): ?>
+            <a href="<?= e(url($a['url'])) ?>" class="px-5 py-2.5 flex gap-2 text-sm hover:bg-amber-50">
+                <span class="<?= $a['kind']==='stock' ? 'text-orange-500' : ($a['kind']==='efatura' ? 'text-red-500' : 'text-amber-600') ?>">•</span>
+                <span class="text-slate-700"><?= e($a['msg']) ?></span>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($chart)): ?>
     <?php
         $cSales = array_map('floatval', $chart['sales'] ?? []);
