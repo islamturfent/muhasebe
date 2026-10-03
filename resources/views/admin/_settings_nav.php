@@ -1,8 +1,9 @@
 <?php
 /** @var string $activeTab */
 $tabs = [
-    'general' => ['label' => __('admin.general_settings'), 'url' => '/admin/settings'],
-    'session' => ['label' => __('admin.session_security'), 'url' => '/admin/settings/session'],
+    'general'      => ['label' => __('admin.general_settings'), 'url' => '/admin/settings'],
+    'session'      => ['label' => __('admin.session_security'), 'url' => '/admin/settings/session'],
+    'localization' => ['label' => __('admin.localization_settings'), 'url' => '/admin/settings/localization'],
 ];
 ?>
 <div class="flex flex-wrap gap-2 mb-6">

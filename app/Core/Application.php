@@ -29,6 +29,15 @@ final class Application
         $locale = Session::get('locale');
         if (!$locale) {
             $locale = Config::get('app.locale', 'tr');
+            // Platform default locale (super admin Localization settings).
+            try {
+                $v = DB::scalar("SELECT value FROM settings WHERE `group` = 'platform' AND `key` = 'default_locale'");
+                if ($v) {
+                    $locale = $v;
+                }
+            } catch (\Throwable $e) {
+                // DB unavailable during CLI/migration — keep config default.
+            }
         }
         Translator::instance()->setLocale($locale);
         Translator::instance()->load($basePath . '/resources/lang');

@@ -73,6 +73,7 @@ $menu = [
         <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
             <span class="font-semibold text-slate-700"><?= e(__('admin.title')) ?></span>
             <div class="flex items-center gap-3">
+                <a href="<?= e(url('/locale?locale=' . ($locale==='tr' ? 'en' : 'tr') . '&return=' . urlencode(request_path()))) ?>" class="text-sm px-3 py-2 rounded-lg hover:bg-slate-100 font-medium" title="<?= e(__('nav.language')) ?>"><?= $locale==='tr' ? 'EN' : 'TR' ?></a>
                 <a href="<?= e(url('/theme?mode=' . ($dark ? 'light' : 'dark') . '&return=/admin')) ?>" class="p-2 rounded-lg hover:bg-slate-100" title="Toggle theme"><?= $dark ? '☀' : '☾' ?></a>
                 <a href="<?= e(url('/app/profile')) ?>" class="p-2 rounded-lg hover:bg-slate-100" title="<?= e(__('nav.profile')) ?>">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M15 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>

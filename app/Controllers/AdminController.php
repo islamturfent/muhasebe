@@ -488,6 +488,36 @@ final class AdminController extends Controller
         return Response::redirect('/admin/settings/session');
     }
 
+    // ---- Ayarlar menüsü: Yerelleştirme ----
+    public function localizationSettings(Request $request): Response
+    {
+        $platform = function (string $key) {
+            $r = DB::first("SELECT value FROM settings WHERE `group` = 'platform' AND `key` = :k", ['k' => $key]);
+            return $r ? $r['value'] : null;
+        };
+        $defaultLocale = (string) ($platform('default_locale') ?? \Muh\Core\Config::get('app.locale', 'tr'));
+
+        return $this->view('admin.settings_localization', [
+            'layout' => 'layouts.admin',
+            'activeTab' => 'localization',
+            'defaultLocale' => $defaultLocale,
+            'supportedLocales' => \Muh\Core\Translator::instance()->supportedLocales(),
+        ]);
+    }
+
+    public function saveLocalizationSettings(Request $request): Response
+    {
+        $allowed = \Muh\Core\Translator::instance()->supportedLocales();
+        $locale = (string) $request->input('default_locale');
+        if (!in_array($locale, $allowed, true)) {
+            $locale = 'tr';
+        }
+        $this->platformSetting('default_locale', $locale);
+        AuditLogService::record('admin.settings.localization.save', 'admin', 'settings', null, null, ['default_locale' => $locale]);
+        Session::flash('success', __('admin.settings_saved'));
+        return Response::redirect('/admin/settings/localization');
+    }
+
     // ---- Sistem sağlığı & yedekleme yönetimi ----
     public function backups(Request $request): Response
     {
