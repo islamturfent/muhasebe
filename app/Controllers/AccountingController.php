@@ -166,6 +166,180 @@ final class AccountingController extends Controller
         }
         return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
     }
+
+    // ---- Hesap Planı (Chart of Accounts) CRUD ----
+
+    public function chart(Request $request): Response
+    {
+        Auth::requireCan('accounting.read');
+        [$companies, $companyId, $periods, $periodId] = $this->resolveContext($request);
+        $accounts = $companyId ? DB::select(
+            'SELECT * FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p ORDER BY code ASC',
+            ['c' => $companyId, 'p' => $periodId]
+        ) : [];
+
+        return $this->view('app.accounting.chart', [
+            'layout' => 'layouts.app',
+            'companies' => $companies, 'companyId' => $companyId,
+            'periods' => $periods, 'periodId' => $periodId,
+            'accounts' => $accounts,
+        ]);
+    }
+
+    private function chartFormData(Request $request): array
+    {
+        [$companies, $companyId, $periods, $periodId] = $this->resolveContext($request);
+        $periodOptions = DB::select('SELECT id, name FROM fiscal_periods WHERE company_id = :c AND deleted_at IS NULL ORDER BY start_date DESC', ['c' => $companyId]);
+        foreach ($periods as &$p) {
+            $p['is_current'] = (int) $p['is_current'];
+        }
+        return [$companies, $companyId, $periodOptions, $periodId];
+    }
+
+    public function createChartAccount(Request $request): Response
+    {
+        Auth::requireCan('accounting.create');
+        [$companies, $companyId, $periodOptions, $periodId] = $this->chartFormData($request);
+        return $this->view('app.accounting.chart-create', [
+            'layout' => 'layouts.app',
+            'companies' => $companies, 'companyId' => $companyId,
+            'periods' => $periodOptions, 'periodId' => $periodId,
+            'account' => null,
+        ]);
+    }
+
+    public function storeChartAccount(Request $request): Response
+    {
+        Auth::requireCan('accounting.create');
+        $tenantId = Auth::tenantId();
+        $companyId = (int) $request->input('company_id');
+        $periodId = (int) ($request->input('period_id') ?? 0);
+
+        $code = trim((string) $request->input('code'));
+        $name = trim((string) $request->input('name'));
+        $type = (string) $request->input('type');
+        $isHeader = $request->input('is_header') ? 1 : 0;
+        $openingDebit = (float) ($request->input('opening_debit') ?? 0);
+        $openingCredit = (float) ($request->input('opening_credit') ?? 0);
+        $currency = $request->input('currency') ?: 'TRY';
+
+        $validTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
+        if ($code === '' || $name === '' || !in_array($type, $validTypes, true) || !$companyId || !$periodId) {
+            Session::set('_form_errors', [__('accounting.account_required')]);
+            return Response::redirect('/app/accounting/chart/create?company_id=' . $companyId . '&period_id=' . $periodId);
+        }
+
+        $exists = DB::first(
+            'SELECT id FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p AND code = :code',
+            ['c' => $companyId, 'p' => $periodId, 'code' => $code]
+        );
+        if ($exists) {
+            Session::set('_form_errors', [__('accounting.code_exists')]);
+            return Response::redirect('/app/accounting/chart/create?company_id=' . $companyId . '&period_id=' . $periodId);
+        }
+
+        DB::insert('accounting_accounts', [
+            'tenant_id'     => $tenantId,
+            'company_id'    => $companyId,
+            'fiscal_period_id' => $periodId,
+            'code'          => $code,
+            'name'          => $name,
+            'type'          => $type,
+            'subtype'       => $request->input('subtype') ?: null,
+            'group'         => substr($code, 0, 1),
+            'is_header'     => $isHeader,
+            'currency'      => $currency,
+            'opening_debit' => $openingDebit,
+            'opening_credit'=> $openingCredit,
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+        Session::flash('success', __('accounting.account_created'));
+        return Response::redirect('/app/accounting/chart?company_id=' . $companyId . '&period_id=' . $periodId);
+    }
+
+    public function editChartAccount(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.update');
+        $id = (int) $id;
+        $account = DB::first(
+            'SELECT * FROM accounting_accounts WHERE id = :id AND tenant_id = :t',
+            ['id' => $id, 't' => Auth::tenantId()]
+        );
+        if (!$account) {
+            return Response::redirect('/app/accounting/chart');
+        }
+        $companyId = (int) $account['company_id'];
+        $periodId = (int) $account['fiscal_period_id'];
+        $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
+        $periodOptions = DB::select('SELECT id, name FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC', ['c' => $companyId]);
+
+        return $this->view('app.accounting.chart-create', [
+            'layout' => 'layouts.app',
+            'companies' => $companies, 'companyId' => $companyId,
+            'periods' => $periodOptions, 'periodId' => $periodId,
+            'account' => $account,
+        ]);
+    }
+
+    public function updateChartAccount(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.update');
+        $id = (int) $id;
+        $account = DB::first('SELECT * FROM accounting_accounts WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if (!$account) {
+            return Response::redirect('/app/accounting/chart');
+        }
+
+        $code = trim((string) $request->input('code'));
+        $name = trim((string) $request->input('name'));
+        $type = (string) $request->input('type');
+        $validTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
+        if ($code === '' || $name === '' || !in_array($type, $validTypes, true)) {
+            Session::set('_form_errors', [__('accounting.account_required')]);
+            return Response::redirect('/app/accounting/chart/' . $id . '/edit');
+        }
+
+        $dupe = DB::first(
+            'SELECT id FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p AND code = :code AND id != :id',
+            ['c' => $account['company_id'], 'p' => $account['fiscal_period_id'], 'code' => $code, 'id' => $id]
+        );
+        if ($dupe) {
+            Session::set('_form_errors', [__('accounting.code_exists')]);
+            return Response::redirect('/app/accounting/chart/' . $id . '/edit');
+        }
+
+        DB::execute(
+            'UPDATE accounting_accounts SET code = :code, name = :name, type = :t, subtype = :st,
+                    is_header = :h, currency = :cu, opening_debit = :od, opening_credit = :oc, updated_at = NOW()
+              WHERE id = :id',
+            [
+                'code' => $code, 'name' => $name, 't' => $type,
+                'st' => $request->input('subtype') ?: null, 'h' => $request->input('is_header') ? 1 : 0,
+                'cu' => $request->input('currency') ?: 'TRY',
+                'od' => (float) ($request->input('opening_debit') ?? 0),
+                'oc' => (float) ($request->input('opening_credit') ?? 0),
+                'id' => $id,
+            ]
+        );
+        Session::flash('success', __('accounting.account_updated'));
+        return Response::redirect('/app/accounting/chart?company_id=' . (int) $account['company_id'] . '&period_id=' . (int) $account['fiscal_period_id']);
+    }
+
+    public function destroyChartAccount(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.delete');
+        $id = (int) $id;
+        $account = DB::first('SELECT * FROM accounting_accounts WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        $refs = $account ? (int) DB::scalar('SELECT COUNT(*) FROM accounting_entry_lines WHERE account_id = :id', ['id' => $id]) : 0;
+        if ($account && $refs === 0) {
+            DB::execute('DELETE FROM accounting_accounts WHERE id = :id', ['id' => $id]);
+            Session::flash('success', __('accounting.account_deleted'));
+        } else {
+            Session::flash('error', __('accounting.account_in_use'));
+        }
+        return Response::redirect('/app/accounting/chart?company_id=' . (int) ($account['company_id'] ?? 0) . '&period_id=' . (int) ($account['fiscal_period_id'] ?? 0));
+    }
 }
 
     
