@@ -91,6 +91,7 @@ return function (Router $router): void {
         $g->get('/app/accounting/entry/create', [\Muh\Controllers\AccountingController::class, 'createEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/entry', [\Muh\Controllers\AccountingController::class, 'storeEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/entry/{id}/delete', [\Muh\Controllers\AccountingController::class, 'destroyEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/periods/close', [\Muh\Controllers\PeriodController::class, 'close'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)
         $g->get('/app/cash', [\Muh\Controllers\CashController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);

@@ -1,5 +1,6 @@
 <?php
 /** @var array $company @var array $periods @var array $accounts @var array $currentAccounts */
+use Muh\Core\Auth;
 use Muh\Core\Translator;
 $locale = Translator::instance()->locale();
 $totalDebit = array_sum(array_column($accounts, 'opening_debit'));
@@ -20,15 +21,36 @@ $totalCredit = array_sum(array_column($accounts, 'opening_credit'));
     <!-- Left column: fiscal periods + current accounts -->
     <div class="lg:col-span-1 space-y-6">
         <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('onboarding.step_period')) ?></div>
+            <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('period.title')) ?></div>
             <div class="divide-y divide-slate-50">
-                <?php foreach ($periods as $p): ?>
-                <div class="px-5 py-3 flex items-center justify-between">
-                    <div>
-                        <div class="font-medium text-slate-700 text-sm"><?= e($p['name']) ?></div>
-                        <div class="text-xs text-slate-400"><?= e(format_date($p['start_date'])) ?> – <?= e(format_date($p['end_date'])) ?></div>
+                <?php foreach ($periods as $p): $hasNext = false; ?>
+                <div class="px-5 py-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium text-slate-700 text-sm"><?= e($p['name']) ?></div>
+                            <div class="text-xs text-slate-400"><?= e(format_date($p['start_date'])) ?> – <?= e(format_date($p['end_date'])) ?></div>
+                        </div>
+                        <?php if ($p['is_closed']): ?><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-500"><?= e(__('period.status_closed')) ?></span>
+                        <?php elseif ($p['is_current']): ?><span class="px-2 py-0.5 rounded-full text-[11px] bg-brand-50 text-brand-600"><?= e(__('common.active')) ?></span>
+                        <?php else: ?><span class="px-2 py-0.5 rounded-full text-[11px] bg-green-50 text-green-600"><?= e(__('period.status_open')) ?></span><?php endif; ?>
                     </div>
-                    <?php if ($p['is_current']): ?><span class="px-2 py-0.5 rounded-full text-[11px] bg-brand-50 text-brand-600"><?= e(__('common.active')) ?></span><?php endif; ?>
+                    <?php if (!$p['is_closed'] && Auth::can('accounting.create')):
+                        $next = null;
+                        foreach ($periods as $pp) { if (!$pp['is_closed'] && $pp['start_date'] > $p['start_date']) { $next = $pp; break; } }
+                        $hasNext = (bool) $next;
+                    ?>
+                    <form method="post" action="<?= e(url('/app/periods/close')) ?>" class="mt-2 flex items-center gap-2" onsubmit="return confirm('<?= e(__('period.close_confirm')) ?>')">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="company_id" value="<?= (int)$company['id'] ?>">
+                        <input type="hidden" name="period_id" value="<?= (int)$p['id'] ?>">
+                        <?php if ($hasNext): ?>
+                        <select name="target_period_id" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white">
+                            <option value="<?= (int)$next['id'] ?>"><?= e(__('period.choose_target')) ?>: <?= e($next['name']) ?></option>
+                        </select>
+                        <?php endif; ?>
+                        <button class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100"><?= e(__('period.close')) ?></button>
+                    </form>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
             </div>

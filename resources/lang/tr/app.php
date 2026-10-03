@@ -7,4 +7,5 @@ return [
     'company_created' => 'Firma oluşturuldu.',
     'no_companies' => 'Henüz firma eklenmemiş. Onboarding sihirbazından ekleyebilirsiniz.',
     'settings_desc' => 'Ofis, kullanıcılar, güvenlik, abonelik ve vergi ayarlarını buradan yönetin.',
+    'not_authorized' => 'Bu işlem için yetkiniz yok.',
 ];
