@@ -66,4 +66,13 @@ return [
     'bulk_done' => ':n invoices created.',
     'select_accounts' => 'Select at least one current account.',
     'no_accounts' => 'No current accounts in the selected company.',
+    'approval_sent' => 'Invoice sent for approval.',
+    'approval_approved' => 'Invoice approved.',
+    'approval_rejected' => 'Invoice rejected.',
+    'submit_approval' => 'Send for Approval',
+    'approve' => 'Approve',
+    'reject_entry' => 'Reject',
+    'approval_pending_badge' => 'Pending Approval',
+    'approval_approved_badge' => 'Approved',
+    'approval_rejected_badge' => 'Rejected',
 ];

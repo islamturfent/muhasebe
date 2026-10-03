@@ -37,7 +37,9 @@ final class AccountingService
         array $lines,
         ?Request $request = null,
         ?string $refType = null,
-        ?string $refId = null
+        ?string $refId = null,
+        string $status = 'posted',
+        ?array $approval = null
     ): int {
         if (empty($lines)) {
             throw new ValidationException(['lines' => __('accounting.no_lines')]);
@@ -107,7 +109,7 @@ final class AccountingService
         $entryId = (int) DB::transaction(function () use (
             $tenantId, $companyId, $fiscalPeriodId, $voucherType,
             $date, $description, $prepared, $totalDebit, $totalCredit, $number,
-            $refType, $refId
+            $refType, $refId, $status, $approval
         ) {
             $entryId = (int) DB::insert('accounting_entries', [
                 'tenant_id'       => $tenantId,
@@ -120,9 +122,11 @@ final class AccountingService
                 'description'     => $description,
                 'debit_total'     => $totalDebit,
                 'credit_total'    => $totalCredit,
-                'status'          => 'posted',
+                'status'          => $status,
                 'reference_type'  => $refType,
                 'reference_id'    => $refId,
+                'approval_status' => $approval['status'] ?? 'none',
+                'approval_note'   => $approval['note'] ?? null,
                 'created_at'      => now(),
                 'updated_at'      => now(),
             ]);

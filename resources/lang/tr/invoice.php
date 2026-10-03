@@ -66,4 +66,13 @@ return [
     'bulk_done' => ':n fatura oluşturuldu.',
     'select_accounts' => 'En az bir cari seçin.',
     'no_accounts' => 'Seçili firmada cari hesap yok.',
+    'approval_sent' => 'Fatura onaya gönderildi.',
+    'approval_approved' => 'Fatura onaylandı.',
+    'approval_rejected' => 'Fatura reddedildi.',
+    'submit_approval' => 'Onaya Gönder',
+    'approve' => 'Onayla',
+    'reject_entry' => 'Reddet',
+    'approval_pending_badge' => 'Onay Bekliyor',
+    'approval_approved_badge' => 'Onaylandı',
+    'approval_rejected_badge' => 'Reddedildi',
 ];

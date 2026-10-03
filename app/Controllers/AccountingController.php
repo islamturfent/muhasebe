@@ -146,14 +146,19 @@ final class AccountingController extends Controller
             ? $request->input('voucher_type', 'journal')
             : 'journal';
 
+        $forApproval = (bool) $request->input('for_approval');
+
         try {
             $id = AccountingService::postEntry(
                 $tenantId, $companyId, $periodId,
                 $voucherType, $request->input('date') ?: date('Y-m-d'),
                 $request->input('description') ?: __('accounting.manual_entry'),
-                $lines, $request
+                $lines, $request,
+                null, null,
+                $forApproval ? 'draft' : 'posted',
+                $forApproval ? ['status' => 'pending', 'note' => null] : null
             );
-            Session::flash('success', __('accounting.entry_created'));
+            Session::flash('success', $forApproval ? __('accounting.sent_for_approval') : __('accounting.entry_created'));
             return Response::redirect('/app/accounting/journal?company_id=' . $companyId . '&period_id=' . $periodId);
         } catch (ValidationException $e) {
             Session::set('_form_errors', $e->errors);
@@ -269,6 +274,38 @@ final class AccountingController extends Controller
         });
         Session::flash('success', __('accounting.entry_updated'));
         return Response::redirect('/app/accounting/journal?company_id=' . $companyId . '&period_id=' . $periodId);
+    }
+
+    /** Yevmiye fişini onayla (draft → posted). */
+    public function approveEntry(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.post');
+        $id = (int) $id;
+        $entry = DB::first('SELECT * FROM accounting_entries WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if ($entry) {
+            DB::execute(
+                "UPDATE accounting_entries SET status = 'posted', approval_status = 'approved', approved_by = :u, approved_at = NOW() WHERE id = :id",
+                ['u' => (int) Auth::id(), 'id' => $id]
+            );
+            Session::flash('success', __('accounting.entry_approved'));
+        }
+        return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
+    }
+
+    /** Yevmiye fişini reddet. */
+    public function rejectEntry(Request $request, $id): Response
+    {
+        Auth::requireCan('accounting.post');
+        $id = (int) $id;
+        $entry = DB::first('SELECT * FROM accounting_entries WHERE id = :id AND tenant_id = :t', ['id' => $id, 't' => Auth::tenantId()]);
+        if ($entry) {
+            DB::execute(
+                'UPDATE accounting_entries SET approval_status = \'rejected\', approval_note = :n, updated_at = NOW() WHERE id = :id',
+                ['n' => $request->input('note') ?: null, 'id' => $id]
+            );
+            Session::flash('success', __('accounting.entry_rejected'));
+        }
+        return Response::redirect('/app/accounting/journal?company_id=' . (int) $entry['company_id'] . '&period_id=' . (int) $entry['fiscal_period_id']);
     }
 
     /** Yevmiye fişi sil. */

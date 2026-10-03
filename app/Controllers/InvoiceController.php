@@ -239,6 +239,42 @@ final class InvoiceController extends Controller
         ]);
     }
 
+    /** Faturayı onaya gönder. */
+    public function submitApproval(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('invoice.update');
+        DB::execute("UPDATE invoices SET approval_status = 'pending', updated_at = NOW() WHERE id = :id AND tenant_id = :t", ['id' => $id, 't' => Auth::tenantId()]);
+        Session::flash('success', __('invoice.approval_sent'));
+        return Response::redirect('/app/invoices/' . $id);
+    }
+
+    /** Faturayı onayla. */
+    public function approveInvoice(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('invoice.approve');
+        DB::execute(
+            "UPDATE invoices SET approval_status = 'approved', approved_by = :u, approved_at = NOW(), updated_at = NOW() WHERE id = :id AND tenant_id = :t",
+            ['id' => $id, 't' => Auth::tenantId(), 'u' => (int) Auth::id()]
+        );
+        Session::flash('success', __('invoice.approval_approved'));
+        return Response::redirect('/app/invoices/' . $id);
+    }
+
+    /** Faturayı reddet. */
+    public function rejectInvoice(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('invoice.approve');
+        DB::execute(
+            "UPDATE invoices SET approval_status = 'rejected', approval_note = :n, updated_at = NOW() WHERE id = :id AND tenant_id = :t",
+            ['id' => $id, 't' => Auth::tenantId(), 'n' => $request->input('note') ?: null]
+        );
+        Session::flash('success', __('invoice.approval_rejected'));
+        return Response::redirect('/app/invoices/' . $id);
+    }
+
     /** Standalone, print/PDF-friendly invoice (no app chrome). */
     public function print(Request $request, $id): Response
     {

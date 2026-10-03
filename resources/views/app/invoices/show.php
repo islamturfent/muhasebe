@@ -8,6 +8,25 @@ $locale = Translator::instance()->locale();
     <div class="flex items-center justify-between mb-4 gap-3">
         <a href="<?= e(url('/app/invoices')) ?>" class="text-sm text-brand-600 hover:underline">← <?= e(__('invoice.title')) ?></a>
         <div class="flex items-center gap-2 flex-wrap">
+            <?php if (($invoice['approval_status'] ?? 'none') !== 'none'): $ac = ['pending'=>'bg-amber-50 text-amber-700','approved'=>'bg-emerald-50 text-emerald-700','rejected'=>'bg-red-50 text-red-600']; ?>
+            <span class="px-2 py-1 rounded-full text-xs font-semibold <?= $ac[$invoice['approval_status']] ?? 'bg-slate-100 text-slate-600' ?>"><?= e(__('invoice.approval_' . $invoice['approval_status'] . '_badge')) ?><?= !empty($invoice['approval_note']) ? ' · ' . e($invoice['approval_note']) : '' ?></span>
+            <?php endif; ?>
+            <?php if (($invoice['approval_status'] ?? 'none') === 'pending'): ?>
+            <form method="post" action="<?= e(url('/app/invoices/' . $invoice['id'] . '/approve')) ?>">
+                <?= csrf_field() ?>
+                <button class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">✓ <?= e(__('invoice.approve')) ?></button>
+            </form>
+            <form method="post" action="<?= e(url('/app/invoices/' . $invoice['id'] . '/reject')) ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="note" value="">
+                <button class="px-4 py-2 rounded-lg border border-red-300 text-red-600 text-sm font-medium hover:bg-red-50" onclick="var n=prompt('<?= e(__('accounting.reject_note_prompt')) ?>'); if(n===null||n.trim()===''){return false;} this.form.querySelector('[name=note]').value=n; return true;">✕ <?= e(__('invoice.reject_entry')) ?></button>
+            </form>
+            <?php elseif (($invoice['approval_status'] ?? 'none') === 'none'): ?>
+            <form method="post" action="<?= e(url('/app/invoices/' . $invoice['id'] . '/submit-approval')) ?>">
+                <?= csrf_field() ?>
+                <button class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50"><?= e(__('invoice.submit_approval')) ?></button>
+            </form>
+            <?php endif; ?>
             <?php if (in_array($invoice['type'], ['sales', 'purchase'], true) && in_array($invoice['efatura_status'], ['draft', 'error', 'rejected'], true)): ?>
             <form method="post" action="<?= e(url('/app/invoices/' . $invoice['id'] . '/efatura')) ?>">
                 <?= csrf_field() ?>

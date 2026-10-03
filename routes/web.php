@@ -80,6 +80,9 @@ return function (Router $router): void {
         $g->get('/app/invoices/{id}', [\Muh\Controllers\InvoiceController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}/print', [\Muh\Controllers\InvoiceController::class, 'print'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/{id}/efatura', [\Muh\Controllers\InvoiceController::class, 'sendEfatura'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/invoices/{id}/submit-approval', [\Muh\Controllers\InvoiceController::class, 'submitApproval'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/invoices/{id}/approve', [\Muh\Controllers\InvoiceController::class, 'approveInvoice'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/invoices/{id}/reject', [\Muh\Controllers\InvoiceController::class, 'rejectInvoice'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/{id}/email', [\Muh\Controllers\InvoiceController::class, 'email'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/bulk-efatura', [\Muh\Controllers\InvoiceController::class, 'bulkEfatura'], [\Muh\Middleware\TenantMiddleware::class]);
 
@@ -93,6 +96,8 @@ return function (Router $router): void {
         $g->post('/app/accounting/entry/{id}/delete', [\Muh\Controllers\AccountingController::class, 'destroyEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/entry/{id}/edit', [\Muh\Controllers\AccountingController::class, 'editEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/entry/{id}', [\Muh\Controllers\AccountingController::class, 'updateEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/accounting/entry/{id}/approve', [\Muh\Controllers\AccountingController::class, 'approveEntry'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/accounting/entry/{id}/reject', [\Muh\Controllers\AccountingController::class, 'rejectEntry'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/chart', [\Muh\Controllers\AccountingController::class, 'chart'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/chart/create', [\Muh\Controllers\AccountingController::class, 'createChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/accounting/chart', [\Muh\Controllers\AccountingController::class, 'storeChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);

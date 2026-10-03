@@ -70,7 +70,11 @@ $isEdit = !empty($entry);
             <div id="balanceStatus" class="mt-4 p-3 rounded-lg text-sm font-medium bg-green-50 border border-green-200 text-green-700"><?= e(__('accounting.not_balanced')) ?></div>
         </div>
 
-        <div class="flex gap-3 mt-6">
+        <label class="flex items-center gap-2 mt-6 text-sm text-slate-600">
+            <input type="checkbox" name="for_approval" value="1" class="w-4 h-4 text-brand-600"> <?= e(__('accounting.for_approval')) ?>
+        </label>
+
+        <div class="flex gap-3 mt-4">
             <button class="px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700"><?= e(__('common.save')) ?></button>
             <a href="<?= e(url('/app/accounting/journal')) ?>" class="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium"><?= e(__('common.cancel')) ?></a>
         </div>
