@@ -25,4 +25,8 @@ return [
     'no_transactions' => 'No transactions yet.',
     'back' => 'Cash',
     'new_transaction' => 'New Transaction',
+    'same_account' => 'Cannot transfer to the same account.',
+    'virman' => 'Transfer',
+    'virman_done' => 'Transfer completed.',
+    'to_account' => 'Target account',
 ];

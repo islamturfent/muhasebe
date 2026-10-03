@@ -41,4 +41,8 @@ return [
     'status' => 'Status',
     'active' => 'Active',
     'search_placeholder' => 'Search products...',
+    'stock_take' => 'Stock take',
+    'stock_take_done' => 'Stock count saved.',
+    'stock_take_hint' => 'Enter the actual (counted) stock; the difference is recorded as a movement.',
+    'counted' => 'Counted quantity',
 ];

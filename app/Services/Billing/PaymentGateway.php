@@ -21,6 +21,13 @@ interface PaymentGateway
     public function cancelSubscription(string $providerSubscriptionId): void;
 
     /**
+     * Start a hosted checkout (e.g. Stripe Checkout Session) and return the
+     * URL the user is redirected to for card payment/3DS. Returns '' if not
+     * configured.
+     */
+    public function createCheckoutSession(array $tenant, array $plan, string $billingCycle, string $successUrl, string $cancelUrl): string;
+
+    /**
      * Validate & normalize an incoming webhook payload.
      * Returns a normalized event: ['event' => string, 'external_id' => string|null, 'meta' => array]
      */

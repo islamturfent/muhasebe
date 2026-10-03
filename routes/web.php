@@ -65,6 +65,7 @@ return function (Router $router): void {
         $g->post('/app/inventory/{id}', [\Muh\Controllers\ProductController::class, 'update'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/inventory/{id}/delete', [\Muh\Controllers\ProductController::class, 'destroy'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/{id}', [\Muh\Controllers\ProductController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/inventory/{id}/stock-take', [\Muh\Controllers\ProductController::class, 'stockTake'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/app/inventory/warehouses', [\Muh\Controllers\WarehouseController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/warehouses/create', [\Muh\Controllers\WarehouseController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -88,6 +89,7 @@ return function (Router $router): void {
         $g->post('/app/cash', [\Muh\Controllers\CashController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/cash/{id}', [\Muh\Controllers\CashController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/cash/{id}/transaction', [\Muh\Controllers\CashController::class, 'transaction'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/cash/{id}/virman', [\Muh\Controllers\CashController::class, 'virman'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Bank
         $g->get('/app/bank', [\Muh\Controllers\BankController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -128,6 +130,7 @@ return function (Router $router): void {
         $g->get('/app/settings', [\Muh\Controllers\SettingsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/settings/subscription', [\Muh\Controllers\SubscriptionController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/subscription/subscribe', [\Muh\Controllers\SubscriptionController::class, 'subscribe'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/settings/subscription/checkout', [\Muh\Controllers\SubscriptionController::class, 'checkout'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Documents (Phase 11)
         $g->get('/app/documents', [\Muh\Controllers\DocumentController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);

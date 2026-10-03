@@ -69,6 +69,48 @@ final class BillingService
         return ['subscription_id' => $id, 'provider' => $provider];
     }
 
+    /**
+     * Start a hosted checkout (Stripe Checkout) for a tenant/plan and return
+     * the redirect URL. A local subscription record is created upfront so plan
+     * limits apply during checkout; SimulatedGateway treats it as paid
+     * immediately, real providers activate it via the webhook.
+     */
+    public function checkout(int $tenantId, int $planId, string $billingCycle = 'monthly'): string
+    {
+        $tenant = DB::first('SELECT * FROM tenants WHERE id = :id', ['id' => $tenantId]);
+        $plan = DB::first('SELECT * FROM plans WHERE id = :id AND is_active = 1', ['id' => $planId]);
+        if (!$tenant || !$plan) {
+            throw new \Muh\Core\ValidationException(['plan' => __('subscription.plan_not_found')]);
+        }
+
+        $successUrl = url('/app/settings/subscription?paid=1');
+        $cancelUrl = url('/app/settings/subscription');
+        $url = $this->gateway->createCheckoutSession($tenant, $plan, $billingCycle, $successUrl, $cancelUrl);
+        if ($url === '') {
+            throw new \RuntimeException('Payment provider is not configured.');
+        }
+
+        // Cancel/close any previous live subscription, then record the intent.
+        $existing = DB::first('SELECT * FROM subscriptions WHERE tenant_id = :t AND status IN (\'active\',\'trial\',\'past_due\') AND deleted_at IS NULL ORDER BY id DESC', ['t' => $tenantId]);
+        if ($existing && $existing['provider_subscription_id']) {
+            $this->gateway->cancelSubscription($existing['provider_subscription_id']);
+        }
+        $status = $this->gateway instanceof SimulatedGateway ? 'active' : 'trial';
+        $now = now();
+        $id = (int) DB::insert('subscriptions', [
+            'tenant_id' => $tenantId,
+            'plan_id' => (int) $plan['id'],
+            'status' => $status,
+            'starts_at' => $now,
+            'billing_cycle' => $billingCycle,
+            'payment_provider' => Config::get('billing.provider', 'simulated'),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        AuditLogService::record('subscription.checkout', 'subscription', 'subscriptions', (string) $id, null, ['plan' => $plan['code'], 'cycle' => $billingCycle, 'url' => $url]);
+        return $url;
+    }
+
     public function cancel(int $tenantId): void
     {
         $sub = DB::first('SELECT * FROM subscriptions WHERE tenant_id = :t AND status IN (\'active\',\'trial\',\'past_due\') AND deleted_at IS NULL ORDER BY id DESC', ['t' => $tenantId]);

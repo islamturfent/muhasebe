@@ -25,6 +25,13 @@ final class SimulatedGateway implements PaymentGateway
         // no-op in simulation
     }
 
+    public function createCheckoutSession(array $tenant, array $plan, string $billingCycle, string $successUrl, string $cancelUrl): string
+    {
+        // Simulated provider: treat the payment as completed immediately and
+        // send the user straight to the success URL.
+        return $successUrl;
+    }
+
     public function parseWebhook(array $payload): array
     {
         $event = $payload['event'] ?? $payload['type'] ?? 'unknown';

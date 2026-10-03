@@ -75,6 +75,22 @@ final class ProductController extends Controller
         ]);
     }
 
+    /**
+     * Physical stock count (sayım): set a product's real counted quantity.
+     */
+    public function stockTake(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('inventory.update');
+        try {
+            (new InventoryService())->stockTake($id, (float) $request->input('counted'), $request->input('description') ?: null);
+            Session::flash('success', __('inventory.stock_take_done'));
+        } catch (ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+        }
+        return Response::redirect('/app/inventory/' . $id);
+    }
+
     public function store(Request $request): Response
     {
         Auth::requireCan('inventory.create');

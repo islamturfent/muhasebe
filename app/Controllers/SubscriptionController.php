@@ -51,4 +51,28 @@ final class SubscriptionController extends Controller
         Session::flash('success', __('subscription.subscribed'));
         return Response::redirect('/app/settings/subscription');
     }
+
+    /**
+     * Start a hosted payment (Stripe Checkout). Redirects the user to the
+     * provider's checkout URL where the card/3DS flow happens.
+     */
+    public function checkout(Request $request): Response
+    {
+        Auth::requireCan('subscription.update');
+        $plan = Plan::findByCode((string) $request->input('plan'));
+        if (!$plan) {
+            Session::flash('error', __('subscription.plan_not_found'));
+            return Response::redirect('/app/settings/subscription');
+        }
+
+        $billing = new BillingService();
+        try {
+            $url = $billing->checkout(Auth::tenantId(), (int) $plan['id'], $request->input('cycle', 'monthly'));
+        } catch (\Throwable $e) {
+            Session::flash('error', $e->getMessage());
+            return Response::redirect('/app/settings/subscription');
+        }
+
+        return Response::redirect($url);
+    }
 }

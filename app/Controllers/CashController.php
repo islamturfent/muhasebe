@@ -51,6 +51,28 @@ final class CashController extends Controller
         return Response::redirect('/app/cash');
     }
 
+    /**
+     * Virman: transfer funds from this cash account to another.
+     */
+    public function virman(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('cash.create');
+        try {
+            (new CashService())->transfer(
+                $id,
+                (int) $request->input('to_id'),
+                (float) $request->input('amount'),
+                $request->input('date') ?: null,
+                $request->input('description') ?: null
+            );
+            Session::flash('success', __('cash.virman_done'));
+        } catch (ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+        }
+        return Response::redirect('/app/cash/' . $id);
+    }
+
     public function show(Request $request, $id): Response
     {
         $id = (int) $id;
@@ -65,11 +87,14 @@ final class CashController extends Controller
         $to = $request->query('to') ?: null;
         $type = $request->query('type') ?: null;
         $trx = $service->transactions($id, $from, $to, $type);
+        // Other cash accounts available as virman destinations.
+        $otherAccounts = DB::select('SELECT id, name, code FROM cash_accounts WHERE tenant_id = :t AND id != :id AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId(), 'id' => $id]);
         return $this->view('app.cash.show', [
             'layout' => 'layouts.app',
             'account' => $account,
             'company' => $company,
             'transactions' => $trx['items'],
+            'otherAccounts' => $otherAccounts,
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],

@@ -41,4 +41,8 @@ return [
     'status' => 'Durum',
     'active' => 'Aktif',
     'search_placeholder' => 'Ürün ara...',
+    'stock_take' => 'Sayım',
+    'stock_take_done' => 'Sayım kaydedildi.',
+    'stock_take_hint' => 'Fiili (sayılan) stok miktarını gir; fark otomatik hareket olarak kaydedilir.',
+    'counted' => 'Sayım miktarı',
 ];

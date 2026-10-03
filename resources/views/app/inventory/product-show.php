@@ -25,6 +25,19 @@ $locale = Translator::instance()->locale();
     <div class="rounded-2xl bg-white border border-slate-200 p-5"><div class="text-xs text-slate-400 uppercase"><?= e(__('common.tax')) ?></div><div class="text-xl font-bold text-slate-800">%<?= e((float)$product['vat_rate']) ?></div></div>
 </div>
 
+<?php if ($product['type'] !== 'service' && Auth::can('inventory.update')): ?>
+<div class="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
+    <h2 class="font-semibold text-slate-800 text-sm mb-1"><?= e(__('inventory.stock_take')) ?></h2>
+    <p class="text-xs text-slate-400 mb-3"><?= e(__('inventory.stock_take_hint')) ?></p>
+    <form method="post" action="<?= e(url('/app/inventory/' . $product['id'] . '/stock-take')) ?>" class="flex flex-wrap items-end gap-2">
+        <?= csrf_field() ?>
+        <label class="text-xs text-slate-500"><?= e(__('inventory.counted')) ?> <input type="number" step="0.01" name="counted" required class="ml-1 px-3 py-2 rounded-lg border border-slate-200 text-sm"></label>
+        <input type="text" name="description" placeholder="<?= e(__('inventory.stock_take')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+        <button class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('inventory.stock_take')) ?></button>
+    </form>
+</div>
+<?php endif; ?>
+
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
     <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('inventory.movements')) ?></div>
     <div class="overflow-x-auto">

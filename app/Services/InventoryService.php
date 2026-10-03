@@ -198,6 +198,32 @@ final class InventoryService
         );
     }
 
+    /**
+     * Physical stock count (sayım): set the real counted quantity for a
+     * product. Records an 'adjustment' movement equal to counted - current so
+     * the stock ledger always reconciles; runs inside a transaction.
+     */
+    public function stockTake(int $productId, float $counted, ?string $description = null): int
+    {
+        $tenantId = $this->tenantId();
+        $prod = DB::first('SELECT id, company_id, stock_quantity FROM products WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $productId, 't' => $tenantId]);
+        if (!$prod) {
+            throw new ValidationException(['product' => __('validation.in')]);
+        }
+        $delta = round($counted - (float) $prod['stock_quantity'], 2);
+        if (abs($delta) < 0.001) {
+            return 0; // nothing to adjust
+        }
+        $companyId = (int) $prod['company_id'];
+        $wh = DB::first('SELECT id FROM warehouses WHERE company_id = :c AND is_default = 1 AND deleted_at IS NULL', ['c' => $companyId])
+            ?: DB::first('SELECT id FROM warehouses WHERE company_id = :c AND deleted_at IS NULL ORDER BY id LIMIT 1', ['c' => $companyId]);
+        $desc = $description ?: __('inventory.stock_take');
+
+        return DB::transaction(function () use ($tenantId, $companyId, $wh, $productId, $delta, $desc): int {
+            return self::recordMovement($tenantId, $companyId, $wh ? (int) $wh['id'] : 0, $productId, 'adjustment', date('Y-m-d'), $delta, 0.0, $desc, 'manual', null);
+        });
+    }
+
     public function product(int $tenantId, int $id): ?array
     {
         return DB::first(

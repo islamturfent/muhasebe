@@ -72,6 +72,35 @@ final class CashService
         return $id;
     }
 
+    /**
+     * Virman: move funds between two cash accounts of the tenant. Both sides
+     * are recorded (outbound debit, inbound credit) inside one transaction so
+     * the total never drifts.
+     */
+    public function transfer(int $fromId, int $toId, float $amount, ?string $date = null, ?string $description = null): void
+    {
+        $tenantId = (int) Auth::tenantId();
+        if ($fromId === $toId) {
+            throw new ValidationException(['to_id' => __('cash.same_account')]);
+        }
+        if ($amount <= 0) {
+            throw new ValidationException(['amount' => __('validation.min')]);
+        }
+        $from = DB::first('SELECT id, company_id FROM cash_accounts WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $fromId, 't' => $tenantId]);
+        $to = DB::first('SELECT id, company_id FROM cash_accounts WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $toId, 't' => $tenantId]);
+        if (!$from || !$to) {
+            throw new ValidationException(['to_id' => __('validation.in')]);
+        }
+        $d = $date ?: date('Y-m-d');
+        $desc = $description ?: __('cash.virman');
+
+        DB::transaction(function () use ($tenantId, $from, $to, $d, $amount, $desc): void {
+            self::addTransaction($tenantId, (int) $from['company_id'], (int) $from['id'], 'transfer', $d, -$amount, $desc);
+            self::addTransaction($tenantId, (int) $to['company_id'], (int) $to['id'], 'transfer', $d, $amount, $desc);
+            AuditLogService::record('cash.virman', 'cash', 'cash_accounts', (string) $from['id'], null, ['to' => (int) $to['id'], 'amount' => $amount], (int) $to['company_id'], $tenantId);
+        });
+    }
+
     public function transactions(int $cashAccountId, ?string $from = null, ?string $to = null, ?string $type = null): array
     {
         $sql = 'SELECT * FROM cash_transactions WHERE cash_account_id = :id';

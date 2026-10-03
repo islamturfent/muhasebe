@@ -25,4 +25,8 @@ return [
     'no_transactions' => 'Henüz hareket yok.',
     'back' => 'Kasa',
     'new_transaction' => 'Yeni İşlem',
+    'same_account' => 'Aynı hesaba virman yapılamaz.',
+    'virman' => 'Virman',
+    'virman_done' => 'Virman işlemi tamamlandı.',
+    'to_account' => 'Hedef hesap',
 ];

@@ -79,6 +79,39 @@ final class StripePaymentGateway implements PaymentGateway
         $this->request('DELETE', '/subscriptions/' . rawurlencode($providerSubscriptionId));
     }
 
+    /**
+     * Start a hosted Stripe Checkout Session for a subscription payment.
+     * Card details / 3DS are handled by Stripe (PCI-compliant) on its domain;
+     * the user is redirected back to $successUrl (with ?session_id=...) on
+     * completion.
+     */
+    public function createCheckoutSession(array $tenant, array $plan, string $billingCycle, string $successUrl, string $cancelUrl): string
+    {
+        if (!$this->configured()) {
+            return '';
+        }
+        $priceId = $billingCycle === 'yearly'
+            ? ($plan['stripe_price_yearly_id'] ?? $plan['stripe_price_monthly_id'] ?? null)
+            : ($plan['stripe_price_monthly_id'] ?? $plan['stripe_price_yearly_id'] ?? null);
+        if (!$priceId) {
+            throw new \RuntimeException('Stripe price id not configured for this plan.');
+        }
+
+        $form = [
+            'mode' => 'subscription',
+            'line_items[0][price]' => $priceId,
+            'line_items[0][quantity]' => '1',
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'client_reference_id' => (string) ($tenant['id'] ?? ''),
+            'customer_email' => (string) ($tenant['email'] ?? ''),
+            'subscription_data[metadata][tenant_id]' => (string) ($tenant['id'] ?? ''),
+            'subscription_data[metadata][plan]' => (string) ($plan['code'] ?? ''),
+        ];
+        $session = $this->request('POST', '/checkout/sessions', $form);
+        return (string) ($session['url'] ?? '');
+    }
+
     public function parseWebhook(array $payload): array
     {
         $type = (string) ($payload['type'] ?? 'unknown');
@@ -92,6 +125,9 @@ final class StripePaymentGateway implements PaymentGateway
                 break;
             case 'invoice.payment_failed':
                 $event = 'payment_failed';
+                break;
+            case 'checkout.session.completed':
+                $event = 'subscription_created';
                 break;
             case 'customer.subscription.deleted':
                 $event = 'subscription_cancelled';
