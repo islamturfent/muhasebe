@@ -11,4 +11,6 @@ return [
     'sub_expired' => 'Your subscription has expired',
     'sub_mail_subject' => 'Your subscription expires soon',
     'sub_mail_expired' => 'Your subscription has expired',
+    'due_mail_subject' => 'Invoice due soon / overdue: :no',
+    'stock_mail_subject' => 'Critical stock alert: :name',
 ];

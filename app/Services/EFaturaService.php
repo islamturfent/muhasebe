@@ -224,6 +224,7 @@ final class EFaturaService
 
         if ($status === 'error') {
             (new NotificationService())->create('efatura_error', __('efatura.error_title', ['no' => $invoice['number']]), $result['message'] ?? '', 'danger', null, (int) $invoice['company_id'], '/app/invoices/' . $invoiceId);
+            NotificationService::maybeMail($tenantId, 'efatura', __('efatura.error_title', ['no' => $invoice['number']]), ($result['message'] ?? '') . ' — <a href="' . url('/app/invoices/' . $invoiceId) . '">' . __('common.view') . '</a>');
         }
 
         return $status;

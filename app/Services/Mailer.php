@@ -14,21 +14,26 @@ namespace Muh\Services;
  */
 final class Mailer
 {
-    public function send(string $to, string $subject, string $html): bool
+    /**
+     * Send an e-mail. Pass $options to override global config with tenant
+     * settings (host/port/user/pass/encryption/from/enabled).
+     */
+    public function send(string $to, string $subject, string $html, ?array $options = null): bool
     {
         $to = trim($to);
-        $enabled = (bool) config('mail.enabled', false);
-        $host = (string) config('mail.host', '');
+        $options = $options ?? [];
+        $enabled = (bool) ($options['enabled'] ?? config('mail.enabled', false));
+        $host = (string) ($options['host'] ?? config('mail.host', ''));
 
         // 1) SMTP relay (production): host configured + enabled.
         if ($enabled && $host !== '') {
             $smtp = new SmtpMailer(
                 $host,
-                (int) config('mail.port', 587),
-                (string) config('mail.username', ''),
-                (string) config('mail.password', ''),
-                (string) config('mail.encryption', 'tls'),
-                (string) config('mail.from', 'Hesap360 <no-reply@muh.local>')
+                (int) ($options['port'] ?? config('mail.port', 587)),
+                (string) ($options['username'] ?? config('mail.username', '')),
+                (string) ($options['password'] ?? config('mail.password', '')),
+                (string) ($options['encryption'] ?? config('mail.encryption', 'tls')),
+                (string) ($options['from'] ?? config('mail.from', 'Hesap360 <no-reply@muh.local>'))
             );
             if ($smtp->send($to, $subject, $html)) {
                 return true;
@@ -41,7 +46,7 @@ final class Mailer
 
         // 2) PHP mail() when enabled but no relay configured.
         if ($enabled) {
-            $from = config('mail.from', 'Hesap360 <no-reply@muh.local>');
+            $from = $options['from'] ?? config('mail.from', 'Hesap360 <no-reply@muh.local>');
             $headers = "MIME-Version: 1.0\r\n"
                 . "Content-Type: text/html; charset=UTF-8\r\n"
                 . "From: {$from}\r\n";

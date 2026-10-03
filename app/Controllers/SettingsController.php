@@ -26,6 +26,7 @@ final class SettingsController extends Controller
             ['/app/tax-rates', 'taxrate.title', '🧾'],
             ['/app/audit', 'audit.title', '📋'],
             ['/app/documents', 'document.title', '📁'],
+            ['/app/settings/email', 'mail.title', '✉️'],
             ['/app/settings/efatura', 'efatura.settings_title', '🧾'],
         ];
 

@@ -11,4 +11,6 @@ return [
     'sub_expired' => 'Aboneliğiniz sona erdi',
     'sub_mail_subject' => 'Aboneliğiniz yakında sona eriyor',
     'sub_mail_expired' => 'Aboneliğiniz sona erdi',
+    'due_mail_subject' => 'Fatura vadesi yaklaşıyor / geçti: :no',
+    'stock_mail_subject' => 'Kritik stok uyarısı: :name',
 ];

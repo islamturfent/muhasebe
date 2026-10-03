@@ -16,6 +16,24 @@ final class NotificationService
 {
     private const TYPES = ['due_date', 'unpaid_invoice', 'critical_stock', 'efatura_error', 'subscription', 'user', 'document', 'system'];
 
+    /**
+     * Send an e-mail for a notification type if enabled in the tenant mail
+     * settings and an SMTP/log target exists.
+     */
+    public static function maybeMail(int $tenantId, string $type, string $subject, string $body): bool
+    {
+        $flag = 'notify_' . $type;
+        $opts = MailSettingService::mailerOptions($tenantId);
+        if (empty($opts[$flag])) {
+            return false;
+        }
+        $to = MailSettingService::tenantEmail($tenantId);
+        if (!$to) {
+            return false;
+        }
+        return (new Mailer())->send($to, $subject, $body, $opts);
+    }
+
     public function unreadCount(?int $userId = null): int
     {
         $tenantId = Auth::tenantId();
@@ -114,6 +132,7 @@ final class NotificationService
                 $tenantId
             );
             $created++;
+            static::maybeMail($tenantId, 'due', __('notify.due_mail_subject', ['no' => $inv['number']]), __('notify.due_body', ['company' => $inv['company_name'], 'amount' => money($inv['total'] - $inv['paid']), 'date' => format_date($inv['due_date'])]) . ' — <a href="' . url('/app/invoices/' . $inv['id']) . '">' . __('common.view') . '</a>');
         }
 
         // 2) Critical stock
@@ -131,6 +150,7 @@ final class NotificationService
             }
             $this->create('critical_stock', __('notify.stock_title', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]), 'danger', null, null, '/app/inventory/' . $p['id'], ['key' => $key], $tenantId);
             $created++;
+            static::maybeMail($tenantId, 'stock', __('notify.stock_mail_subject', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]));
         }
 
         // 3) Subscription expiry (only the tenant's own subscription).
