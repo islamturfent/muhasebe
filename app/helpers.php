@@ -79,6 +79,63 @@ if (!function_exists('request_path')) {
     }
 }
 
+if (!function_exists('route_query')) {
+    /**
+     * Current request path + query string, with the given query parameters
+     * overridden. Uses request_path() so the base sub-directory is preserved
+     * and existing GET filters are kept (e.g. type=, company_id=, search=).
+     * Pass null/'' for a param to remove it.
+     */
+    function route_query(array $overrides = []): string
+    {
+        $path = request_path();
+        [$base, $qs] = array_pad(explode('?', $path, 2), 2, null);
+        $params = [];
+        if ($qs) {
+            parse_str($qs, $params);
+        }
+        foreach ($overrides as $k => $v) {
+            if ($v === null || $v === '') {
+                unset($params[$k]);
+            } else {
+                $params[$k] = $v;
+            }
+        }
+        return $base . (count($params) ? '?' . http_build_query($params) : '');
+    }
+}
+
+if (!function_exists('paginate')) {
+    /**
+     * SQL-level pagination helper for list queries (no GROUP BY).
+     * Converts `SELECT ... FROM ...` to a COUNT, applies LIMIT/OFFSET, and
+     * clamps the page. Returns items + paging metadata.
+     */
+    function paginate(string $selectSql, array $params, int $perPage = 25, string $pageKey = 'page'): array
+    {
+        $page = max(1, (int) ($_GET[$pageKey] ?? 1));
+        $countSql = preg_replace('/^\s*SELECT\s+.*?\s+FROM\s+/is', 'SELECT COUNT(*) FROM ', trim($selectSql));
+        $countParams = [];
+        foreach ($params as $k => $v) {
+            if (is_scalar($v)) {
+                $countParams[$k] = $v;
+            }
+        }
+        $total = (int) \Muh\Core\DB::scalar($countSql, $countParams);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $lastPage);
+        $offset = ($page - 1) * $perPage;
+        $items = \Muh\Core\DB::select($selectSql . ' LIMIT ' . $offset . ', ' . $perPage, $params);
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'lastPage' => $lastPage,
+            'perPage' => $perPage,
+        ];
+    }
+}
+
 if (!function_exists('asset')) {
     function asset(string $path): string
     {

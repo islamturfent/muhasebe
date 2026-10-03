@@ -17,11 +17,15 @@ final class NotificationsController extends Controller
     {
         Auth::requireCan('dashboard.view');
         $service = new NotificationService();
-        // Auto-generate any pending notifications, then list them.
+        // Auto-generate any pending notifications, then list them (paginated).
         $service->generate();
+        $page = $service->list();
         return $this->view('app.notifications.index', [
             'layout' => 'layouts.app',
-            'notifications' => $service->list(),
+            'notifications' => $page['items'],
+            'total' => $page['total'],
+            'page' => $page['page'],
+            'lastPage' => $page['lastPage'],
         ]);
     }
 

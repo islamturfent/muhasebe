@@ -6,7 +6,7 @@ $locale = Translator::instance()->locale();
 <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
         <h1 class="text-2xl font-bold text-slate-900"><?= e(__('invoice.title')) ?></h1>
-        <p class="text-slate-500"><?= count($invoices) ?> <?= e(__('common.records')) ?></p>
+        <p class="text-slate-500"><?= (int) ($total ?? count($invoices)) ?> <?= e(__('common.records')) ?></p>
     </div>
     <a href="<?= e(url('/app/invoices/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('invoice.new')) ?></a>
 </div>
@@ -56,4 +56,5 @@ $locale = Translator::instance()->locale();
             </tbody>
         </table>
     </div>
+    <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
 </div>

@@ -29,15 +29,17 @@ final class NotificationService
         return (int) DB::scalar($sql, $params);
     }
 
-    public function list(int $limit = 50): array
+    public function list(int $page = 1, int $perPage = 25): array
     {
         $tenantId = Auth::tenantId();
         $userId = Auth::id();
-        return DB::select(
+        return paginate(
             'SELECT * FROM notifications
               WHERE tenant_id = :t AND (user_id = :u OR user_id IS NULL)
-              ORDER BY id DESC LIMIT ' . (int) $limit,
-            ['t' => $tenantId, 'u' => $userId]
+              ORDER BY id DESC',
+            ['t' => $tenantId, 'u' => $userId],
+            $perPage,
+            'page'
         );
     }
 

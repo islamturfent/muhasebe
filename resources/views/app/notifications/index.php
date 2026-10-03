@@ -42,4 +42,5 @@ function timeAgo($dt, $locale): string {
         <?php endif; ?>
     </div>
     <?php endforeach; ?>
+    <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
 </div>

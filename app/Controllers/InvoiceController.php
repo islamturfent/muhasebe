@@ -40,17 +40,20 @@ final class InvoiceController extends Controller
             $sql .= ' AND i.type = :type';
             $params['type'] = $type;
         }
-        $sql .= ' ORDER BY i.id DESC LIMIT 100';
+        $sql .= ' ORDER BY i.id DESC';
 
-        $invoices = DB::select($sql, $params);
+        $page = paginate($sql, $params, 25);
         $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => $tenantId]);
 
         return $this->view('app.invoices.index', [
             'layout' => 'layouts.app',
-            'invoices' => $invoices,
+            'invoices' => $page['items'],
             'companies' => $companies,
             'companyId' => $companyId,
             'type' => $type,
+            'page' => $page['page'],
+            'lastPage' => $page['lastPage'],
+            'total' => $page['total'],
         ]);
     }
 

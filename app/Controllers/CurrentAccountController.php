@@ -27,8 +27,25 @@ final class CurrentAccountController extends Controller
         $type = $request->query('type') ?: null;
         $search = $request->query('search') ?: null;
 
-        $service = new CurrentAccountService();
-        $accounts = $service->listForCompany($tenantId, $companyId ?: null, $type, $search);
+        $sql = 'SELECT ca.*, c.name AS company_name FROM current_accounts ca
+                 JOIN companies c ON c.id = ca.company_id
+                WHERE ca.tenant_id = :t AND ca.deleted_at IS NULL';
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND ca.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        if ($type && in_array($type, ['customer', 'supplier', 'both'], true)) {
+            $sql .= ' AND ca.type = :type';
+            $params['type'] = $type;
+        }
+        if ($search) {
+            $sql .= ' AND (ca.name LIKE :s OR ca.code LIKE :s OR ca.tax_number LIKE :s)';
+            $params['s'] = '%' . $search . '%';
+        }
+        $sql .= ' ORDER BY ca.name ASC';
+
+        $page = paginate($sql, $params, 25);
 
         // Companies for the create form / filter.
         $companies = DB::select(
@@ -40,12 +57,15 @@ final class CurrentAccountController extends Controller
 
         return $this->view('app.current-accounts.index', [
             'layout' => 'layouts.app',
-            'accounts' => $accounts,
+            'accounts' => $page['items'],
             'companies' => $companies,
             'companyId' => $companyId,
             'defaultCompanyId' => $defaultCompanyId,
             'type' => $type,
             'search' => $search,
+            'page' => $page['page'],
+            'lastPage' => $page['lastPage'],
+            'total' => $page['total'],
         ]);
     }
 

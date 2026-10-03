@@ -26,17 +26,36 @@ final class ProductController extends Controller
         $search = $request->query('search') ?: null;
 
         $service = new InventoryService();
-        $products = $service->products($companyId ?: null, $search);
-        $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId()]);
+        $tenantId = Auth::tenantId();
+        $sql = 'SELECT p.*, c.name AS company_name, u.abbr AS unit_abbr FROM products p
+                 JOIN companies c ON c.id = p.company_id
+                 LEFT JOIN units u ON u.id = p.unit_id
+                WHERE p.tenant_id = :t AND p.deleted_at IS NULL';
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND p.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        if ($search) {
+            $sql .= ' AND (p.name LIKE :s OR p.code LIKE :s OR p.barcode LIKE :s)';
+            $params['s'] = '%' . $search . '%';
+        }
+        $sql .= ' ORDER BY p.name ASC';
+
+        $page = paginate($sql, $params, 25);
+        $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => $tenantId]);
         $warehouses = $service->warehouses();
 
         return $this->view('app.inventory.products', [
             'layout' => 'layouts.app',
-            'products' => $products,
+            'products' => $page['items'],
             'companies' => $companies,
             'warehouses' => $warehouses,
             'companyId' => $companyId,
             'search' => $search,
+            'page' => $page['page'],
+            'lastPage' => $page['lastPage'],
+            'total' => $page['total'],
         ]);
     }
 

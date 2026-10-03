@@ -6,7 +6,7 @@ $locale = Translator::instance()->locale();
 <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
         <h1 class="text-2xl font-bold text-slate-900"><?= e(__('inventory.products')) ?></h1>
-        <p class="text-slate-500"><?= count($products) ?> <?= e(__('common.records')) ?></p>
+        <p class="text-slate-500"><?= (int) ($total ?? count($products)) ?> <?= e(__('common.records')) ?></p>
     </div>
     <div class="flex gap-2">
         <a href="<?= e(url('/app/inventory/warehouses')) ?>" class="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50"><?= e(__('inventory.warehouses')) ?></a>
@@ -59,4 +59,5 @@ $locale = Translator::instance()->locale();
             </tbody>
         </table>
     </div>
+    <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
 </div>
