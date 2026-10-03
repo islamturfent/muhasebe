@@ -34,6 +34,60 @@ $user = Auth::user();
     <?php endforeach; ?>
 </div>
 
+<?php if (!empty($chart)): ?>
+<?php
+    $cSales = array_map('floatval', $chart['sales'] ?? []);
+    $cPurch = array_map('floatval', $chart['purchase'] ?? []);
+    $cColl = array_map('floatval', $chart['collection'] ?? []);
+    $cPay = array_map('floatval', $chart['payment'] ?? []);
+    $maxA = max(array_merge($cSales, $cPurch, [1]));
+    $maxB = max(array_merge($cColl, $cPay, [1]));
+    $ef = $efaturaCounts ?? [];
+?>
+<!-- Aylık hareketler + e-Fatura durumu -->
+<div class="grid lg:grid-cols-2 gap-4 mt-6">
+    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <div class="font-semibold text-slate-800 mb-4"><?= e(__('dashboard.monthly_flow')) ?></div>
+        <div class="text-xs text-slate-400 mb-2"><?= e(__('dashboard.sales')) ?> vs <?= e(__('dashboard.purchases')) ?></div>
+        <div class="flex items-end gap-2 h-28">
+            <?php foreach ($chart['labels'] as $i => $lbl): ?>
+            <div class="flex-1 flex flex-col items-center gap-1">
+                <div class="w-full flex gap-0.5 items-end justify-center" style="height:95px">
+                    <div class="w-1/2 rounded-t bg-brand-500" style="height:<?= round(($cSales[$i] / $maxA) * 100) ?>%"></div>
+                    <div class="w-1/2 rounded-t bg-rose-400" style="height:<?= round(($cPurch[$i] / $maxA) * 100) ?>%"></div>
+                </div>
+                <span class="text-[10px] text-slate-400"><?= e($lbl) ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="text-xs text-slate-400 mt-4 mb-2"><?= e(__('dashboard.collections')) ?> vs <?= e(__('dashboard.payments')) ?></div>
+        <div class="flex items-end gap-2 h-28">
+            <?php foreach ($chart['labels'] as $i => $lbl): ?>
+            <div class="flex-1 flex flex-col items-center gap-1">
+                <div class="w-full flex gap-0.5 items-end justify-center" style="height:95px">
+                    <div class="w-1/2 rounded-t bg-emerald-500" style="height:<?= round(($cColl[$i] / $maxB) * 100) ?>%"></div>
+                    <div class="w-1/2 rounded-t bg-amber-400" style="height:<?= round(($cPay[$i] / $maxB) * 100) ?>%"></div>
+                </div>
+                <span class="text-[10px] text-slate-400"><?= e($lbl) ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <div class="font-semibold text-slate-800 mb-4"><?= e(__('efatura.title')) ?> <?= e(__('efatura.status')) ?></div>
+        <div class="space-y-2">
+            <?php foreach (['draft','sending','sent','accepted','rejected','error'] as $st): if (empty($ef[$st])) continue; ?>
+            <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-600"><?= e(__('efatura.st_' . $st)) ?></span>
+                <span class="px-2 py-0.5 rounded-full text-xs <?= $st==='accepted' ? 'bg-emerald-50 text-emerald-700' : (in_array($st,['error','rejected'],true) ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600') ?>" style="min-width:30px;text-align:center"><?= (int) $ef[$st] ?></span>
+            </div>
+            <?php endforeach; ?>
+            <?php if (!$ef): ?><div class="text-sm text-slate-400"><?= e(__('common.no_data')) ?></div><?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="grid lg:grid-cols-3 gap-6 mt-6">
     <!-- Recent companies -->
     <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl overflow-hidden">

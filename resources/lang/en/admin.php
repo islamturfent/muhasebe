@@ -110,4 +110,5 @@ return [
     'db_size' => 'DB Size',
     'table_count' => 'Tables',
     'backup_dir' => 'Backup Folder',
+    'recent_activity' => 'Recent Activity',
 ];

@@ -108,12 +108,48 @@ final class AdminController extends Controller
             ['t' => $tenant['id']]
         );
 
+        // Tenant-wide stats.
+        $t = (int) $tenant['id'];
+        $row = DB::first(
+            'SELECT
+                (SELECT COUNT(*) FROM invoices WHERE tenant_id = ? AND deleted_at IS NULL) AS invoices,
+                (SELECT COUNT(*) FROM current_accounts WHERE tenant_id = ? AND deleted_at IS NULL) AS caris,
+                (SELECT COUNT(*) FROM products WHERE tenant_id = ? AND deleted_at IS NULL) AS products,
+                (SELECT COALESCE(SUM(total),0) FROM invoices WHERE tenant_id = ? AND type = \'sales\' AND status = \'posted\' AND deleted_at IS NULL) AS sales,
+                (SELECT COALESCE(SUM(total),0) FROM invoices WHERE tenant_id = ? AND type = \'purchase\' AND status = \'posted\' AND deleted_at IS NULL) AS purchase,
+                (SELECT COALESCE(SUM(balance),0) FROM cash_accounts WHERE tenant_id = ? AND deleted_at IS NULL) AS cash,
+                (SELECT COALESCE(SUM(balance),0) FROM bank_accounts WHERE tenant_id = ? AND deleted_at IS NULL) AS bank,
+                (SELECT COALESCE(SUM(balance),0) FROM current_accounts WHERE tenant_id = ? AND balance > 0 AND deleted_at IS NULL) AS receivable,
+                (SELECT COALESCE(SUM(-balance),0) FROM current_accounts WHERE tenant_id = ? AND balance < 0 AND deleted_at IS NULL) AS payable',
+            array_fill(0, 9, $t)
+        );
+        $stats = [
+            'invoices' => (int) ($row['invoices'] ?? 0),
+            'caris' => (int) ($row['caris'] ?? 0),
+            'products' => (int) ($row['products'] ?? 0),
+            'sales' => (float) ($row['sales'] ?? 0),
+            'purchase' => (float) ($row['purchase'] ?? 0),
+            'cash' => (float) ($row['cash'] ?? 0),
+            'bank' => (float) ($row['bank'] ?? 0),
+            'receivable' => (float) ($row['receivable'] ?? 0),
+            'payable' => (float) ($row['payable'] ?? 0),
+        ];
+
+        $recentAudit = DB::select(
+            'SELECT a.action, a.created_at, a.ip, COALESCE(u.name, \'—\') AS user_name
+               FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id
+              WHERE a.tenant_id = :t ORDER BY a.id DESC LIMIT 8',
+            ['t' => $t]
+        );
+
         return $this->view('admin.tenant-show', [
             'layout' => 'layouts.admin',
             'tenant' => $tenant,
             'companies' => $companies,
             'users' => $users,
             'sub' => $sub,
+            'stats' => $stats,
+            'recentAudit' => $recentAudit,
         ]);
     }
 

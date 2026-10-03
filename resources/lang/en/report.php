@@ -48,4 +48,5 @@ return [
     'revenue' => 'Revenue',
     'expenses' => 'Expenses',
     'net_profit' => 'Net Profit / Loss',
+    'efatura_status' => 'e-Invoice Status Report',
 ];

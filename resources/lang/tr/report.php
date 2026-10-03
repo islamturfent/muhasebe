@@ -48,4 +48,5 @@ return [
     'revenue' => 'Gelirler',
     'expenses' => 'Giderler',
     'net_profit' => 'Net Kâr / Zarar',
+    'efatura_status' => 'e-Fatura Durum Raporu',
 ];

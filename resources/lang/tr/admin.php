@@ -110,4 +110,5 @@ return [
     'db_size' => 'Veritabanı Boyutu',
     'table_count' => 'Tablo Sayısı',
     'backup_dir' => 'Yedek Klasörü',
+    'recent_activity' => 'Son Etkinlik',
 ];

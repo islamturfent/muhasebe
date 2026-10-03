@@ -32,6 +32,7 @@ $reports = [
     ['banka-mutabakat', 'report.bank_reconciliation'],
     ['kdv', 'report.vat_summary'],
     ['kdv-detay', 'report.vat_detail'],
+    ['efatura', 'report.efatura_status'],
     ['karlilik', 'report.profitability'],
     ['borc-alacak', 'report.receivables_payables'],
 ];

@@ -75,12 +75,47 @@ final class DashboardController extends Controller
             ['t' => $tenantId, 'today' => $today]
         );
 
+        // Office-wide monthly sales / purchases / collections / payments (last 6 months).
+        $chart = ['labels' => [], 'sales' => [], 'purchase' => [], 'collection' => [], 'payment' => []];
+        for ($m = 5; $m >= 0; $m--) {
+            $s = date('Y-m-01', strtotime("-$m months"));
+            $e = date('Y-m-t', strtotime("-$m months"));
+            $chart['labels'][] = date('M', strtotime($s));
+            $chart['sales'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(total),0) FROM invoices WHERE tenant_id = :t AND type = 'sales' AND status = 'posted' AND deleted_at IS NULL AND date BETWEEN :s AND :e" . $companyFilter,
+                ['t' => $tenantId, 's' => $s, 'e' => $e]
+            );
+            $chart['purchase'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(total),0) FROM invoices WHERE tenant_id = :t AND type = 'purchase' AND status = 'posted' AND deleted_at IS NULL AND date BETWEEN :s AND :e" . $companyFilter,
+                ['t' => $tenantId, 's' => $s, 'e' => $e]
+            );
+            $chart['collection'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(amount),0) FROM current_account_transactions WHERE tenant_id = :t AND type = 'collection' AND date BETWEEN :s AND :e" . $companyFilter,
+                ['t' => $tenantId, 's' => $s, 'e' => $e]
+            );
+            $chart['payment'][] = (float) DB::scalar(
+                "SELECT COALESCE(SUM(amount),0) FROM current_account_transactions WHERE tenant_id = :t AND type = 'payment' AND date BETWEEN :s AND :e" . $companyFilter,
+                ['t' => $tenantId, 's' => $s, 'e' => $e]
+            );
+        }
+
+        // e-Fatura status distribution across the office.
+        $efaturaCounts = [];
+        foreach (DB::select(
+            "SELECT efatura_status, COUNT(*) AS c FROM invoices WHERE tenant_id = :t AND deleted_at IS NULL GROUP BY efatura_status",
+            ['t' => $tenantId]
+        ) as $r) {
+            $efaturaCounts[$r['efatura_status']] = (int) $r['c'];
+        }
+
         return $this->view('app.office-dashboard', [
             'layout' => 'layouts.app',
             'kpis'    => $kpis,
             'recentInvoices' => $recentInvoices,
             'recentCompanies' => $recentCompanies,
             'upcoming' => $upcoming,
+            'chart' => $chart,
+            'efaturaCounts' => $efaturaCounts,
         ]);
     }
 

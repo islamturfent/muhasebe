@@ -127,6 +127,7 @@ return function (Router $router): void {
         $g->get('/app/reports/banka-mutabakat/export', [\Muh\Controllers\ReportsController::class, 'bankaMutabakat'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/yaslandirma/export', [\Muh\Controllers\ReportsController::class, 'yaslandirma'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/cari-ekstre/export', [\Muh\Controllers\ReportsController::class, 'cariEkstre'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/efatura/export', [\Muh\Controllers\ReportsController::class, 'efatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/satis/export', [\Muh\Controllers\ReportsController::class, 'satis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/alis/export', [\Muh\Controllers\ReportsController::class, 'alis'], [\Muh\Middleware\TenantMiddleware::class]);

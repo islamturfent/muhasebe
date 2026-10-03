@@ -19,6 +19,30 @@
         </form>
     </div>
 
+    <?php if (!empty($stats)): ?>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <?php
+        $cards = [
+            ['admin.t_invoices', (int) $stats['invoices'], 'text-slate-900'],
+            ['admin.t_companies', count($companies), 'text-slate-900'],
+            ['current_account.title', (int) $stats['caris'], 'text-slate-900'],
+            ['dashboard.sales', $stats['sales'], 'text-emerald-600'],
+            ['dashboard.purchases', $stats['purchase'], 'text-rose-600'],
+            ['dashboard.receivable', $stats['receivable'], 'text-emerald-600'],
+            ['dashboard.payable', $stats['payable'], 'text-rose-600'],
+            ['dashboard.cash', $stats['cash'], 'text-slate-900'],
+            ['dashboard.bank', $stats['bank'], 'text-slate-900'],
+            ['inventory.products', $stats['products'], 'text-slate-900'],
+        ];
+        foreach ($cards as [$label, $val, $color]): ?>
+        <div class="bg-white border border-slate-200 rounded-2xl p-4">
+            <div class="text-xs text-slate-400 uppercase"><?= e(__($label)) ?></div>
+            <div class="text-xl font-bold mt-1 <?= $color ?>"><?= is_int($val) ? e($val) : e(number_format((float) $val, 2, ',', '.')) ?></div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
     <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('admin.firms')) ?> (<?= count($companies) ?>)</div>
         <div class="divide-y divide-slate-100">
@@ -42,6 +66,22 @@
             </div>
             <?php endforeach; ?>
             <?php if (!$users): ?><div class="px-5 py-4 text-sm text-slate-400">—</div><?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Son etkinlik -->
+    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('admin.recent_activity')) ?></div>
+        <div class="divide-y divide-slate-100">
+            <?php if (!$recentAudit): ?><div class="px-5 py-4 text-sm text-slate-400">—</div><?php endif; ?>
+            <?php foreach ($recentAudit as $a): ?>
+            <div class="px-5 py-3 flex items-center justify-between">
+                <div>
+                    <div class="font-mono text-xs text-brand-600"><?= e($a['action']) ?></div>
+                    <div class="text-xs text-slate-400"><?= e($a['user_name']) ?> · <?= e(format_datetime($a['created_at'])) ?> · IP <?= e($a['ip'] ?? '') ?></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </div>

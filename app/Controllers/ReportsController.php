@@ -523,6 +523,49 @@ final class ReportsController extends Controller
         return $this->export($format, __('report.cari_ekstre'), $sub, $headers, $out, 'cari-ekstre');
     }
 
+    // ---- Report: e-Fatura durum (e-Fatura status across the office) ----
+    public function efatura(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        $tenantId = (int) Auth::tenantId();
+        $companyId = (int) ($request->query('company_id') ?? 0);
+        $status = $request->query('status') ?: null;
+
+        $sql = "SELECT i.number, i.date, i.type, i.total, i.efatura_status, i.efatura_doc_type, i.efatura_envelope_id,
+                       c.name AS company_name, ca.name AS cari
+                  FROM invoices i
+                  JOIN companies c ON c.id = i.company_id
+                  LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+                 WHERE i.tenant_id = :t AND i.deleted_at IS NULL";
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND i.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        if ($status && in_array($status, ['draft', 'sending', 'sent', 'accepted', 'rejected', 'error'], true)) {
+            $sql .= ' AND i.efatura_status = :st';
+            $params['st'] = $status;
+        }
+        $sql .= ' ORDER BY i.date DESC, i.id DESC';
+        $rows = DB::select($sql, $params);
+
+        $headers = [
+            __('accounting.number'), __('common.date'), __('invoice.type'), __('current_account.name'), __('invoice.company'),
+            __('report.amount'), __('efatura.status'), __('efatura.doc_type'), __('efatura.envelope_id'),
+        ];
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                $r['number'], format_date($r['date']), __('invoice.type_' . $r['type']), $r['cari'] ?? '', $r['company_name'],
+                number_format((float) $r['total'], 2, ',', '.'),
+                __('efatura.st_' . $r['efatura_status']),
+                $r['efatura_doc_type'] ? __('efatura.type_' . $r['efatura_doc_type']) : '—',
+                $r['efatura_envelope_id'] ?? '',
+            ];
+        }
+        return $this->export($format, __('report.efatura_status'), '', $headers, $out, 'efatura-durum');
+    }
+
     private function firstCompanyId(): int
     {
         return (int) DB::scalar('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY id LIMIT 1', ['t' => Auth::tenantId()]);
