@@ -61,9 +61,7 @@ $isSales = true;
                 <button type="button" onclick="addLine()" class="px-3 py-1.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium hover:bg-brand-50">+ <?= e(__('invoice.add_line')) ?></button>
             </div>
             <div id="lines">
-                <?php for ($i = 0; $i < 1; $i++): ?>
-                <?= $this->partial('app.invoices.lines', ['products' => $products]) ?>
-                <?php endfor; ?>
+                <?= str_replace('__LINE__', '0', $this->partial('app.invoices.lines', ['products' => $products])) ?>
             </div>
         </div>
 
@@ -93,7 +91,7 @@ $isSales = true;
 <script>
 const PRODUCTS = <?= json_encode($products, JSON_UNESCAPED_UNICODE) ?>;
 const lineTpl = <?= json_encode(str_replace(["\n","\r"], ['',''], $this->partial('app.invoices.lines', ['products' => $products])), JSON_UNESCAPED_UNICODE) ?>;
-function addLine(){ const el = document.createElement('div'); el.innerHTML = lineTpl; document.getElementById('lines').appendChild(el.firstElementChild); recalc(); }
+function addLine(){ const i = document.querySelectorAll('#lines .line').length; const el = document.createElement('div'); el.innerHTML = lineTpl.split('__LINE__').join(String(i)); document.getElementById('lines').appendChild(el.firstElementChild); recalc(); }
 function onProductChange(sel){ const id = sel.value; const p = PRODUCTS.find(x => String(x.id)===id); if(!p) return; const row = sel.closest('.line'); row.querySelector('[name="unit_price"]').value = p.type==='service' ? p.sale_price : p.sale_price; row.querySelector('[name="vat_rate"]').value = p.vat_rate; recalc(); }
 function recalc(){
   let sub=0, disc=0, tax=0, tot=0;

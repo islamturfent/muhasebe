@@ -55,7 +55,8 @@ if (!function_exists('request_path')) {
      */
     function request_path(): string
     {
-        $uri = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        $full = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        $uri = (string) parse_url($full, PHP_URL_PATH);
         $uri = $uri ?: '/';
 
         $baseUrl = Config::get('app.url', '');
@@ -71,7 +72,10 @@ if (!function_exists('request_path')) {
             }
         }
         $uri = $uri === '' ? '/' : $uri;
-        return $uri;
+        // Preserve the query string so return-to-page keeps GET filters (e.g.
+        // /app/current-accounts?type=customer) after toggling language/theme.
+        $query = (string) parse_url($full, PHP_URL_QUERY);
+        return $query !== '' ? $uri . '?' . $query : $uri;
     }
 }
 
