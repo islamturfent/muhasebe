@@ -12,6 +12,7 @@ return [
     'view' => 'Görüntüle',
     'download' => 'İndir',
     'search' => 'Ara',
+    'search_shortcut' => 'Kısayol: “/” veya Ctrl+K ile aramaya odaklan, Ctrl+Enter ile ilk sonucu aç',
     'actions' => 'İşlemler',
     'status' => 'Durum',
     'date' => 'Tarih',

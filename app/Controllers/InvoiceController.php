@@ -302,8 +302,8 @@ final class InvoiceController extends Controller
         $id = (int) $id;
         Auth::requireCan('invoice.read');
         $invoice = DB::first(
-            'SELECT i.*, c.name AS company_name, c.trade_name, c.tax_number, c.tax_office, c.address,
-                    c.email AS company_email, c.phone AS company_phone,
+            'SELECT i.*, c.name AS company_name, c.trade_name, c.tax_number, c.tax_office, c.mersis, c.address,
+                    c.email AS company_email, c.phone AS company_phone, c.website, c.logo_path, c.currency,
                     ca.name AS account_name, ca.address AS account_address, ca.tax_number AS account_tax
                FROM invoices i
                JOIN companies c ON c.id = i.company_id
@@ -320,8 +320,22 @@ final class InvoiceController extends Controller
              WHERE ii.invoice_id = :id ORDER BY ii.id',
             ['id' => $id]
         );
+        $brand = \Muh\Services\BrandingService::forCompany([
+            'id' => (int) $invoice['company_id'],
+            'name' => $invoice['company_name'],
+            'trade_name' => $invoice['trade_name'] ?? '',
+            'logo_path' => $invoice['logo_path'] ?? '',
+            'tax_number' => $invoice['tax_number'] ?? '',
+            'tax_office' => $invoice['tax_office'] ?? '',
+            'mersis' => $invoice['mersis'] ?? '',
+            'address' => $invoice['address'] ?? '',
+            'phone' => $invoice['company_phone'] ?? '',
+            'email' => $invoice['company_email'] ?? '',
+            'website' => $invoice['website'] ?? '',
+            'currency' => $invoice['currency'] ?? 'TRY',
+        ]);
         // No layout → the view is a self-contained HTML document.
-        return $this->view('app.invoices.print', ['invoice' => $invoice, 'items' => $items]);
+        return $this->view('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
     }
 
     public function sendEfatura(Request $request, $id): Response
@@ -379,7 +393,9 @@ final class InvoiceController extends Controller
         $id = (int) $id;
         Auth::requireCan('invoice.read');
         $invoice = DB::first(
-            'SELECT i.*, c.name AS company_name, c.email AS company_email, ca.name AS account_name, ca.email AS account_email
+            'SELECT i.*, c.name AS company_name, c.email AS company_email, c.trade_name, c.tax_number, c.tax_office, c.mersis, c.address,
+                    c.phone AS company_phone, c.website, c.logo_path, c.currency,
+                    ca.name AS account_name, ca.email AS account_email, ca.address AS account_address, ca.tax_number AS account_tax
                FROM invoices i
                JOIN companies c ON c.id = i.company_id
                LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
@@ -395,13 +411,28 @@ final class InvoiceController extends Controller
             ['id' => $id]
         );
 
+        $brand = \Muh\Services\BrandingService::forCompany([
+            'id' => (int) $invoice['company_id'],
+            'name' => $invoice['company_name'],
+            'trade_name' => $invoice['trade_name'] ?? '',
+            'logo_path' => $invoice['logo_path'] ?? '',
+            'tax_number' => $invoice['tax_number'] ?? '',
+            'tax_office' => $invoice['tax_office'] ?? '',
+            'mersis' => $invoice['mersis'] ?? '',
+            'address' => $invoice['address'] ?? '',
+            'phone' => $invoice['company_phone'] ?? '',
+            'email' => $invoice['company_email'] ?? '',
+            'website' => $invoice['website'] ?? '',
+            'currency' => $invoice['currency'] ?? 'TRY',
+        ]);
+
         $to = trim((string) ($invoice['account_email'] ?? '')) ?: trim((string) ($invoice['company_email'] ?? ''));
         if (!$to) {
             Session::flash('error', __('invoice.no_email'));
             return Response::redirect('/app/invoices/' . $id);
         }
 
-        $html = \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items]);
+        $html = \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
         $subject = __('invoice.email_subject', ['no' => $invoice['number'], 'company' => $invoice['company_name']]);
 
         $ok = (new \Muh\Services\Mailer())->send($to, $subject, $html);

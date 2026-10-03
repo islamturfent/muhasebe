@@ -9,10 +9,19 @@ $totalCredit = array_sum(array_column($accounts, 'opening_credit'));
 <div class="mb-6">
     <a href="<?= e(url('/app/companies')) ?>" class="text-sm text-brand-600 hover:underline">← <?= e(__('nav.companies')) ?></a>
     <div class="flex items-center gap-3 mt-2">
-        <span class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg font-bold"><?= e(mb_strtoupper(mb_substr($company['name'], 0, 1))) ?></span>
-        <div>
+        <?php if (!empty($company['logo_path'])): ?>
+            <img src="<?= e(url('/company-logo/' . (int) $company['id'])) ?>" alt="" class="w-12 h-12 rounded-xl object-contain border border-slate-200">
+        <?php else: ?>
+            <span class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg font-bold"><?= e(mb_strtoupper(mb_substr($company['name'], 0, 1))) ?></span>
+        <?php endif; ?>
+        <div class="flex flex-col">
             <h1 class="text-2xl font-bold text-slate-900"><?= e($company['name']) ?></h1>
             <p class="text-sm text-slate-500"><?= e($company['trade_name'] ?? '') ?><?= $company['tax_number'] ? ' · ' . e($company['tax_number']) : '' ?> · <?= e($company['tax_office'] ?? '') ?></p>
+            <form method="post" enctype="multipart/form-data" action="<?= e(url('/app/companies/' . (int) $company['id'] . '/logo')) ?>" class="mt-2 flex items-center gap-2">
+                <?= csrf_field() ?>
+                <input type="file" name="logo" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="text-xs">
+                <button class="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold"><?= e(__('app.logo_upload')) ?></button>
+            </form>
         </div>
     </div>
 </div>

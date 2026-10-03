@@ -36,6 +36,7 @@ return [
     'draft' => 'Taslak',
     'cancelled' => 'İptal',
     'status' => 'Durum',
+    'thanks' => 'İş birliğiniz için teşekkür ederiz.',
     'back' => 'Faturalara dön',
     'print' => 'Yazdır / PDF',
     'stock_sales' => ':no satış faturası stok çıkışı',

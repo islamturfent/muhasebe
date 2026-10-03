@@ -138,6 +138,63 @@ switch ($command) {
         echo "e-Fatura statuses polled; {$advanced} invoice(s) advanced.\n";
         break;
 
+    case 'doctor':
+    case 'ready':
+        // Production-readiness self-check (no deployment performed).
+        $checks = [];
+        $add = function (string $name, bool $ok, string $detail = '') use (&$checks) {
+            $checks[] = ['name' => $name, 'ok' => $ok, 'detail' => $detail];
+        };
+
+        // 1) Environment
+        $env = config('app.env', 'local');
+        $add('Uygulama ortamı (APP_ENV)', $env !== 'local', "env={$env}");
+
+        // 2) Maintenance
+        $maint = (bool) config('app.maintenance', false);
+        $add('Bakım modu kapalı', !$maint, $maint ? 'bakım modu AÇIK' : 'kapalı');
+
+        // 3) HTTPS / secure session (production)
+        $secure = (bool) config('app.session.secure', false);
+        $add('Güvenli oturum (SESSION_SECURE)', !$secure ? false : true, 'SESSION_SECURE=' . ($secure ? 'true' : 'false (production için true önerilir)'));
+
+        // 4) Rate limiting
+        $rl = (bool) config('app.security.rate_limit.enabled', true);
+        $add('Rate limit etkin', $rl, $rl ? 'etkin' : 'kapalı');
+
+        // 5) Performans indeksleri
+        try {
+            $idx = (int) DB::scalar(
+                "SELECT COUNT(*) FROM information_schema.STATISTICS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifications' AND INDEX_NAME = 'idx_notif_tenant_read'"
+            );
+            $add('Performans indeksleri (migration 0018)', $idx >= 1, $idx >= 1 ? 'mevcut' : 'php bin/muh migrate çalıştır');
+        } catch (\Throwable $e) {
+            $add('Performans indeksleri', false, $e->getMessage());
+        }
+
+        // 6) Storage writable + backups dir
+        $docs = rtrim((string) config('app.filesystem.documents', dirname(__DIR__) . '/storage/documents'), '/');
+        $bkDir = dirname(__DIR__) . '/storage/backups';
+        $wDocs = is_dir($docs) ? is_writable($docs) : (is_writable(dirname($docs)));
+        $wBk = is_dir($bkDir) ? is_writable($bkDir) : (is_writable(dirname($bkDir)));
+        $add('Storage yazılabilir (belgeler)', $wDocs, $docs);
+        $add('Yedekleme klasörü yazılabilir', $wBk, $bkDir);
+
+        $fails = 0;
+        foreach ($checks as $c) {
+            $mark = $c['ok'] ? 'PASS' : ($env === 'production' ? 'FAIL' : 'WARN');
+            if (!$c['ok'] && ($env === 'production')) {
+                $fails++;
+            }
+            echo "  [{$mark}] {$c['name']} — {$c['detail']}\n";
+        }
+        echo "\nReadiness summary: " . (count($checks) - $fails) . "/" . count($checks) . " ok\n";
+        if ($env === 'production') {
+            exit($fails > 0 ? 1 : 0);
+        }
+        break;
+
     case 'security':
         exit((new \Muh\Core\SecurityChecker())->run());
 

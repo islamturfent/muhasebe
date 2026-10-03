@@ -7,11 +7,12 @@ $total = array_sum(array_map(fn ($g) => count($g['items']), $results));
     <p class="text-slate-500"><?= $query ? (int) $total . ' ' . e(__('common.records')) : '' ?></p>
 </div>
 
-<form method="get" action="<?= e(url('/app/search')) ?>" class="mb-6 bg-white border border-slate-200 rounded-2xl p-4">
+<form method="get" action="<?= e(url('/app/search')) ?>" class="mb-6 bg-white border border-slate-200 rounded-2xl p-4" id="searchForm">
     <div class="flex gap-2">
-        <input name="q" value="<?= e($query) ?>" placeholder="<?= e(__('nav.search')) ?>" autofocus class="flex-1 px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+        <input name="q" id="searchInput" value="<?= e($query) ?>" placeholder="<?= e(__('nav.search')) ?>" autofocus class="flex-1 px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
         <button class="px-6 py-3 rounded-lg bg-brand-600 text-white font-semibold"><?= e(__('common.search')) ?></button>
     </div>
+    <div class="text-xs text-slate-400 mt-2"><?= e(__('common.search_shortcut')) ?></div>
 </form>
 
 <?php if ($query !== '' && !$results): ?>
@@ -20,10 +21,10 @@ $total = array_sum(array_map(fn ($g) => count($g['items']), $results));
 
 <?php foreach ($results as $group): ?>
 <div class="mb-6">
-    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-2"><?= e($group['label']) ?></h2>
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-2 flex items-center gap-2"><?= e($group['label']) ?> <span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-xs"><?= (int) count($group['items']) ?></span></h2>
     <div class="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-50 overflow-hidden">
         <?php foreach ($group['items'] as $item): ?>
-        <a href="<?= e(url($item['url'])) ?>" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+        <a href="<?= e(url($item['url'])) ?>" class="search-item flex items-center justify-between px-5 py-3 hover:bg-slate-50">
             <div>
                 <div class="font-medium text-slate-800"><?= e($item['title']) ?></div>
                 <?php if (!empty($item['sub'])): ?><div class="text-xs text-slate-400"><?= e($item['sub']) ?></div><?php endif; ?>
@@ -34,3 +35,16 @@ $total = array_sum(array_map(fn ($g) => count($g['items']), $results));
     </div>
 </div>
 <?php endforeach; ?>
+
+<script>
+// Ctrl/Cmd+Enter opens the first result directly.
+const firstRes = document.querySelector('.search-item');
+if (firstRes) {
+  document.getElementById('searchInput').addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      window.location.href = firstRes.getAttribute('href');
+    }
+  });
+}
+</script>

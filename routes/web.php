@@ -19,6 +19,8 @@ return function (Router $router): void {
     $router->get('/pricing', [HomeController::class, 'pricing']);
     $router->get('/locale', [HomeController::class, 'switchLocale']);
     $router->get('/theme', [ThemeController::class, 'toggle']);
+    // Public company logo (used in printed/e-mailed documents).
+    $router->get('/company-logo/{id}', [\Muh\Controllers\CompanyController::class, 'serveLogo']);
 
     // ---- Auth (guest) ----
     $router->group(['middleware' => [\Muh\Middleware\GuestMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
@@ -44,6 +46,7 @@ return function (Router $router): void {
         $g->get('/app/company', [DashboardController::class, 'company'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/companies', [\Muh\Controllers\CompanyController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/companies/create', [\Muh\Controllers\CompanyController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/companies/{id}/logo', [\Muh\Controllers\CompanyController::class, 'uploadLogo'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/companies', [\Muh\Controllers\CompanyController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/companies/{id}', [\Muh\Controllers\CompanyController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
 
@@ -188,6 +191,8 @@ return function (Router $router): void {
         $g->get('/app/profile', [\Muh\Controllers\ProfileController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/profile', [\Muh\Controllers\ProfileController::class, 'update'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/settings', [\Muh\Controllers\SettingsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/settings/currency', [\Muh\Controllers\SettingsController::class, 'currency'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/settings/currency', [\Muh\Controllers\SettingsController::class, 'saveCurrency'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/settings/efatura', [\Muh\Controllers\SettingsController::class, 'efatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/efatura', [\Muh\Controllers\SettingsController::class, 'saveEfatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/settings/email', [\Muh\Controllers\MailSettingsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);

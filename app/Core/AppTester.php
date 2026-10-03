@@ -554,6 +554,40 @@ final class AppTester
         }
         $results[] = ['name' => 'Performans indeksleri (migration 0018)', 'ok' => $idxOk, 'detail' => $idxDetail];
 
+        // ---- Fatura/doküman markalama (BrandingService) ----
+        $brOk = false; $brDetail = '';
+        try {
+            $comp = DB::first('SELECT * FROM companies LIMIT 1');
+            $brand = \Muh\Services\BrandingService::forCompany($comp);
+            $brOk = is_array($brand)
+                && array_key_exists('logo_url', $brand)
+                && array_key_exists('name', $brand) && array_key_exists('tax_number', $brand)
+                && array_key_exists('currency', $brand) && array_key_exists('iban', $brand)
+                && is_string($brand['currency']);
+            $brDetail = $brOk ? 'marka bloğu hazır (logo/vergi/iban/kur)' : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $brOk = false; $brDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Fatura/doküman markalama (BrandingService)', 'ok' => $brOk, 'detail' => $brDetail];
+
+        // ---- Çoklu para birimi (CurrencyService) — rollback ----
+        $curOk = false; $curDetail = '';
+        try {
+            DB::transaction(function () use (&$curOk, &$curDetail) {
+                \Muh\Services\CurrencyService::setRate('USD', 'TRY', 32.5, date('Y-m-d'));
+                $r = \Muh\Services\CurrencyService::rateToTry('USD', date('Y-m-d'));
+                $sym = \Muh\Services\CurrencyService::symbol('USD');
+                $conv = \Muh\Services\CurrencyService::convert('USD', 'TRY', 10, date('Y-m-d'));
+                $curOk = abs($r - 32.5) < 0.001 && $sym === '$' && abs($conv - 325) < 0.01;
+                $curDetail = $curOk ? ('kur + dönüşüm ok (1 USD=' . round($r, 4) . ' TRY)') : 'hata (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $curOk = false; $curDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Çoklu para birimi (CurrencyService)', 'ok' => $curOk, 'detail' => $curDetail];
+
         return $results;
     }
 }

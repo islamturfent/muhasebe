@@ -183,3 +183,25 @@ Apache vhost, TLS, security headers, scheduled backups, health check).
 - `tr` and `en` dictionaries under `resources/lang`.
 - Locale persists per session (and per user in DB).
 - `money()`/`format_date()` adapt to locale (TR: `1.234,56 ₺`, `DD.MM.YYYY`).
+
+---
+
+## Production & Readiness
+
+The app ships with a **readiness self-check** that inspects the current environment
+without deploying anything:
+
+```bash
+php bin/muh doctor
+```
+
+It verifies: `APP_ENV`, maintenance mode, secure sessions (`SESSION_SECURE`), rate
+limiting, performance indexes (migration `0018`), and that storage/backup dirs are
+writable. In `APP_ENV=production` it exits non-zero if any check fails, so it can be
+used in CI/deploy as a gate.
+
+- Copy [`.env.production.example`](.env.production.example) → real `.env` on the server
+  (never commit secrets), set `APP_ENV=production`, `APP_DEBUG=false`, `APP_HTTPS=true`,
+  `SESSION_SECURE=true` and a real `APP_KEY`.
+- Run `php bin/muh migrate` then `php bin/muh doctor` before going live.
+- **Canlı kurulum en sonda** yapılacaktır; bu bölüm yalnızca hazırlığı tarif eder.

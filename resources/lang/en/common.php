@@ -12,6 +12,7 @@ return [
     'view' => 'View',
     'download' => 'Download',
     'search' => 'Search',
+    'search_shortcut' => 'Shortcut: press "/" or Ctrl+K to focus search, Ctrl+Enter to open the first result',
     'actions' => 'Actions',
     'status' => 'Status',
     'date' => 'Date',
