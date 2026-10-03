@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="tr" dir="ltr" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="http://127.0.0.1:8099/assets/img/favicon.ico">
+    <title>Hesap360 · Tüm Firmalar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="http://127.0.0.1:8099/assets/css/app.css">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { brand: {50:'#eef4ff',100:'#dbe7ff',500:'#3b6cff',600:'#2b55e0',700:'#1f3fa8'} } } } }
+    </script>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200">
+        <div class="p-4 flex items-center gap-2 border-b border-slate-100">
+            <img src="http://127.0.0.1:8099/assets/img/logo-mark.svg" alt="Hesap360" class="w-9 h-9">
+            <div>
+                <div class="font-bold text-slate-900 leading-none">Hesap360</div>
+                <div class="text-[11px] text-slate-400">Türkiye için profesyonel bulut muhasebe ve finans platformu</div>
+            </div>
+        </div>
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="http://127.0.0.1:8099/app/dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Panel</a><a href="http://127.0.0.1:8099/app/companies" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Firmalar</a><a href="http://127.0.0.1:8099/app/current-accounts" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cari</a><a href="http://127.0.0.1:8099/app/customers" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Müşteriler</a><a href="http://127.0.0.1:8099/app/invoices" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Faturalar</a><a href="http://127.0.0.1:8099/app/inventory" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Stok</a><a href="http://127.0.0.1:8099/app/branches" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Şubeler</a><a href="http://127.0.0.1:8099/app/tax-rates" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Vergi Oranları</a><a href="http://127.0.0.1:8099/app/cash" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Kasa</a><a href="http://127.0.0.1:8099/app/bank" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Banka</a><a href="http://127.0.0.1:8099/app/checks" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Çek/Senet</a><a href="http://127.0.0.1:8099/app/accounting" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Muhasebe</a><a href="http://127.0.0.1:8099/app/tax-calendar" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-brand-600 bg-brand-50">Vergi Takvimi</a><a href="http://127.0.0.1:8099/app/reports" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Raporlar</a><a href="http://127.0.0.1:8099/app/import" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">İçe Aktarma (Excel / CSV)</a><a href="http://127.0.0.1:8099/app/documents" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Belgeler</a><a href="http://127.0.0.1:8099/app/users" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Kullanıcılar</a><a href="http://127.0.0.1:8099/app/settings" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Ayarlar</a>        </nav>
+        <div class="p-3 border-t border-slate-100 text-xs text-slate-400">
+            <div class="font-medium text-slate-600 mb-1">Ahmet Yılmaz</div>
+            <div>demo@muh.local</div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- Topbar -->
+        <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 flex-1">
+                <form method="post" action="http://127.0.0.1:8099/app/switch-company" class="flex items-center gap-2">
+                    <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                    <select name="company_id" onchange="this.form.submit()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand-500 outline-none">
+                        <option value="">Tüm Firmalar</option>
+                                                    <option value="1" >Demo A.Ş.</option>
+                                            </select>
+                    <span class="hidden lg:inline text-xs text-slate-400">Firma Değiştir</span>
+                </form>
+
+                <form method="get" action="http://127.0.0.1:8099/app/search" class="hidden md:flex flex-1 max-w-md ml-4">
+                    <input type="text" name="q" placeholder="Ara..." class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
+                </form>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <a href="http://127.0.0.1:8099/locale?locale=en&amp;return=%2Fapp%2Ftax-calendar%3Fyear%3D2026" class="text-sm px-3 py-2 rounded-lg hover:bg-slate-100 font-medium">
+                    EN                </a>
+                <a href="http://127.0.0.1:8099/theme?mode=dark&amp;return=%2Fapp%2Ftax-calendar%3Fyear%3D2026" class="p-2 rounded-lg hover:bg-slate-100" title="Toggle theme"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></a>
+                <a href="http://127.0.0.1:8099/app/notifications" class="relative p-2 rounded-lg hover:bg-slate-100" title="Bildirimler">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">8</span>                </a>
+                <a href="http://127.0.0.1:8099/app/profile" class="p-2 rounded-lg hover:bg-slate-100" title="Profil">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M15 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </a>
+                <a href="http://127.0.0.1:8099/app/settings" class="p-2 rounded-lg hover:bg-slate-100" title="Yardım">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.2 8.2A4 4 0 0112 6c2 0 3.5 1.5 3.5 3.5 0 2-2 2.5-2 4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </a>
+                <form method="post" action="http://127.0.0.1:8099/logout">
+                    <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                    <button class="text-sm px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-100 font-medium" type="submit">Çıkış Yap</button>
+                </form>
+            </div>
+        </header>
+
+                <main class="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div class="mb-4 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">29 yükümlülük takvime eklendi.</div>
+                                    <div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Vergi Takvimi &amp; Yükümlülükler</h1>
+    <p class="text-slate-500">Türkiye vergi ödevleri ve son ödeme tarihleri</p>
+</div>
+
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="rounded-2xl bg-white border border-red-200 p-5">
+        <div class="text-xs text-slate-400 uppercase">Vadesi Geçmiş</div>
+        <div class="text-2xl font-bold text-red-600">19</div>
+    </div>
+    <div class="rounded-2xl bg-white border border-amber-200 p-5">
+        <div class="text-xs text-slate-400 uppercase">Yaklaşan (15 gün)</div>
+        <div class="text-2xl font-bold text-amber-600">1</div>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-5">
+        <div class="text-xs text-slate-400 uppercase">Bekliyor</div>
+        <div class="text-2xl font-bold text-slate-800">29</div>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-200 p-5">
+        <div class="text-xs text-slate-400 uppercase">Toplam</div>
+        <div class="text-2xl font-bold text-slate-800">29</div>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6 mb-6">
+    <!-- Generate -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <h3 class="font-semibold text-slate-800 mb-3">Yıl Takvimini Oluştur</h3>
+        <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/generate" class="space-y-2">
+            <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">            <input type="number" name="year" value="2026" min="2000" max="2100" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+            <select name="company_id" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                <option value="">Firma — (Tümü)</option>
+                <option value="1">Demo A.Ş.</option>            </select>
+            <button class="w-full px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold">Yıl Takvimini Oluştur</button>
+        </form>
+    </div>
+
+    <!-- Add -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <h3 class="font-semibold text-slate-800 mb-3">Yeni Yükümlülük</h3>
+        <form method="post" action="http://127.0.0.1:8099/app/tax-calendar" class="space-y-2">
+            <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">            <input name="name" placeholder="Yükümlülük Adı *" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
+            <div class="grid grid-cols-2 gap-2">
+                <select name="obligation_type" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                    <option value="kdv">KDV</option><option value="muhtasar">Muhtasar/Stopaj</option><option value="gecici">Geçici Vergi</option><option value="annual">Yıllık</option><option value="other">Diğer</option>                </select>
+                <input type="date" name="due_date" required class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <input name="period_label" placeholder="Dönem" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                <input type="number" name="amount" step="0.01" value="0" class="px-3 py-2 rounded-lg border border-slate-200 text-sm">
+            </div>
+            <input name="company_id" type="hidden" value="0">
+            <button class="w-full px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold">Yeni Yükümlülük</button>
+        </form>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <h3 class="font-semibold text-slate-800 mb-3">Filtrele</h3>
+        <form method="get" action="http://127.0.0.1:8099/app/tax-calendar" class="space-y-2">
+            <input type="number" name="year" value="2026" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
+            <select name="status" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                <option value="">Durum — Tümü</option>
+                <option value="pending" >Bekliyor</option>
+                <option value="done" >Tamamlandı</option>
+            </select>
+            <button class="w-full px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium">Filtrele</button>
+        </form>
+    </div>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="text-left text-xs text-slate-400 uppercase bg-slate-50">
+            <tr>
+                <th class="px-5 py-2">Yükümlülük Adı</th>
+                <th class="px-5 py-2">Vergi Türü</th>
+                <th class="px-5 py-2">Dönem</th>
+                <th class="px-5 py-2">Firma</th>
+                <th class="px-5 py-2">Son Tarih</th>
+                <th class="px-5 py-2 text-right">Tutar</th>
+                <th class="px-5 py-2 text-center">Durum</th>
+                <th class="px-5 py-2"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+                                    <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-01]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-01</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.02.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/1/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/1/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-01]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-01</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.02.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/2/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/2/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-02]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-02</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.03.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/3/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/3/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-02]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-02</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.03.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/4/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/4/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Geçici Vergi Dönemi (Nisan) 2026</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Geçici Vergi</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-Q</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">17.04.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/25/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/25/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-03]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-03</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.04.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/5/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/5/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-03]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-03</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.04.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/6/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/6/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-04]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-04</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.05.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/7/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/7/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-04]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-04</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.05.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/8/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/8/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Yıllık Gelir / Kurumlar Vergisi 2026</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Yıllık</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.05.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/29/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/29/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-05]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-05</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.06.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/9/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/9/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-05]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-05</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.06.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/10/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/10/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Geçici Vergi Dönemi (Temmuz) 2026</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Geçici Vergi</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-Q</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">17.07.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/26/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/26/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-06]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-06</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.07.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/11/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/11/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-06]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-06</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.07.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/12/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/12/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-07]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-07</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.08.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/13/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/13/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-07]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-07</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.08.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/14/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/14/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-08]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-08</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">25.09.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/15/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/15/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 bg-red-50/40">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-08]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-08</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-red-600 font-medium">27.09.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/16/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/16/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Geçici Vergi Dönemi (Ekim) 2026</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Geçici Vergi</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-Q</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">17.10.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/27/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/27/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-09]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-09</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">25.10.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/17/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/17/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-09]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-09</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">27.10.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/18/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/18/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-10]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-10</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">25.11.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/19/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/19/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-10]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-10</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">27.11.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/20/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/20/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-11]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-11</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">25.12.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/21/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/21/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-11]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-11</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">27.12.2026</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/22/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/22/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Geçici Vergi Dönemi (Ocak) 2026</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Geçici Vergi</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-Q</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">17.01.2027</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/28/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/28/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">KDV Beyannamesi [2026-12]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">KDV</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-12</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">25.01.2027</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/23/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/23/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                        <tr class="hover:bg-slate-50 ">
+                <td class="px-5 py-2.5 font-medium text-slate-700">Muhtasar &amp; Stopaj [2026-12]</td>
+                <td class="px-5 py-2.5"><span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600">Muhtasar/Stopaj</span></td>
+                <td class="px-5 py-2.5 text-slate-500">2026-12</td>
+                <td class="px-5 py-2.5 text-slate-500">—</td>
+                <td class="px-5 py-2.5 text-slate-600">27.01.2027</td>
+                <td class="px-5 py-2.5 text-right text-slate-700">0,00 ₺</td>
+                <td class="px-5 py-2.5 text-center">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/24/toggle" class="inline">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">Bekliyor</button>
+                    </form>
+                </td>
+                <td class="px-5 py-2.5 text-right">
+                    <form method="post" action="http://127.0.0.1:8099/app/tax-calendar/24/delete" class="inline" onsubmit="return confirm('Sil?')">
+                        <input type="hidden" name="_token" value="d38408b11300591f8d25cadd0cd594efa1d07382184dc5945831671e3d6cd919">                        <button class="text-slate-400 hover:text-red-500 text-xs">Sil</button>
+                    </form>
+                </td>
+            </tr>
+                    </tbody>
+    </table>
+</div>
+<div class="flex flex-col sm:flex-row items-center justify-between gap-2 px-5 py-3 border-t border-slate-100 text-sm">
+    <span class="text-slate-500">29 kayıt</span>    <div class="flex items-center gap-3">
+                <span class="text-slate-500">1 / 1</span>
+            </div>
+</div>
+        </main>
+    </div>
+</div>
+</body>
+</html>

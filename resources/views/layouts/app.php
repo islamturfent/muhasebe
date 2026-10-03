@@ -54,6 +54,7 @@ $menu = [
     '/app/bank' => __('nav.bank'),
     '/app/checks' => __('nav.checks'),
     '/app/accounting' => __('nav.accounting'),
+    '/app/tax-calendar' => __('nav.tax_calendar'),
     '/app/reports' => __('nav.reports'),
     '/app/import' => __('import.title'),
     '/app/documents' => __('nav.documents'),

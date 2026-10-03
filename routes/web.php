@@ -101,6 +101,12 @@ return function (Router $router): void {
         $g->post('/app/accounting/chart/{id}/delete', [\Muh\Controllers\AccountingController::class, 'destroyChartAccount'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/ledger', [\Muh\Controllers\AccountingController::class, 'ledger'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/accounting/ledger/export', [\Muh\Controllers\AccountingController::class, 'ledgerExport'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/tax-calendar', [\Muh\Controllers\TaxCalendarController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/tax-calendar/generate', [\Muh\Controllers\TaxCalendarController::class, 'generate'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/tax-calendar', [\Muh\Controllers\TaxCalendarController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/tax-calendar/{id}/toggle', [\Muh\Controllers\TaxCalendarController::class, 'toggleStatus'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/tax-calendar/{id}/delete', [\Muh\Controllers\TaxCalendarController::class, 'destroy'], [\Muh\Middleware\TenantMiddleware::class]);
+
         $g->post('/app/periods/close', [\Muh\Controllers\PeriodController::class, 'close'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)

@@ -11,6 +11,7 @@ return [
     'bank' => 'Banka',
     'checks' => 'Çek/Senet',
     'accounting' => 'Muhasebe',
+    'tax_calendar' => 'Vergi Takvimi',
     'reports' => 'Raporlar',
     'documents' => 'Belgeler',
     'notifications' => 'Bildirimler',

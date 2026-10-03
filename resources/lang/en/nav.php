@@ -11,6 +11,7 @@ return [
     'bank' => 'Bank',
     'checks' => 'Checks/Notes',
     'accounting' => 'Accounting',
+    'tax_calendar' => 'Tax Calendar',
     'reports' => 'Reports',
     'documents' => 'Documents',
     'notifications' => 'Notifications',
