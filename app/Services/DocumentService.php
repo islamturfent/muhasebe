@@ -33,6 +33,24 @@ final class DocumentService
         );
     }
 
+    /** Documents linked to an invoice. */
+    public function forInvoice(int $tenantId, int $invoiceId): array
+    {
+        return DB::select(
+            'SELECT * FROM documents WHERE tenant_id = :t AND invoice_id = :i AND deleted_at IS NULL ORDER BY id DESC',
+            ['t' => $tenantId, 'i' => $invoiceId]
+        );
+    }
+
+    /** Documents linked to a current account (cari). */
+    public function forCurrentAccount(int $tenantId, int $currentAccountId): array
+    {
+        return DB::select(
+            'SELECT * FROM documents WHERE tenant_id = :t AND current_account_id = :a AND deleted_at IS NULL ORDER BY id DESC',
+            ['t' => $tenantId, 'a' => $currentAccountId]
+        );
+    }
+
     public function find(int $tenantId, int $id): ?array
     {
         return DB::first('SELECT * FROM documents WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $id, 't' => $tenantId]);

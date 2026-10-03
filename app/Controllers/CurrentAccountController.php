@@ -135,6 +135,7 @@ final class CurrentAccountController extends Controller
         $unpaidInvoices = $account['type'] === 'customer'
             ? DB::select("SELECT id, number, total, paid FROM invoices WHERE company_id = :c AND current_account_id = :a AND type = 'sales' AND status = 'posted' AND paid < total AND deleted_at IS NULL ORDER BY due_date LIMIT 20", ['c' => (int) $account['company_id'], 'a' => $id])
             : [];
+        $documents = (new \Muh\Services\DocumentService())->forCurrentAccount(Auth::tenantId(), $id);
 
         return $this->view('app.current-accounts.show', [
             'statement' => $statement,
@@ -145,6 +146,7 @@ final class CurrentAccountController extends Controller
             'cashAccounts' => $cashAccounts,
             'bankAccounts' => $bankAccounts,
             'unpaidInvoices' => $unpaidInvoices,
+            'documents' => $documents,
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],

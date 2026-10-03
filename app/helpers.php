@@ -269,3 +269,17 @@ if (!function_exists('app_log')) {
         @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
     }
 }
+
+if (!function_exists('format_bytes')) {
+    function format_bytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = 0;
+        $b = (float) $bytes;
+        while ($b >= 1024 && $i < count($units) - 1) {
+            $b /= 1024;
+            $i++;
+        }
+        return number_format($b, $i > 0 ? 1 : 0, ',', '.') . ' ' . $units[$i];
+    }
+}

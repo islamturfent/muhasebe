@@ -243,3 +243,57 @@ function toggleTarget(v){
         <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
     </div>
 </div>
+
+<?php if (Auth::can('document.read') || Auth::can('document.create')): ?>
+<!-- İlişkili belgeler (cari) -->
+<div class="max-w-4xl mt-6 bg-white border border-slate-200 rounded-2xl p-5">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-slate-800"><?= e(__('nav.documents')) ?> <span class="text-xs text-slate-400 font-normal">(<?= count($documents ?? []) ?>)</span></h3>
+        <?php if (Auth::can('document.create')): ?>
+        <details class="relative">
+            <summary class="cursor-pointer px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 text-sm font-medium hover:bg-brand-100">+ <?= e(__('document.upload')) ?></summary>
+            <form method="post" action="<?= e(url('/app/documents')) ?>" enctype="multipart/form-data" class="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-lg p-4 space-y-2 z-10">
+                <?= csrf_field() ?>
+                <input type="hidden" name="company_id" value="<?= (int)$account['company_id'] ?>">
+                <input type="hidden" name="current_account_id" value="<?= (int)$account['id'] ?>">
+                <input type="hidden" name="redirect" value="<?= e(url('/app/current-accounts/' . (int)$account['id'])) ?>">
+                <select name="category" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                    <?php foreach (['invoice','receipt','contract','bank_statement','other'] as $c): ?>
+                    <option value="<?= $c ?>"><?= e(__('document.cat_' . $c)) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input type="file" name="file" required class="w-full text-sm border border-slate-200 rounded-lg px-2 py-2 bg-white">
+                <input name="notes" placeholder="<?= e(__('document.notes')) ?>" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                <button class="w-full px-3 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('document.upload')) ?></button>
+            </form>
+        </details>
+        <?php endif; ?>
+    </div>
+    <?php if (!empty($documents)): ?>
+    <ul class="divide-y divide-slate-50">
+        <?php foreach ($documents as $d): ?>
+        <li class="py-2 flex items-center justify-between text-sm">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-slate-400">📄</span>
+                <span class="text-slate-700 truncate"><?= e($d['original_name']) ?></span>
+                <span class="text-xs text-slate-400">(<?= e(__('document.cat_' . $d['category'])) ?>)</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-400"><?= e(format_bytes((int) $d['size'])) ?></span>
+                <a href="<?= e(url('/app/documents/' . (int)$d['id'] . '/download')) ?>" class="text-brand-600 hover:underline text-xs"><?= e(__('common.download')) ?></a>
+                <?php if (Auth::can('document.delete')): ?>
+                <form method="post" action="<?= e(url('/app/documents/' . (int)$d['id'] . '/delete')) ?>" class="inline" onsubmit="return confirm('<?= e(__('common.delete')) ?>?')">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="redirect" value="<?= e(url('/app/current-accounts/' . (int)$account['id'])) ?>">
+                    <button class="text-slate-400 hover:text-red-500 text-xs"><?= e(__('common.delete')) ?></button>
+                </form>
+                <?php endif; ?>
+            </div>
+        </li>
+        <?php endforeach; ?>
+    </ul>
+    <?php else: ?>
+    <div class="text-sm text-slate-400 py-2"><?= e(__('document.no_documents')) ?></div>
+    <?php endif; ?>
+</div>
+<?php endif; ?>

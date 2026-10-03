@@ -229,11 +229,13 @@ final class InvoiceController extends Controller
              WHERE ii.invoice_id = :id ORDER BY ii.id',
             ['id' => $id]
         );
+        $documents = (new \Muh\Services\DocumentService())->forInvoice(Auth::tenantId(), $id);
 
         return $this->view('app.invoices.show', [
             'layout' => 'layouts.app',
             'invoice' => $invoice,
             'items' => $items,
+            'documents' => $documents,
         ]);
     }
 

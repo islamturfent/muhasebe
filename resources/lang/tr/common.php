@@ -10,6 +10,7 @@ return [
     'edit' => 'Düzenle',
     'create' => 'Oluştur',
     'view' => 'Görüntüle',
+    'download' => 'İndir',
     'search' => 'Ara',
     'actions' => 'İşlemler',
     'status' => 'Durum',

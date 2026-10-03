@@ -41,6 +41,11 @@ final class DocumentController extends Controller
             return Response::redirect('/app/documents?company_id=' . (int) $request->input('company_id'));
         }
         Session::flash('success', __('document.uploaded'));
+        // Honor a safe return URL (e.g. back to invoice/cari detail).
+        $redirect = (string) $request->input('redirect');
+        if ($redirect !== '' && str_contains($redirect, '/app/')) {
+            return Response::redirect($redirect);
+        }
         return Response::redirect('/app/documents?company_id=' . (int) $request->input('company_id'));
     }
 
@@ -66,6 +71,10 @@ final class DocumentController extends Controller
         Auth::requireCan('document.delete');
         (new DocumentService())->delete(Auth::tenantId(), $id);
         Session::flash('success', __('document.deleted'));
+        $redirect = (string) $request->input('redirect');
+        if ($redirect !== '' && str_contains($redirect, '/app/')) {
+            return Response::redirect($redirect);
+        }
         return Response::redirect('/app/documents?company_id=' . (int) $request->input('company_id'));
     }
 }
