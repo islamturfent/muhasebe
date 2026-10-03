@@ -38,6 +38,7 @@ final class MailSettingService
             'notify_stock' => '1',
             'notify_efatura' => '1',
             'notify_user' => '1',
+            'notify_tax' => '1',
         ];
     }
 
@@ -45,7 +46,7 @@ final class MailSettingService
     {
         $allowed = [
             'enabled', 'host', 'port', 'username', 'password', 'encryption',
-            'from_email', 'from_name', 'notify_due', 'notify_stock', 'notify_efatura', 'notify_user',
+            'from_email', 'from_name', 'notify_due', 'notify_stock', 'notify_efatura', 'notify_user', 'notify_tax',
         ];
         // Never persist the password unless it was re-entered.
         $existing = static::get($tenantId);
@@ -57,7 +58,7 @@ final class MailSettingService
             if ($key === 'enabled') {
                 $value = $value ? '1' : '0';
             }
-            foreach (['notify_due', 'notify_stock', 'notify_efatura', 'notify_user'] as $b) {
+            foreach (['notify_due', 'notify_stock', 'notify_efatura', 'notify_user', 'notify_tax'] as $b) {
                 if ($key === $b) {
                     $value = $value ? '1' : '0';
                 }
@@ -82,6 +83,7 @@ final class MailSettingService
             'notify_stock' => (bool) (int) ($s['notify_stock'] ?? 1),
             'notify_efatura' => (bool) (int) ($s['notify_efatura'] ?? 1),
             'notify_user' => (bool) (int) ($s['notify_user'] ?? 1),
+            'notify_tax' => (bool) (int) ($s['notify_tax'] ?? 1),
         ];
     }
 

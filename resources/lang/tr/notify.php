@@ -13,4 +13,7 @@ return [
     'sub_mail_expired' => 'Aboneliğiniz sona erdi',
     'due_mail_subject' => 'Fatura vadesi yaklaşıyor / geçti: :no',
     'stock_mail_subject' => 'Kritik stok uyarısı: :name',
+    'tax_title' => 'Vergi ödevi yaklaşıyor: :name',
+    'tax_overdue_title' => 'Vergi ödevi vadesi geçti: :name',
+    'tax_body' => 'Son tarih: :date',
 ];

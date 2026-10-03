@@ -14,7 +14,7 @@ use Muh\Core\DB;
  */
 final class NotificationService
 {
-    private const TYPES = ['due_date', 'unpaid_invoice', 'critical_stock', 'efatura_error', 'subscription', 'user', 'document', 'system'];
+    private const TYPES = ['due_date', 'unpaid_invoice', 'critical_stock', 'efatura_error', 'subscription', 'user', 'document', 'system', 'tax'];
 
     /**
      * Send an e-mail for a notification type if enabled in the tenant mail
@@ -151,6 +151,31 @@ final class NotificationService
             $this->create('critical_stock', __('notify.stock_title', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]), 'danger', null, null, '/app/inventory/' . $p['id'], ['key' => $key], $tenantId);
             $created++;
             static::maybeMail($tenantId, 'stock', __('notify.stock_mail_subject', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]));
+        }
+
+        // 2b) Vergi takvimi: yaklaşan / vadesi geçen yükümlülükler (14 gün).
+        $taxFuture = date('Y-m-d', strtotime('+14 days'));
+        $taxObligations = DB::select(
+            "SELECT id, name, due_date FROM tax_obligations
+              WHERE tenant_id = :t AND deleted_at IS NULL AND status = 'pending'
+                AND due_date IS NOT NULL AND due_date <= :future",
+            ['t' => $tenantId, 'future' => $taxFuture]
+        );
+        foreach ($taxObligations as $to) {
+            $key = 'tax_' . $to['id'] . '_' . $todayKey;
+            if (DB::scalar('SELECT COUNT(*) FROM notifications WHERE tenant_id = :t AND payload = :p', ['t' => $tenantId, 'p' => json_encode(['key' => $key])]) > 0) {
+                continue;
+            }
+            $over = strtotime($to['due_date']) < strtotime(date('Y-m-d'));
+            $this->create(
+                'tax',
+                $over ? __('notify.tax_overdue_title', ['name' => $to['name']]) : __('notify.tax_title', ['name' => $to['name']]),
+                __('notify.tax_body', ['date' => format_date($to['due_date'])]),
+                $over ? 'danger' : 'warning',
+                null, null, '/app/tax-calendar', ['key' => $key], $tenantId
+            );
+            $created++;
+            static::maybeMail($tenantId, 'tax', __('notify.tax_title', ['name' => $to['name']]), __('notify.tax_body', ['date' => format_date($to['due_date'])]));
         }
 
         // 3) Subscription expiry (only the tenant's own subscription).

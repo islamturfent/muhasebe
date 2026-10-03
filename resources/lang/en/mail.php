@@ -18,6 +18,7 @@ return [
     'notify_stock' => 'Critical stock',
     'notify_efatura' => 'e-Invoice error',
     'notify_user' => 'New user',
+    'notify_tax' => 'Upcoming tax obligation',
     'save' => 'Save',
     'saved' => 'Email settings saved.',
     'send_test' => 'Send Test Email',

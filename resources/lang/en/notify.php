@@ -13,4 +13,7 @@ return [
     'sub_mail_expired' => 'Your subscription has expired',
     'due_mail_subject' => 'Invoice due soon / overdue: :no',
     'stock_mail_subject' => 'Critical stock alert: :name',
+    'tax_title' => 'Tax obligation approaching: :name',
+    'tax_overdue_title' => 'Tax obligation overdue: :name',
+    'tax_body' => 'Due date: :date',
 ];

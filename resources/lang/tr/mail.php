@@ -18,6 +18,7 @@ return [
     'notify_stock' => 'Kritik stok',
     'notify_efatura' => 'e-Fatura hatası',
     'notify_user' => 'Yeni kullanıcı',
+    'notify_tax' => 'Yaklaşan vergi yükümlülüğü',
     'save' => 'Kaydet',
     'saved' => 'E-posta ayarları kaydedildi.',
     'send_test' => 'Test E-postası Gönder',
