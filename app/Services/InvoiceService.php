@@ -191,6 +191,27 @@ final class InvoiceService
         return $invoiceId;
     }
 
+    /**
+     * Create the same invoice (template) for several current accounts at once.
+     * Each account is posted atomically via {@see create()} (cari + stock +
+     * VAT + balanced journal). Returns created ids and per-account failures.
+     */
+    public function createBulk(array $data, array $accountIds, ?Request $request = null): array
+    {
+        $created = [];
+        $failed = [];
+        foreach (array_unique(array_filter($accountIds)) as $acctId) {
+            $row = $data;
+            $row['current_account_id'] = (int) $acctId;
+            try {
+                $created[] = $this->create($row, $request);
+            } catch (ValidationException $e) {
+                $failed[(int) $acctId] = array_values($e->errors);
+            }
+        }
+        return ['created' => $created, 'failed' => $failed];
+    }
+
     private function postInvoiceJournal(
         int $tenantId, int $companyId, int $periodId, string $type,
         string $date, string $number, float $subtotal, float $discount, float $tax, float $total,

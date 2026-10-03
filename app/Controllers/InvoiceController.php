@@ -69,6 +69,50 @@ final class InvoiceController extends Controller
         ]);
     }
 
+    /**
+     * Bulk invoice form: create the same invoice for several current accounts.
+     */
+    public function bulkCreate(Request $request): Response
+    {
+        Auth::requireCan('invoice.create');
+        $tenantId = Auth::tenantId();
+        $companies = DB::select('SELECT id, name FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => $tenantId]);
+        $selectedCompany = (int) ($request->query('company_id') ?? ($companies[0]['id'] ?? 0));
+        $accounts = $selectedCompany
+            ? DB::select('SELECT id, code, name FROM current_accounts WHERE company_id = :c AND deleted_at IS NULL ORDER BY name', ['c' => $selectedCompany])
+            : [];
+        $products = $selectedCompany
+            ? DB::select('SELECT id, code, name, sale_price, vat_rate FROM products WHERE company_id = :c AND deleted_at IS NULL ORDER BY name', ['c' => $selectedCompany])
+            : [];
+
+        return $this->view('app.invoices.bulk-create', [
+            'layout' => 'layouts.app',
+            'companies' => $companies,
+            'selectedCompany' => $selectedCompany,
+            'accounts' => $accounts,
+            'products' => $products,
+        ]);
+    }
+
+    public function bulk(Request $request): Response
+    {
+        Auth::requireCan('invoice.create');
+        $accountIds = (array) $request->input('accounts', []);
+        if (!$accountIds) {
+            Session::set('_form_errors', ['accounts' => __('invoice.select_accounts')]);
+            return Response::redirect('/app/invoices/bulk/create?company_id=' . (int) $request->input('company_id'));
+        }
+        $service = new InvoiceService();
+        try {
+            $result = $service->createBulk($request->all(), $accountIds, $request);
+        } catch (ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+            return Response::redirect('/app/invoices/bulk/create?company_id=' . (int) $request->input('company_id'));
+        }
+        Session::flash('success', __('invoice.bulk_done', ['n' => count($result['created'])]));
+        return Response::redirect('/app/invoices');
+    }
+
     public function create(Request $request): Response
     {
         Auth::requireCan('invoice.create');

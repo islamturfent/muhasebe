@@ -47,4 +47,10 @@ return [
     'type_proforma' => 'Proforma',
     'reminder_subject' => 'Invoice Reminder - :no',
     'reminder_body' => 'Dear customer, the payment of :amount for invoice :no is due by :due.',
+    'bulk_title' => 'Bulk Invoice',
+    'bulk_hint' => 'Create the same invoice for several accounts at once.',
+    'bulk_submit' => 'Create Bulk Invoices',
+    'bulk_done' => ':n invoices created.',
+    'select_accounts' => 'Select at least one current account.',
+    'no_accounts' => 'No current accounts in the selected company.',
 ];

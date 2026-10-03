@@ -73,6 +73,8 @@ return function (Router $router): void {
 
         $g->get('/app/invoices', [\Muh\Controllers\InvoiceController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/create', [\Muh\Controllers\InvoiceController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/invoices/bulk/create', [\Muh\Controllers\InvoiceController::class, 'bulkCreate'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/invoices/bulk', [\Muh\Controllers\InvoiceController::class, 'bulk'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices', [\Muh\Controllers\InvoiceController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}', [\Muh\Controllers\InvoiceController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/{id}/efatura', [\Muh\Controllers\InvoiceController::class, 'sendEfatura'], [\Muh\Middleware\TenantMiddleware::class]);

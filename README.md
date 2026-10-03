@@ -64,6 +64,15 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
 
 No Composer or external package install is required — the app is dependency-free.
 
+## Scheduled tasks (cron)
+Automated due/unpaid invoice **reminder e-mails** can be run on a schedule:
+```
+# Every morning at 08:00
+0 8 * * *  cd /path/to/muh && php bin/muh reminders >> storage/logs/cron.log 2>&1
+```
+With SMTP configured (`MAIL_ENABLED=true`, `MAIL_HOST=...`) it sends real e-mails;
+otherwise (default) it writes to `storage/logs/mail.log`.
+
 ## Getting started (XAMPP / local)
 
 1. Create the database (MySQL):

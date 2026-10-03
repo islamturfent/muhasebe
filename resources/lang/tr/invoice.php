@@ -47,4 +47,10 @@ return [
     'type_proforma' => 'Proforma',
     'reminder_subject' => 'Fatura Hatırlatması - :no',
     'reminder_body' => 'Sayın yetkili, :no numaralı fatura için :amount tutarındaki ödemenin :due tarihine kadar yapılması gerekmektedir.',
+    'bulk_title' => 'Toplu Fatura',
+    'bulk_hint' => 'Aynı faturayı birden çok cari için tek seferde oluştur.',
+    'bulk_submit' => 'Toplu Fatura Oluştur',
+    'bulk_done' => ':n fatura oluşturuldu.',
+    'select_accounts' => 'En az bir cari seçin.',
+    'no_accounts' => 'Seçili firmada cari hesap yok.',
 ];

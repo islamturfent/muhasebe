@@ -96,6 +96,21 @@ switch ($command) {
         }
         break;
 
+    case 'reminders':
+    case 'reminder:run':
+        // Send due/unpaid invoice reminder e-mails for every tenant.
+        $tenants = DB::select('SELECT id FROM tenants WHERE status = \'active\'');
+        $svc = new \Muh\Services\InvoiceReminderService();
+        $totalSent = 0;
+        $totalInvoices = 0;
+        foreach ($tenants as $tenant) {
+            $res = $svc->sendReminders((int) $tenant['id'], 7);
+            $totalSent += $res['sent'];
+            $totalInvoices += $res['invoices'];
+        }
+        echo "Reminders sent: {$totalSent} e-mails across {$totalInvoices} due invoice(s).\n";
+        break;
+
     case 'security':
         exit((new \Muh\Core\SecurityChecker())->run());
 
