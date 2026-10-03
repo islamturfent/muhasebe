@@ -222,12 +222,24 @@ final class CurrentAccountService
         return DB::select($sql, $params);
     }
 
-    public function transactions(int $currentAccountId): array
+    public function transactions(int $currentAccountId, ?string $from = null, ?string $to = null, ?string $type = null): array
     {
-        return DB::select(
-            'SELECT * FROM current_account_transactions WHERE current_account_id = :id ORDER BY date DESC, id DESC LIMIT 200',
-            ['id' => $currentAccountId]
-        );
+        $sql = 'SELECT * FROM current_account_transactions WHERE current_account_id = :id';
+        $params = ['id' => $currentAccountId];
+        if ($from) {
+            $sql .= ' AND date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND date <= :to';
+            $params['to'] = $to;
+        }
+        if ($type && in_array($type, ['debt', 'credit', 'payment', 'collection'], true)) {
+            $sql .= ' AND type = :type';
+            $params['type'] = $type;
+        }
+        $sql .= ' ORDER BY date DESC, id DESC';
+        return paginate($sql, $params, 50);
     }
 
     private function assertCompanyBelongsToTenant(int $tenantId, int $companyId): void

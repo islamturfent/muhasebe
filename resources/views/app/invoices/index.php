@@ -21,7 +21,10 @@ $locale = Translator::instance()->locale();
         <option value="sales" <?= $type==='sales'?'selected':'' ?>><?= e(__('invoice.type_sales')) ?></option>
         <option value="purchase" <?= $type==='purchase'?'selected':'' ?>><?= e(__('invoice.type_purchase')) ?></option>
     </select>
-    <a href="<?= e(url('/app/invoices')) ?>" class="self-center text-sm text-slate-500 hover:text-brand-600"><?= e(__('common.cancel')) ?></a>
+    <label class="text-xs text-slate-500 self-center"><?= e(__('common.from')) ?> <input type="date" name="from" value="<?= e($from ?? '') ?>" class="ml-1 text-sm border border-slate-200 rounded-lg px-2 py-2"></label>
+    <label class="text-xs text-slate-500 self-center"><?= e(__('common.to')) ?> <input type="date" name="to" value="<?= e($to ?? '') ?>" class="ml-1 text-sm border border-slate-200 rounded-lg px-2 py-2"></label>
+    <button class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold self-center"><?= e(__('common.filter')) ?></button>
+    <a href="<?= e(url('/app/invoices')) ?>" class="self-center text-sm text-slate-500 hover:text-brand-600"><?= e(__('common.reset')) ?></a>
 </form>
 
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">

@@ -121,13 +121,22 @@ final class CurrentAccountController extends Controller
             'SELECT id, name, currency FROM companies WHERE id = :id AND tenant_id = :t',
             ['id' => $account['company_id'], 't' => Auth::tenantId()]
         );
-        $transactions = $service->transactions($id);
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+        $type = $request->query('type') ?: null;
+        $trx = $service->transactions($id, $from, $to, $type);
 
         return $this->view('app.current-accounts.show', [
             'layout' => 'layouts.app',
             'account' => $account,
             'company' => $company,
-            'transactions' => $transactions,
+            'transactions' => $trx['items'],
+            'page' => $trx['page'],
+            'lastPage' => $trx['lastPage'],
+            'total' => $trx['total'],
+            'from' => $from,
+            'to' => $to,
+            'type' => $type,
         ]);
     }
 

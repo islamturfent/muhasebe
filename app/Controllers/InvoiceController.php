@@ -25,6 +25,8 @@ final class InvoiceController extends Controller
         $tenantId = Auth::tenantId();
         $companyId = (int) ($request->query('company_id') ?? 0);
         $type = $request->query('type') ?: null;
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
 
         $sql = 'SELECT i.*, c.name AS company_name, ca.name AS account_name
                  FROM invoices i
@@ -40,6 +42,14 @@ final class InvoiceController extends Controller
             $sql .= ' AND i.type = :type';
             $params['type'] = $type;
         }
+        if ($from) {
+            $sql .= ' AND i.date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND i.date <= :to';
+            $params['to'] = $to;
+        }
         $sql .= ' ORDER BY i.id DESC';
 
         $page = paginate($sql, $params, 25);
@@ -51,6 +61,8 @@ final class InvoiceController extends Controller
             'companies' => $companies,
             'companyId' => $companyId,
             'type' => $type,
+            'from' => $from,
+            'to' => $to,
             'page' => $page['page'],
             'lastPage' => $page['lastPage'],
             'total' => $page['total'],

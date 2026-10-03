@@ -74,6 +74,18 @@ $running = $balance; // walk transactions newest-first is misleading; compute op
 
     <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('current_account.transactions')) ?></div>
+        <form method="get" action="<?= e(url('/app/current-accounts/' . $account['id'])) ?>" class="px-5 py-3 border-b border-slate-100 flex flex-wrap items-end gap-2 text-sm">
+            <label class="text-xs text-slate-500"><?= e(__('common.from')) ?> <input type="date" name="from" value="<?= e($from ?? '') ?>" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200"></label>
+            <label class="text-xs text-slate-500"><?= e(__('common.to')) ?> <input type="date" name="to" value="<?= e($to ?? '') ?>" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200"></label>
+            <label class="text-xs text-slate-500"><?= e(__('current_account.type')) ?>
+                <select name="type" class="ml-1 px-2 py-1.5 rounded-lg border border-slate-200">
+                    <option value="">—</option>
+                    <?php foreach (['debt','credit','payment','collection'] as $ct): ?><option value="<?= $ct ?>" <?= $type===$ct?'selected':'' ?>><?= e(__('current_account.type_' . $ct)) ?></option><?php endforeach; ?>
+                </select>
+            </label>
+            <button class="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold"><?= e(__('common.filter')) ?></button>
+            <a href="<?= e(url('/app/current-accounts/' . $account['id'])) ?>" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 text-xs"><?= e(__('common.reset')) ?></a>
+        </form>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="text-left text-xs text-slate-400 uppercase bg-slate-50">
@@ -101,5 +113,6 @@ $running = $balance; // walk transactions newest-first is misleading; compute op
                 </tbody>
             </table>
         </div>
+        <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
     </div>
 </div>
