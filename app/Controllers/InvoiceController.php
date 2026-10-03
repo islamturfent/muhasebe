@@ -282,6 +282,35 @@ final class InvoiceController extends Controller
         return Response::redirect('/app/invoices/' . $id);
     }
 
+    /** e-Fatura toplu gönderim: seçili faturaları gönderir, her biri için sonuç döner. */
+    public function bulkEfatura(Request $request): Response
+    {
+        Auth::requireCan('invoice.send');
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
+        if (!$ids) {
+            Session::flash('error', __('efatura.select_invoices'));
+            return Response::redirect('/app/invoices');
+        }
+        $service = new \Muh\Services\EFaturaService();
+        $results = [];
+        foreach ($ids as $invId) {
+            $inv = DB::first('SELECT id, number, type FROM invoices WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $invId, 't' => Auth::tenantId()]);
+            if (!$inv || !in_array($inv['type'], ['sales', 'purchase'], true)) {
+                $results[] = ['no' => $inv['number'] ?? '—', 'ok' => false, 'status' => 'skipped'];
+                continue;
+            }
+            try {
+                $status = $service->sendInvoice($invId, 'invoice');
+                $results[] = ['no' => $inv['number'], 'ok' => in_array($status, ['sent', 'accepted'], true), 'status' => $status];
+            } catch (\Throwable $e) {
+                $results[] = ['no' => $inv['number'], 'ok' => false, 'status' => 'error'];
+            }
+        }
+        Session::set('_bulk_efatura', $results);
+        Session::flash('success', __('efatura.bulk_done', ['sent' => count(array_filter($results, fn ($r) => $r['ok'])), 'total' => count($results)]));
+        return Response::redirect('/app/invoices');
+    }
+
     /** Faturayı cari e-posta adresine gönderir (PDF/yazdır çıktısı ekli). */
     public function email(Request $request, $id): Response
     {

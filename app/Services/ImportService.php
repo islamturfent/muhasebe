@@ -19,6 +19,7 @@ final class ImportService
 {
     public const CARI_COLUMNS = ['code', 'name', 'type', 'tax_number', 'email', 'phone', 'opening_balance'];
     public const STOCK_COLUMNS = ['code', 'name', 'type', 'barcode', 'purchase_price', 'sale_price', 'vat_rate', 'critical_stock', 'opening_stock'];
+    public const ACCOUNTING_COLUMNS = ['code', 'name', 'type', 'group', 'is_header', 'opening_debit', 'opening_credit'];
 
     /** Parse an uploaded CSV file into rows keyed by header. */
     public function parseCsv(?array $file): array
@@ -62,7 +63,11 @@ final class ImportService
     /** Auto-detect a column mapping from headers for a given import type. */
     public function autoMap(array $headers, string $type): array
     {
-        $columns = $type === 'cari' ? self::CARI_COLUMNS : self::STOCK_COLUMNS;
+        $columns = match ($type) {
+            'cari' => self::CARI_COLUMNS,
+            'accounting' => self::ACCOUNTING_COLUMNS,
+            default => self::STOCK_COLUMNS,
+        };
         $aliases = [
             'code' => ['kodu', 'code', 'kod'],
             'name' => ['ad', 'unvan', 'adi', 'name', 'name', 'title'],
@@ -77,6 +82,10 @@ final class ImportService
             'vat_rate' => ['kdv', 'kdv orani', 'vat', 'vat_rate'],
             'critical_stock' => ['kritik', 'critical', 'critical_stock'],
             'opening_stock' => ['acilis stok', 'stok', 'opening_stock'],
+            'group' => ['grup', 'grubu', 'group'],
+            'is_header' => ['is_header', 'ust kalem', 'ana hesap', 'header'],
+            'opening_debit' => ['acilis borc', 'opening_debit', 'borc'],
+            'opening_credit' => ['acilis alacak', 'opening_credit', 'alacak'],
         ];
 
         $map = [];
@@ -155,6 +164,56 @@ final class ImportService
             }
         }
         AuditLogService::record('import.products', 'import', 'products', null, null, ['imported' => $imported, 'errors' => count($errors)], $companyId, $tenantId);
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    /**
+     * Import hesap planı (chart of accounts) into the company's current fiscal
+     * period from parsed rows. @return array{imported:int, errors:array}
+     */
+    public function importAccountingAccounts(array $rows, array $map, int $tenantId, int $companyId): array
+    {
+        $imported = 0;
+        $errors = [];
+        $periodId = (int) DB::scalar(
+            'SELECT id FROM fiscal_periods WHERE company_id = :c AND is_current = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1',
+            ['c' => $companyId]
+        ) ?: (int) DB::scalar('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY id LIMIT 1', ['c' => $companyId]);
+
+        foreach ($rows as $idx => $row) {
+            $lineNo = $idx + 2;
+            $code = trim((string) ($row[$map['code']] ?? ''));
+            $name = trim((string) ($row[$map['name']] ?? ''));
+            $type = (string) ($row[$map['type']] ?? 'asset');
+            $type = in_array($type, ['asset', 'liability', 'equity', 'income', 'expense'], true) ? $type : 'asset';
+            $group = trim((string) ($row[$map['group']] ?? '')) ?: substr($code, 0, 1);
+            $isHeader = in_array(strtolower(trim((string) ($row[$map['is_header']] ?? ''))), ['1', 'true', 'yes', 'header'], true) ? 1 : 0;
+            $opDebit = (float) ($row[$map['opening_debit']] ?? 0);
+            $opCredit = (float) ($row[$map['opening_credit']] ?? 0);
+
+            if ($code === '' || $name === '') {
+                $errors[] = ['line' => $lineNo, 'code' => $code, 'name' => $name, 'message' => __('import.invalid_row')];
+                continue;
+            }
+            $exists = DB::first(
+                'SELECT id FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p AND code = :code',
+                ['c' => $companyId, 'p' => $periodId, 'code' => $code]
+            );
+            if ($exists) {
+                $errors[] = ['line' => $lineNo, 'code' => $code, 'name' => $name, 'message' => __('import.dup_code')];
+                continue;
+            }
+            DB::insert('accounting_accounts', [
+                'tenant_id' => $tenantId, 'company_id' => $companyId, 'fiscal_period_id' => $periodId,
+                'code' => $code, 'name' => $name, 'type' => $type, 'subtype' => null,
+                'group' => $group, 'is_header' => $isHeader, 'currency' => 'TRY',
+                'opening_debit' => $opDebit,
+                'opening_credit' => $opCredit,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            $imported++;
+        }
+        AuditLogService::record('import.accounting', 'import', 'accounting_accounts', null, null, ['imported' => $imported, 'errors' => count($errors)], $companyId, $tenantId);
         return ['imported' => $imported, 'errors' => $errors];
     }
 }

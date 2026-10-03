@@ -11,6 +11,27 @@ $locale = Translator::instance()->locale();
     <a href="<?= e(url('/app/invoices/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('invoice.new')) ?></a>
 </div>
 
+<?php $bulkResults = \Muh\Core\Session::get('_bulk_efatura'); if ($bulkResults): \Muh\Core\Session::forget('_bulk_efatura'); ?>
+<div class="mb-4 bg-white border border-slate-200 rounded-2xl overflow-hidden">
+    <div class="px-5 py-3 border-b font-semibold text-slate-800 text-sm"><?= e(__('efatura.bulk_result')) ?></div>
+    <div class="divide-y divide-slate-100">
+        <?php foreach ($bulkResults as $r): ?>
+        <div class="px-5 py-2 flex justify-between text-sm">
+            <span class="font-mono text-slate-700"><?= e($r['no']) ?></span>
+            <span class="<?= $r['ok'] ? 'text-emerald-600' : 'text-red-600' ?>"><?= e(__('efatura.st_' . $r['status'])) ?></span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (\Muh\Core\Auth::can('invoice.send')): ?>
+<div class="mb-4 flex items-center gap-3">
+    <label class="text-sm text-slate-600"><input type="checkbox" id="invCheckAll" class="mr-1" onchange="document.querySelectorAll('.inv-check').forEach(c=>c.checked=this.checked)"> <?= e(__('efatura.select_all')) ?></label>
+    <button type="button" class="px-4 py-2 rounded-lg border border-brand-600 text-brand-600 text-sm font-medium hover:bg-brand-50" onclick="bulkEfatura()">⚡ <?= e(__('efatura.send_bulk')) ?></button>
+</div>
+<?php endif; ?>
+
 <form method="get" action="<?= e(url('/app/invoices')) ?>" class="mb-6 bg-white border border-slate-200 rounded-2xl p-4 flex gap-3">
     <select name="company_id" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand-500 outline-none">
         <option value=""><?= e(__('invoice.company')) ?> (<?= e(__('common.all')) ?>)</option>
@@ -39,6 +60,7 @@ $locale = Translator::instance()->locale();
         <table class="w-full text-sm">
             <thead class="text-left text-xs text-slate-400 uppercase bg-slate-50">
                 <tr>
+                    <th class="px-5 py-3" width="32"><?php if (\Muh\Core\Auth::can('invoice.send')): ?><input type="checkbox" class="inv-check" disabled><?php endif; ?></th>
                     <th class="px-5 py-3"><?= e(__('invoice.invoice_no')) ?></th>
                     <th class="px-5 py-3"><?= e(__('invoice.company')) ?></th>
                     <th class="px-5 py-3"><?= e(__('invoice.customer')) ?></th>
@@ -51,9 +73,10 @@ $locale = Translator::instance()->locale();
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
-                <?php if (!$invoices): ?><tr><td colspan="9" class="px-5 py-8 text-center text-slate-400"><?= e(__('invoice.no_invoices')) ?></td></tr><?php endif; ?>
-                <?php foreach ($invoices as $inv): ?>
+                <?php if (!$invoices): ?><tr><td colspan="10" class="px-5 py-8 text-center text-slate-400"><?= e(__('invoice.no_invoices')) ?></td></tr><?php endif; ?>
+                <?php foreach ($invoices as $inv): $eligible = \Muh\Core\Auth::can('invoice.send') && in_array($inv['type'], ['sales','purchase'], true) && in_array($inv['efatura_status'], ['draft','error','rejected'], true); ?>
                 <tr class="hover:bg-slate-50">
+                    <td class="px-5 py-3"><?php if ($eligible): ?><input type="checkbox" class="inv-check" value="<?= (int) $inv['id'] ?>"><?php endif; ?></td>
                     <td class="px-5 py-3 font-mono text-brand-600"><?= e($inv['number']) ?></td>
                     <td class="px-5 py-3 text-slate-700"><?= e($inv['company_name']) ?></td>
                     <td class="px-5 py-3 text-slate-500"><?= e($inv['account_name'] ?? '—') ?></td>
@@ -70,3 +93,17 @@ $locale = Translator::instance()->locale();
     </div>
     <?= $this->partial('partials.pagination', ['page' => $page ?? 1, 'lastPage' => $lastPage ?? 1, 'total' => $total ?? null]) ?>
 </div>
+
+<?php if (\Muh\Core\Auth::can('invoice.send')): ?>
+<script>
+function bulkEfatura(){
+  var ids = Array.from(document.querySelectorAll('.inv-check:checked')).map(function(c){return c.value});
+  if(!ids.length){ alert('<?= e(__('efatura.select_invoices')) ?>'); return; }
+  var f = document.createElement('form');
+  f.method = 'POST'; f.action = '<?= e(url('/app/invoices/bulk-efatura')) ?>';
+  var t = document.createElement('input'); t.type='hidden'; t.name='_token'; t.value='<?= csrf_token() ?>'; f.appendChild(t);
+  ids.forEach(function(id){ var i=document.createElement('input'); i.type='hidden'; i.name='ids[]'; i.value=id; f.appendChild(i); });
+  document.body.appendChild(f); f.submit();
+}
+</script>
+<?php endif; ?>

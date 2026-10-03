@@ -133,6 +133,34 @@ final class NotificationService
             $created++;
         }
 
+        // 3) Subscription expiry (only the tenant's own subscription).
+        $sub = DB::first(
+            'SELECT s.*, t.email AS tenant_email FROM subscriptions s JOIN tenants t ON t.id = s.tenant_id
+              WHERE s.tenant_id = :tid ORDER BY s.id DESC LIMIT 1',
+            ['tid' => $tenantId]
+        );
+        if ($sub && !empty($sub['ends_at'])) {
+            $daysLeft = (int) floor((strtotime($sub['ends_at']) - strtotime(date('Y-m-d'))) / 86400);
+            $key = 'sub_' . $tenantId . '_' . $todayKey;
+            $already = DB::scalar('SELECT COUNT(*) FROM notifications WHERE tenant_id = :t AND payload = :p', ['t' => $tenantId, 'p' => json_encode(['key' => $key])]) > 0;
+            if ($daysLeft <= 14 && !$already) {
+                $over = $daysLeft < 0;
+                $this->create(
+                    'subscription',
+                    $over ? __('notify.sub_expired') : __('notify.sub_title', ['days' => max(0, $daysLeft)]),
+                    $over ? __('notify.sub_body', ['date' => format_date($sub['ends_at'])]) : __('notify.sub_body', ['date' => format_date($sub['ends_at'])]),
+                    $over ? 'danger' : 'warning',
+                    null, null, '/app/settings/subscription', ['key' => $key], $tenantId
+                );
+                $created++;
+                // E-posta hatırlatma: 3 gün içinde / sona erenler için (günde bir).
+                if ($daysLeft <= 3 && $sub['tenant_email']) {
+                    $subject = $over ? __('notify.sub_mail_expired') : __('notify.sub_mail_subject');
+                    (new \Muh\Services\Mailer())->send((string) $sub['tenant_email'], $subject, $over ? __('notify.sub_expired') : __('notify.sub_body', ['date' => format_date($sub['ends_at'])]));
+                }
+            }
+        }
+
         return $created;
     }
 }

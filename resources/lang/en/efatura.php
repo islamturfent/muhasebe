@@ -32,4 +32,9 @@ return [
     'username' => 'Username',
     'password' => 'Password',
     'settings_saved' => 'e-Invoice settings saved.',
+    'send_bulk' => 'Send Bulk',
+    'select_all' => 'Select all',
+    'select_invoices' => 'Select at least one invoice to send.',
+    'bulk_result' => 'Bulk Send Result',
+    'bulk_done' => 'Bulk send finished: :sent / :total succeeded.',
 ];

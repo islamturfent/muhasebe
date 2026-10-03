@@ -30,10 +30,24 @@ final class ImportController extends Controller
         ]);
     }
 
+    private static function normalizeType(string $raw): string
+    {
+        return in_array($raw, ['cari', 'stock', 'accounting'], true) ? $raw : 'cari';
+    }
+
+    private static function columnsFor(string $type): array
+    {
+        return match ($type) {
+            'cari' => ImportService::CARI_COLUMNS,
+            'accounting' => ImportService::ACCOUNTING_COLUMNS,
+            default => ImportService::STOCK_COLUMNS,
+        };
+    }
+
     public function upload(Request $request): Response
     {
         Auth::requireCan('import.run');
-        $type = $request->input('type') === 'stock' ? 'stock' : 'cari';
+        $type = self::normalizeType((string) $request->input('type'));
         $companyId = (int) $request->input('company_id');
         $service = new ImportService();
 
@@ -45,7 +59,7 @@ final class ImportController extends Controller
         }
 
         $map = $service->autoMap($data['headers'], $type);
-        $columns = $type === 'cari' ? ImportService::CARI_COLUMNS : ImportService::STOCK_COLUMNS;
+        $columns = self::columnsFor($type);
 
         // Keep the parsed data in session for the run step.
         Session::set('import_data', ['type' => $type, 'company_id' => $companyId, 'rows' => $data['rows'], 'map' => $map]);
@@ -69,7 +83,7 @@ final class ImportController extends Controller
         if (!$importData) {
             return Response::redirect('/app/import');
         }
-        $type = $importData['type'] === 'stock' ? 'stock' : 'cari';
+        $type = self::normalizeType((string) ($importData['type'] ?? 'cari'));
         $companyId = (int) $importData['company_id'];
 
         // Allow the user to adjust mapping on the run screen before committing.
@@ -77,9 +91,11 @@ final class ImportController extends Controller
         $rows = $importData['rows'] ?? [];
 
         $service = new ImportService();
-        $result = $type === 'stock'
-            ? $service->importProducts($rows, $map, Auth::tenantId(), $companyId)
-            : $service->importCurrentAccounts($rows, $map, Auth::tenantId(), $companyId);
+        $result = match ($type) {
+            'stock' => $service->importProducts($rows, $map, Auth::tenantId(), $companyId),
+            'accounting' => $service->importAccountingAccounts($rows, $map, Auth::tenantId(), $companyId),
+            default => $service->importCurrentAccounts($rows, $map, Auth::tenantId(), $companyId),
+        };
 
         Session::forget('import_data');
         return $this->view('app.import.result', [
@@ -92,16 +108,17 @@ final class ImportController extends Controller
 
     public function template(Request $request, $type = 'cari'): Response
     {
-        $type = $type === 'stock' ? 'stock' : 'cari';
-        $headers = $type === 'cari' ? ImportService::CARI_COLUMNS : ImportService::STOCK_COLUMNS;
-        $content = implode(';', [
-            'code', 'name', 'type', 'tax_number', $type === 'cari' ? 'email' : 'barcode',
-            $type === 'cari' ? 'phone' : 'purchase_price',
-            $type === 'cari' ? 'opening_balance' : 'sale_price',
-            $type === 'stock' ? 'vat_rate' : '',
-            $type === 'stock' ? 'critical_stock' : '',
-            $type === 'stock' ? 'opening_stock' : '',
-        ]) . "\n" . ($type === 'cari' ? 'CARI-001;Örnek;customer;1234567890;ornek@firma.com;+90;1000' : 'STK-001;Örnek Ürün;product;8690;sale_price;450;20;5;0') . "\n";
+        $type = self::normalizeType((string) $type);
+        if ($type === 'stock') {
+            $headers = ImportService::STOCK_COLUMNS;
+            $content = implode(';', $headers) . "\n" . 'STK-001;Örnek Ürün;product;8690;450;250;20;5;0' . "\n";
+        } elseif ($type === 'accounting') {
+            $headers = ImportService::ACCOUNTING_COLUMNS;
+            $content = implode(';', $headers) . "\n" . '100;Kasa;asset;1;0;10000;0' . "\n" . '120;Alıcılar;asset;1;0;0;0' . "\n";
+        } else {
+            $headers = ImportService::CARI_COLUMNS;
+            $content = implode(';', $headers) . "\n" . 'CARI-001;Örnek;customer;1234567890;ornek@firma.com;+90;1000' . "\n";
+        }
         return Response::make($content, 200, [
             'Content-Type' => 'text/csv; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="muh-' . $type . '-template.csv"',

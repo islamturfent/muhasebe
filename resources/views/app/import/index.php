@@ -22,6 +22,9 @@ Session::forget('_form_errors');
                 <label class="flex items-center gap-2 border border-slate-200 rounded-xl px-4 py-3 cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-500/30">
                     <input type="radio" name="type" value="stock"> <?= e(__('import.type_stock')) ?>
                 </label>
+                <label class="flex items-center gap-2 border border-slate-200 rounded-xl px-4 py-3 cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:ring-2 has-[:checked]:ring-brand-500/30">
+                    <input type="radio" name="type" value="accounting"> <?= e(__('import.type_accounting')) ?>
+                </label>
             </div>
         </div>
 
@@ -40,6 +43,7 @@ Session::forget('_form_errors');
         <div class="flex gap-3">
             <a href="<?= e(url('/app/import/template/cari')) ?>" class="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600"><?= e(__('import.download_template')) ?> (Cari)</a>
             <a href="<?= e(url('/app/import/template/stock')) ?>" class="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600"><?= e(__('import.download_template')) ?> (Stok)</a>
+            <a href="<?= e(url('/app/import/template/accounting')) ?>" class="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600"><?= e(__('import.download_template')) ?> (Hesap Planı)</a>
         </div>
 
         <?php if ($errors): ?><div class="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div><?php endif; ?>

@@ -32,4 +32,9 @@ return [
     'username' => 'Kullanıcı Adı',
     'password' => 'Şifre',
     'settings_saved' => 'e-Fatura ayarları kaydedildi.',
+    'send_bulk' => 'Toplu Gönder',
+    'select_all' => 'Tümünü seç',
+    'select_invoices' => 'Göndermek için en az bir fatura seçin.',
+    'bulk_result' => 'Toplu Gönderim Sonucu',
+    'bulk_done' => 'Toplu gönderim tamamlandı: :sent / :total başarılı.',
 ];
