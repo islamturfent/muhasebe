@@ -475,6 +475,29 @@ final class AppTester
         }
         $results[] = ['name' => 'Onay bildirimi + Bildirim Merkezi özeti', 'ok' => $apOk, 'detail' => $apDetail];
 
+        // ---- Beni Hatırla (kalıcı giriş / remember-me) - rollback ----
+        $rmOk = false; $rmDetail = '';
+        try {
+            $uid = (int) DB::scalar('SELECT MIN(id) FROM users');
+            DB::transaction(function () use (&$rmOk, &$rmDetail, $uid) {
+                $token = bin2hex(random_bytes(32));
+                DB::update('users', ['remember_token' => hash('sha256', $token)], 'id = :id', ['id' => $uid]);
+                $_COOKIE['muh_remember'] = $uid . ':' . $token;
+                Auth::logout();
+                Auth::attemptRememberMe();
+                $restored = Auth::check() && (int) Auth::id() === $uid;
+                Auth::clearRememberMe($uid);
+                $dbToken = DB::first('SELECT remember_token FROM users WHERE id = :id', ['id' => $uid])['remember_token'] ?? null;
+                $rmOk = $restored && ($dbToken === null || $dbToken === '');
+                $rmDetail = $rmOk ? 'kalıcı giriş geri yüklendi + çıkışta token temizlendi' : 'kalıcı giriş hatası (BUG) restored=' . var_export($restored, true);
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $rmOk = false; $rmDetail = $e->getMessage();
+        }
+        $results[] = ['name' => "Beni Hatırla (remember-me)", 'ok' => $rmOk, 'detail' => $rmDetail];
+
         return $results;
     }
 }

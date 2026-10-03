@@ -59,6 +59,11 @@ final class AuthController extends Controller
             Session::set('locale', $user['locale']);
         }
 
+        // 'Beni Hatırla' (remember me): long-lived persistent login.
+        if ($remember) {
+            Auth::setRememberMe((int) $user['id']);
+        }
+
         Session::set('login_user_id', (int) $user['id']);
         Session::forget('_fresh');
 
@@ -99,6 +104,7 @@ final class AuthController extends Controller
     {
         $userId = Auth::id();
         AuditLogService::record('auth.logout', 'auth', 'users', $userId ? (string) $userId : null);
+        Auth::clearRememberMe($userId);
         Auth::logout();
         return Response::redirect('/');
     }

@@ -22,6 +22,9 @@ final class Application
         // Start session.
         Session::start();
 
+        // Restore a persistent 'remember me' login if no session exists yet.
+        Auth::attemptRememberMe();
+
         // Detect locale from session (set at login) or default.
         $locale = Session::get('locale');
         if (!$locale) {
