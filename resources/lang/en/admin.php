@@ -60,6 +60,7 @@ return [
     'prev' => 'Previous',
     'next' => 'Next',
     'subscriptions' => 'Subscriptions',
+    'plan' => 'Plan',
     'cycle' => 'Cycle',
     'start' => 'Start',
     'set' => 'Apply',

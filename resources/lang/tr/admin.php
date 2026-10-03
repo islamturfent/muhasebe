@@ -60,6 +60,7 @@ return [
     'prev' => 'Önceki',
     'next' => 'Sonraki',
     'subscriptions' => 'Abonelikler',
+    'plan' => 'Plan',
     'cycle' => 'Döngü',
     'start' => 'Başlangıç',
     'set' => 'Uygula',
