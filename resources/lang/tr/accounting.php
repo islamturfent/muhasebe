@@ -76,4 +76,6 @@ return [
     'entry_updated' => 'Fiş güncellendi.',
     'opening_debit' => 'Açılış Borç',
     'opening_credit' => 'Açılış Alacak',
+    'budget_amount' => 'Bütçe Tutarı (Yıllık)',
+    'budget_help' => 'Bu hesap için yıllık bütçe hedefi (karşılaştırmalı raporlarda kullanılır).',
 ];

@@ -76,4 +76,6 @@ return [
     'entry_updated' => 'Entry updated.',
     'opening_debit' => 'Opening Debit',
     'opening_credit' => 'Opening Credit',
+    'budget_amount' => 'Budget Amount (Annual)',
+    'budget_help' => 'Annual budget target for this account (used in comparative reports).',
 ];

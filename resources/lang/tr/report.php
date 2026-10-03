@@ -75,4 +75,10 @@ return [
     'upcoming_upcoming' => 'Yaklaşan',
     'statement_sub' => 'Hesap hareket dökümü (kümülatif bakiye ile)',
     'efatura_sub' => 'Faturaların e-Fatura durumları',
+    'comparative' => 'Karşılaştırmalı Gelir Tablosu & Bütçe',
+    'comparative_sub' => 'Bu dönem / geçen dönem / bütçe karşılaştırması',
+    'period_current' => 'Bu Dönem',
+    'period_previous' => 'Geçen Dönem',
+    'budget' => 'Bütçe',
+    'budget_variance' => 'Bütçe Farkı',
 ];

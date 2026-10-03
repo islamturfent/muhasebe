@@ -75,4 +75,10 @@ return [
     'upcoming_upcoming' => 'Upcoming',
     'statement_sub' => 'Account movement detail (with cumulative balance)',
     'efatura_sub' => 'Invoice e-invoice statuses',
+    'comparative' => 'Comparative Income Statement & Budget',
+    'comparative_sub' => 'Current / previous period / budget comparison',
+    'period_current' => 'Current Period',
+    'period_previous' => 'Previous Period',
+    'budget' => 'Budget',
+    'budget_variance' => 'Budget Variance',
 ];

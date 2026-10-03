@@ -42,11 +42,12 @@ $balanced = abs($od - $oc) < 0.01;
                     <th class="px-5 py-2 text-center"><?= e(__('accounting.account_is_header')) ?></th>
                     <th class="px-5 py-2 text-right"><?= e(__('common.debit')) ?></th>
                     <th class="px-5 py-2 text-right"><?= e(__('common.credit')) ?></th>
+                    <th class="px-5 py-2 text-right"><?= e(__('accounting.budget_amount')) ?></th>
                     <th class="px-5 py-2"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
-                <?php if (!$accounts): ?><tr><td colspan="7" class="px-5 py-8 text-center text-slate-400"><?= e(__('accounting.no_entries')) ?></td></tr><?php endif; ?>
+                <?php if (!$accounts): ?><tr><td colspan="8" class="px-5 py-8 text-center text-slate-400"><?= e(__('accounting.no_entries')) ?></td></tr><?php endif; ?>
                 <?php foreach ($accounts as $a): ?>
                 <tr class="hover:bg-slate-50">
                     <td class="px-5 py-2.5 font-mono text-brand-600"><?= e($a['code']) ?></td>
@@ -55,6 +56,7 @@ $balanced = abs($od - $oc) < 0.01;
                     <td class="px-5 py-2.5 text-center"><?= $a['is_header'] ? '✓' : '—' ?></td>
                     <td class="px-5 py-2.5 text-right text-slate-700"><?= e(money($a['opening_debit'])) ?></td>
                     <td class="px-5 py-2.5 text-right text-slate-700"><?= e(money($a['opening_credit'])) ?></td>
+                    <td class="px-5 py-2.5 text-right text-slate-700"><?= e(money($a['budget_amount'] ?? 0)) ?></td>
                     <td class="px-5 py-2.5 text-right space-x-2">
                         <?php if (Auth::can('accounting.update')): ?>
                         <a href="<?= e(url('/app/accounting/chart/' . (int)$a['id'] . '/edit')) ?>" class="text-brand-600 hover:underline text-xs"><?= e(__('common.edit')) ?></a>

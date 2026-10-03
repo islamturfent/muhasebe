@@ -64,6 +64,12 @@ $val = function ($field, $default = '') use ($account, $isEdit) {
             </div>
         </div>
 
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.budget_amount')) ?></label>
+            <input type="number" name="budget_amount" step="0.01" value="<?= e($val('budget_amount', '0')) ?>" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+            <p class="mt-1 text-xs text-slate-400"><?= e(__('accounting.budget_help')) ?></p>
+        </div>
+
         <?php if ($isEdit): ?>
         <div class="grid grid-cols-2 gap-4">
             <input type="hidden" name="company_id" value="<?= (int)$account['company_id'] ?>">

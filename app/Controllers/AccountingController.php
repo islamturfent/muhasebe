@@ -410,6 +410,7 @@ final class AccountingController extends Controller
         $isHeader = $request->input('is_header') ? 1 : 0;
         $openingDebit = (float) ($request->input('opening_debit') ?? 0);
         $openingCredit = (float) ($request->input('opening_credit') ?? 0);
+        $budget = (float) ($request->input('budget_amount') ?? 0);
         $currency = $request->input('currency') ?: 'TRY';
 
         $validTypes = ['asset', 'liability', 'equity', 'income', 'expense'];
@@ -440,6 +441,7 @@ final class AccountingController extends Controller
             'currency'      => $currency,
             'opening_debit' => $openingDebit,
             'opening_credit'=> $openingCredit,
+            'budget_amount' => $budget,
             'created_at'    => now(),
             'updated_at'    => now(),
         ]);
@@ -500,7 +502,7 @@ final class AccountingController extends Controller
 
         DB::execute(
             'UPDATE accounting_accounts SET code = :code, name = :name, type = :t, subtype = :st,
-                    is_header = :h, currency = :cu, opening_debit = :od, opening_credit = :oc, updated_at = NOW()
+                    is_header = :h, currency = :cu, opening_debit = :od, opening_credit = :oc, budget_amount = :ba, updated_at = NOW()
               WHERE id = :id',
             [
                 'code' => $code, 'name' => $name, 't' => $type,
@@ -508,6 +510,7 @@ final class AccountingController extends Controller
                 'cu' => $request->input('currency') ?: 'TRY',
                 'od' => (float) ($request->input('opening_debit') ?? 0),
                 'oc' => (float) ($request->input('opening_credit') ?? 0),
+                'ba' => (float) ($request->input('budget_amount') ?? 0),
                 'id' => $id,
             ]
         );

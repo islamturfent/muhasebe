@@ -920,6 +920,87 @@ final class ReportsController extends Controller
         ]);
     }
 
+    // ---- Bütçe & Karşılaştırmalı Gelir Tablosu ----
+
+    private function comparativeData(int $companyId, int $periodId): array
+    {
+        $cur = AccountingService::trialBalance($companyId, $periodId);
+        $curPeriod = DB::first('SELECT start_date FROM fiscal_periods WHERE id = :id', ['id' => $periodId]);
+        $prevBy = [];
+        if ($curPeriod) {
+            $p = DB::first('SELECT id FROM fiscal_periods WHERE company_id = :c AND start_date < :sd ORDER BY start_date DESC LIMIT 1', ['c' => $companyId, 'sd' => $curPeriod['start_date']]);
+            if ($p) {
+                foreach (AccountingService::trialBalance($companyId, (int) $p['id']) as $r) {
+                    $prevBy[(string) $r['code']] = $r;
+                }
+            }
+        }
+        $budgetBy = [];
+        foreach (DB::select('SELECT code, budget_amount FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p', ['c' => $companyId, 'p' => $periodId]) as $b) {
+            $budgetBy[(string) $b['code']] = (float) $b['budget_amount'];
+        }
+        $rows = [];
+        foreach ($cur as $r) {
+            $code = (string) $r['code'];
+            $bal = $r['type'] === 'income' ? (float) $r['credit'] - (float) $r['debit'] : (float) $r['debit'] - (float) $r['credit'];
+            $prev = null;
+            if (isset($prevBy[$code])) {
+                $prev = $r['type'] === 'income' ? (float) $prevBy[$code]['credit'] - (float) $prevBy[$code]['debit'] : (float) $prevBy[$code]['debit'] - (float) $prevBy[$code]['credit'];
+            }
+            $rows[] = ['code' => $code, 'name' => $r['name'], 'type' => $r['type'], 'current' => $bal, 'previous' => $prev ?? 0.0, 'budget' => $budgetBy[$code] ?? 0.0];
+        }
+        return [
+            'income' => array_values(array_filter($rows, fn ($x) => $x['type'] === 'income')),
+            'expense' => array_values(array_filter($rows, fn ($x) => $x['type'] === 'expense')),
+        ];
+    }
+
+    /** Bütçe & karşılaştırmalı gelir tablosu (export). */
+    public function comparative(Request $request): Response
+    {
+        Auth::requireCan('report.export');
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $data = $this->comparativeData($companyId, $periodId);
+        $h = [__('accounting.chart_of_accounts'), __('common.name'), __('report.period_current'), __('report.period_previous'), __('report.budget'), __('report.budget_variance')];
+        $fmt = fn ($x) => number_format((float) $x, 2, ',', '.');
+        $out = [];
+        foreach ([['income', __('report.revenue')], ['expense', __('report.expenses')]] as [$k, $label]) {
+            $out[] = [$label, '', '', '', '', ''];
+            foreach ($data[$k] as $r) {
+                $out[] = [$r['code'], $r['name'], $fmt($r['current']), $fmt($r['previous']), $fmt($r['budget']), $fmt((float) $r['budget'] - (float) $r['current'])];
+            }
+        }
+        return $this->export($format, __('report.comparative'), 'C:' . $companyId . ' P:' . $periodId, $h, $out, 'karsilastirmali');
+    }
+
+    /** Bütçe & karşılaştırmalı gelir tablosu ekranı. */
+    public function comparativeScreen(Request $request): Response
+    {
+        Auth::requireCan('report.view');
+        [$companies, $companyId, $periods, $periodId] = $this->screenContext($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $data = $this->comparativeData($companyId, $periodId);
+        $h = [__('accounting.chart_of_accounts'), __('common.name'), __('report.period_current'), __('report.period_previous'), __('report.budget'), __('report.budget_variance')];
+        $fmt = fn ($x) => number_format((float) $x, 2, ',', '.');
+        $rows = [];
+        $tCur = 0.0; $tPrev = 0.0; $tBud = 0.0;
+        foreach ([['income', __('report.revenue')], ['expense', __('report.expenses')]] as [$k, $label]) {
+            $rows[] = [$label, '', '', '', '', ''];
+            foreach ($data[$k] as $r) {
+                $tCur += (float) $r['current']; $tPrev += (float) $r['previous']; $tBud += (float) $r['budget'];
+                $rows[] = [$r['code'], $r['name'], $fmt($r['current']), $fmt($r['previous']), $fmt($r['budget']), $fmt((float) $r['budget'] - (float) $r['current'])];
+            }
+        }
+        $rows[] = [__('common.total'), '', $fmt($tCur), $fmt($tPrev), $fmt($tBud), $fmt($tBud - $tCur)];
+        return $this->view('app.reports.screen', [
+            'layout' => 'layouts.app', 'title' => __('report.comparative'), 'subtitle' => __('report.comparative_sub'),
+            'headers' => $h, 'rows' => $rows, 'exportSlug' => 'comparative',
+            'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
+        ]);
+    }
+
     // ---- Yaklaşan yükümlülükler (unpaid invoices / upcoming & overdue) ----
 
     private function upcomingData(Request $request): array
