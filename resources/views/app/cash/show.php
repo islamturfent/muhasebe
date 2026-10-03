@@ -41,15 +41,15 @@ use Muh\Core\Auth;
             </form>
         </div>
 
-        <?php if (!empty($otherAccounts)): ?>
+        <?php if (!empty($transferDests)): ?>
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <h2 class="font-semibold text-slate-800 text-sm mb-3"><?= e(__('cash.virman')) ?></h2>
             <form method="post" action="<?= e(url('/app/cash/' . $account['id'] . '/virman')) ?>" class="space-y-3">
                 <?= csrf_field() ?>
                 <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('cash.to_account')) ?></label>
-                    <select name="to_id" required class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
-                        <?php foreach ($otherAccounts as $oa): ?><option value="<?= (int) $oa['id'] ?>"><?= e($oa['name']) ?> (<?= e($oa['code']) ?>)</option><?php endforeach; ?>
+                    <select name="to" required class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                        <?php foreach ($transferDests as $td): ?><option value="<?= e($td['account_type'] . ':' . $td['id']) ?>">[<?= e($td['label']) ?>] <?= e($td['name']) ?> (<?= e($td['code']) ?>)</option><?php endforeach; ?>
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-2">

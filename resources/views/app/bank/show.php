@@ -39,6 +39,28 @@
             </form>
         </div>
 
+        <?php if (!empty($transferDests)): ?>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-4">
+            <h2 class="font-semibold text-slate-800 text-sm mb-3"><?= e(__('cash.virman')) ?></h2>
+            <form method="post" action="<?= e(url('/app/bank/' . $account['id'] . '/virman')) ?>" class="space-y-3">
+                <?= csrf_field() ?>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('cash.to_account')) ?></label>
+                    <select name="to" required class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                        <?php foreach ($transferDests as $td): ?><option value="<?= e($td['account_type'] . ':' . $td['id']) ?>">[<?= e($td['label']) ?>] <?= e($td['name']) ?> (<?= e($td['code']) ?>)</option><?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('bank.amount')) ?></label>
+                        <input type="number" step="0.01" name="amount" min="0" required class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none"></div>
+                    <div><label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('bank.date')) ?></label>
+                        <input type="date" name="date" value="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none"></div>
+                </div>
+                <button class="w-full px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('cash.virman')) ?></button>
+            </form>
+        </div>
+        <?php endif; ?>
+
         <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-slate-100 font-semibold text-slate-800 text-sm"><?= e(__('bank.extract')) ?></div>
             <form method="get" action="<?= e(url('/app/bank/' . $account['id'])) ?>" class="px-5 py-3 border-b border-slate-100 flex flex-wrap items-end gap-2 text-sm">

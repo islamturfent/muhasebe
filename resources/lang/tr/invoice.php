@@ -45,4 +45,6 @@ return [
     'type_sales_return' => 'Satış İade',
     'type_purchase_return' => 'Alış İade',
     'type_proforma' => 'Proforma',
+    'reminder_subject' => 'Fatura Hatırlatması - :no',
+    'reminder_body' => 'Sayın yetkili, :no numaralı fatura için :amount tutarındaki ödemenin :due tarihine kadar yapılması gerekmektedir.',
 ];

@@ -45,4 +45,6 @@ return [
     'type_sales_return' => 'Sales Return',
     'type_purchase_return' => 'Purchase Return',
     'type_proforma' => 'Proforma',
+    'reminder_subject' => 'Invoice Reminder - :no',
+    'reminder_body' => 'Dear customer, the payment of :amount for invoice :no is due by :due.',
 ];

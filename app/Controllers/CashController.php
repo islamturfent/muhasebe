@@ -58,10 +58,14 @@ final class CashController extends Controller
     {
         $id = (int) $id;
         Auth::requireCan('cash.create');
+        // Destination is sent as "type:id" (cash:12 or bank:34).
+        [$toType, $toId] = array_pad(explode(':', (string) $request->input('to')), 2, '');
         try {
-            (new CashService())->transfer(
+            (new TransferService())->transfer(
+                'cash',
                 $id,
-                (int) $request->input('to_id'),
+                $toType,
+                (int) $toId,
                 (float) $request->input('amount'),
                 $request->input('date') ?: null,
                 $request->input('description') ?: null
@@ -87,14 +91,14 @@ final class CashController extends Controller
         $to = $request->query('to') ?: null;
         $type = $request->query('type') ?: null;
         $trx = $service->transactions($id, $from, $to, $type);
-        // Other cash accounts available as virman destinations.
-        $otherAccounts = DB::select('SELECT id, name, code FROM cash_accounts WHERE tenant_id = :t AND id != :id AND deleted_at IS NULL ORDER BY name', ['t' => Auth::tenantId(), 'id' => $id]);
+        // Cash + bank accounts available as virman destinations.
+        $transferDests = (new TransferService())->destinations('cash', $id);
         return $this->view('app.cash.show', [
             'layout' => 'layouts.app',
             'account' => $account,
             'company' => $company,
             'transactions' => $trx['items'],
-            'otherAccounts' => $otherAccounts,
+            'transferDests' => $transferDests,
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],

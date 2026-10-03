@@ -61,10 +61,12 @@ final class BankController extends Controller
         $to = $request->query('to') ?: null;
         $type = $request->query('type') ?: null;
         $trx = $service->transactions($id, $from, $to, $type);
+        $transferDests = (new \Muh\Services\TransferService())->destinations('bank', $id);
         return $this->view('app.bank.show', [
             'layout' => 'layouts.app',
             'account' => $account,
             'transactions' => $trx['items'],
+            'transferDests' => $transferDests,
             'page' => $trx['page'],
             'lastPage' => $trx['lastPage'],
             'total' => $trx['total'],
@@ -72,6 +74,31 @@ final class BankController extends Controller
             'to' => $to,
             'type' => $type,
         ]);
+    }
+
+    /**
+     * Virman from a bank account to any cash/bank account.
+     */
+    public function virman(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('bank.create');
+        [$toType, $toId] = array_pad(explode(':', (string) $request->input('to')), 2, '');
+        try {
+            (new \Muh\Services\TransferService())->transfer(
+                'bank',
+                $id,
+                $toType,
+                (int) $toId,
+                (float) $request->input('amount'),
+                $request->input('date') ?: null,
+                $request->input('description') ?: null
+            );
+            Session::flash('success', __('cash.virman_done'));
+        } catch (ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+        }
+        return Response::redirect('/app/bank/' . $id);
     }
 
     public function transaction(Request $request, $id): Response

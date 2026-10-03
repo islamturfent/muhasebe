@@ -97,6 +97,7 @@ return function (Router $router): void {
         $g->post('/app/bank', [\Muh\Controllers\BankController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/bank/{id}', [\Muh\Controllers\BankController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/bank/{id}/transaction', [\Muh\Controllers\BankController::class, 'transaction'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/bank/{id}/virman', [\Muh\Controllers\BankController::class, 'virman'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Checks & promissory notes
         $g->get('/app/checks', [\Muh\Controllers\CheckController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
