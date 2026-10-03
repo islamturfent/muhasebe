@@ -111,11 +111,15 @@ final class AccountingController extends Controller
             'SELECT code, name FROM accounting_accounts WHERE company_id = :c AND fiscal_period_id = :p ORDER BY code',
             ['c' => $companyId, 'p' => $periodId]
         ) : [];
+        $type = in_array($request->query('type', 'journal'), ['journal', 'transfer', 'opening', 'closing', 'carry_forward'], true)
+            ? $request->query('type', 'journal')
+            : 'journal';
         return $this->view('app.accounting.entry-create', [
             'layout' => 'layouts.app',
             'companies' => $companies, 'companyId' => $companyId,
             'periods' => $periods, 'periodId' => $periodId,
             'accounts' => $accounts,
+            'voucherType' => $type,
         ]);
     }
 
@@ -138,10 +142,14 @@ final class AccountingController extends Controller
             $lines[] = ['account_code' => $code, 'debit' => $debit, 'credit' => $credit];
         }
 
+        $voucherType = in_array($request->input('voucher_type', 'journal'), ['journal', 'transfer', 'opening', 'closing', 'carry_forward'], true)
+            ? $request->input('voucher_type', 'journal')
+            : 'journal';
+
         try {
             $id = AccountingService::postEntry(
                 $tenantId, $companyId, $periodId,
-                'journal', $request->input('date') ?: date('Y-m-d'),
+                $voucherType, $request->input('date') ?: date('Y-m-d'),
                 $request->input('description') ?: __('accounting.manual_entry'),
                 $lines, $request
             );

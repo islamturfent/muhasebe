@@ -15,6 +15,22 @@ $active = 'chart';
 <?= $this->partial('app.accounting._context', ['companies'=>$companies,'companyId'=>$companyId,'periods'=>$periods,'periodId'=>$periodId,'active'=>$active]) ?>
 <?= $this->partial('app.accounting._subnav', ['active'=>$active,'companyId'=>$companyId,'periodId'=>$periodId]) ?>
 
+<?php
+$od = (float) array_sum(array_column($accounts, 'opening_debit'));
+$oc = (float) array_sum(array_column($accounts, 'opening_credit'));
+$balanced = abs($od - $oc) < 0.01;
+?>
+<div class="mb-4 p-4 bg-white border border-slate-200 rounded-2xl flex flex-wrap items-center gap-6 text-sm">
+    <div><span class="text-slate-400"><?= e(__('accounting.opening_balance')) ?>:</span> <span class="font-semibold text-slate-800"><?= e(money($od)) ?></span></div>
+    <div><span class="text-slate-400"><?= e(__('accounting.balance')) ?>:</span> <span class="font-semibold text-slate-800"><?= e(money($oc)) ?></span></div>
+    <div class="<?= $balanced ? 'text-green-600' : 'text-red-600' ?> font-medium">
+        <?= $balanced ? e(__('accounting.balance_status_ok')) : e(__('accounting.balance_status_diff', ['diff' => money(abs($od - $oc))])) ?>
+    </div>
+    <?php if (Auth::can('accounting.create')): ?>
+    <a href="<?= e(url('/app/accounting/entry/create?type=opening&company_id=' . $companyId . '&period_id=' . $periodId)) ?>" class="ml-auto px-3 py-2 rounded-lg bg-brand-50 text-brand-700 text-xs font-medium hover:bg-brand-100">+ <?= e(__('accounting.type_opening')) ?></a>
+    <?php endif; ?>
+</div>
+
 <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-sm">

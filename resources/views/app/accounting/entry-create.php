@@ -1,5 +1,5 @@
 <?php
-/** @var array $companies @var int $companyId @var array $periods @var int $periodId @var array $accounts */
+/** @var array $companies @var int $companyId @var array $periods @var int $periodId @var array $accounts @var string $voucherType */
 use Muh\Core\Session;
 use Muh\Core\Translator;
 $locale = Translator::instance()->locale();
@@ -16,6 +16,18 @@ Session::forget('_form_errors');
         <?= csrf_field() ?>
 
         <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.voucher_type')) ?> *</label>
+                    <select name="voucher_type" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                        <?php foreach (['journal','transfer','opening','closing','carry_forward'] as $vt): ?>
+                        <option value="<?= e($vt) ?>" <?= ($voucherType ?? 'journal') === $vt ? 'selected' : '' ?>><?= e(__('accounting.type_' . $vt)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="hidden md:block"></div>
+                <div class="hidden md:block"></div>
+            </div>
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('accounting.title')) ?> / <?= e(__('common.company')) ?> *</label>

@@ -69,4 +69,7 @@ return [
     'opening_balance' => 'Opening Balance',
     'is_header_help' => 'This account is only a grouping header and does not take movements on its own.',
     'all_accounts' => 'All Accounts',
+    'voucher_type' => 'Voucher Type',
+    'balance_status_ok' => 'Opening balances are balanced (debit = credit)',
+    'balance_status_diff' => 'Opening balances are unbalanced — difference: :diff',
 ];

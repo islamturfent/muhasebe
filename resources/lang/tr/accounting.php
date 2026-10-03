@@ -69,4 +69,7 @@ return [
     'opening_balance' => 'Açılış Bakiyesi',
     'is_header_help' => 'Bu hesap yalnızca gruplama başlığıdır ve tek başına hareket almaz.',
     'all_accounts' => 'Tüm Hesaplar',
+    'voucher_type' => 'Fiş Türü',
+    'balance_status_ok' => 'Açılış bakiyeleri dengeli (borç = alacak)',
+    'balance_status_diff' => 'Açılış bakiyeleri dengeli değil — fark: :diff',
 ];
