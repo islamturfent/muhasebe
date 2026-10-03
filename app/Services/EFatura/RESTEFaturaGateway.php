@@ -24,15 +24,20 @@ final class RESTEFaturaGateway implements EFaturaGateway
     private string $username;
     private string $password;
 
-    public function __construct()
+    /**
+     * @param array $cfg optional overrides: mode, test_url, production_url, username, password
+     *                   (falls back to the env-based efatura.* config)
+     */
+    public function __construct(?array $cfg = null)
     {
-        $mode = Config::get('efatura.mode', 'test');
+        $cfg = $cfg ?? [];
+        $mode = $cfg['mode'] ?? Config::get('efatura.mode', 'test');
         $base = $mode === 'production'
-            ? Config::get('efatura.production_url', '')
-            : Config::get('efatura.test_url', '');
+            ? ($cfg['production_url'] ?? Config::get('efatura.production_url', ''))
+            : ($cfg['test_url'] ?? Config::get('efatura.test_url', ''));
         $this->baseUrl = rtrim((string) $base, '/');
-        $this->username = (string) Config::get('efatura.username', '');
-        $this->password = (string) Config::get('efatura.password', '');
+        $this->username = (string) ($cfg['username'] ?? Config::get('efatura.username', ''));
+        $this->password = (string) ($cfg['password'] ?? Config::get('efatura.password', ''));
     }
 
     public function configured(): bool

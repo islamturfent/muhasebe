@@ -19,6 +19,8 @@ return [
     'line_price' => 'Birim Fiyat',
     'line_discount' => 'İndirim %',
     'line_vat' => 'KDV %',
+    'line_withholding' => 'Teva.',
+    'line_withholding_hint' => 'Tevkifat oranı (KDV üzerinden %). 0 = tevkifat yok.',
     'add_line' => 'Satır Ekle',
     'subtotal' => 'Ara Toplam',
     'discount' => 'İndirim',

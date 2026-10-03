@@ -10,7 +10,7 @@
 $idx = '__LINE__';
 ?>
 <div class="line grid grid-cols-12 gap-2 items-end mb-2">
-    <div class="col-span-4">
+    <div class="col-span-3">
         <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('invoice.line_product')) ?></label>
         <select name="lines[<?= $idx ?>][product_id]" onchange="onProductChange(this)" class="w-full sm:text-sm border border-slate-200 rounded-lg px-2 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
             <option value="">—</option>
@@ -32,6 +32,10 @@ $idx = '__LINE__';
     <div class="col-span-1">
         <label class="block text-xs font-medium text-slate-500 mb-1">% <?= e(__('invoice.line_vat')) ?></label>
         <input type="number" name="lines[<?= $idx ?>][vat_rate]" value="20" class="w-full sm:text-sm border border-slate-200 rounded-lg px-2 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
+    </div>
+    <div class="col-span-1">
+        <label class="block text-xs font-medium text-slate-500 mb-1" title="<?= e(__('invoice.line_withholding_hint')) ?>">% <?= e(__('invoice.line_withholding')) ?></label>
+        <input type="number" name="lines[<?= $idx ?>][withholding_rate]" value="0" min="0" max="100" class="w-full sm:text-sm border border-slate-200 rounded-lg px-2 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
     </div>
     <div class="col-span-2">
         <label class="block text-xs font-medium text-slate-500 mb-1"><?= e(__('invoice.line_description')) ?></label>

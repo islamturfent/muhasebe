@@ -28,4 +28,7 @@ return [
     'extract' => 'Hesap Ekstresi',
     'company' => 'Firma',
     'new_transaction' => 'Yeni Hareket',
+    'opening_balance' => 'Açılış Bakiyesi',
+    'opening_balance_help' => 'Oluşturulurken girilen bakiye (opsiyonel).',
+    'opening_date' => 'Açılış Tarihi',
 ];

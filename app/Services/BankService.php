@@ -56,8 +56,39 @@ final class BankService
             'created_at' => now(), 'updated_at' => now(),
         ]);
         AuditLogService::record('bank.create', 'bank', 'bank_accounts', (string)$id, null, $data, $companyId, $tenantId);
+
+        // Optional opening balance -> post an opening transaction + journal entry.
+        $opening = (float) ($data['opening_balance'] ?? 0);
+        if ($opening > 0) {
+            $date = $data['opening_date'] ?: date('Y-m-d');
+            self::addTransaction($tenantId, $companyId, $id, 'deposit', $date, $opening, __('bank.opening_balance'));
+            $this->postOpeningJournal($tenantId, $companyId, $date, $opening, '102');
+            AuditLogService::record('bank.opening', 'bank', 'bank_accounts', (string)$id, null, ['opening' => $opening], $companyId, $tenantId);
+        }
         return $id;
     }
+
+    /** Post an opening-balance journal entry: DR <asset account> / CR 500 Sermaye. */
+    private function postOpeningJournal(int $tenantId, int $companyId, string $date, float $amount, string $assetCode): void
+    {
+        $periodId = (int) DB::scalar(
+            'SELECT id FROM fiscal_periods WHERE company_id = :c AND :d BETWEEN start_date AND end_date ORDER BY start_date DESC LIMIT 1',
+            ['c' => $companyId, 'd' => $date]
+        ) ?: (int) DB::scalar('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC LIMIT 1', ['c' => $companyId]);
+        if (!$periodId) {
+            return;
+        }
+        \Muh\Services\AccountingService::postEntry(
+            $tenantId, $companyId, $periodId, 'opening', $date, __('bank.opening_balance'),
+            [
+                ['account_code' => $assetCode, 'debit' => $amount, 'credit' => 0],
+                ['account_code' => '500', 'debit' => 0, 'credit' => $amount],
+            ],
+            null, 'opening', null
+        );
+    }
+
+    
 
     public static function addTransaction(int $tenantId, int $companyId, int $bankAccountId, string $type, string $date, float $amount, ?string $description): int
     {

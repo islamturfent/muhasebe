@@ -57,6 +57,7 @@ final class InvoiceService
         $subtotal = 0.0;
         $totalDiscount = 0.0;
         $totalTax = 0.0;
+        $totalWithholding = 0.0;
         $total = 0.0;
 
         foreach ($lines as $i => $raw) {
@@ -64,6 +65,7 @@ final class InvoiceService
             $price = (float) ($raw['unit_price'] ?? 0);
             $vat = (float) ($raw['vat_rate'] ?? 0);
             $disc = (float) ($raw['discount'] ?? 0);
+            $wr = min(100, max(0, (float) ($raw['withholding_rate'] ?? 0)));
             if ($qty <= 0) {
                 continue;
             }
@@ -72,23 +74,27 @@ final class InvoiceService
             $discountAmt = round($net * $disc / 100, 2);
             $netAfterDiscount = round($net - $discountAmt, 2);
             $tax = round($netAfterDiscount * $vat / 100, 2);
+            $withholdingAmt = $wr > 0 ? round($tax * $wr / 100, 2) : 0.0;
             $lineTotal = round($netAfterDiscount + $tax, 2);
 
             $subtotal += $net;
             $totalDiscount += $discountAmt;
             $totalTax += $tax;
+            $totalWithholding += $withholdingAmt;
             $total += $lineTotal;
 
             $preparedLines[] = [
-                'product_id'  => !empty($raw['product_id']) ? (int) $raw['product_id'] : null,
-                'description' => $raw['description'] ?? null,
-                'quantity'    => $qty,
-                'unit_price'  => $price,
-                'discount'    => $disc,
-                'tax_rate'    => $vat,
-                'tax'         => $tax,
-                'line_total'  => $netAfterDiscount,
-                'total'       => $lineTotal,
+                'product_id'      => !empty($raw['product_id']) ? (int) $raw['product_id'] : null,
+                'description'     => $raw['description'] ?? null,
+                'quantity'        => $qty,
+                'unit_price'      => $price,
+                'discount'        => $disc,
+                'tax_rate'        => $vat,
+                'tax'             => $tax,
+                'withholding_rate'=> $wr,
+                'withholding'     => $withholdingAmt,
+                'line_total'      => $netAfterDiscount,
+                'total'           => $lineTotal,
             ];
         }
 
@@ -99,6 +105,7 @@ final class InvoiceService
         $subtotal = round($subtotal, 2);
         $totalDiscount = round($totalDiscount, 2);
         $totalTax = round($totalTax, 2);
+        $totalWithholding = round($totalWithholding, 2);
         $total = round($total, 2);
 
         $period = DB::first(
@@ -116,7 +123,7 @@ final class InvoiceService
 
         $invoiceId = (int) DB::transaction(function () use (
             $tenantId, $companyId, $periodId, $type, $date, $dueDate, $data,
-            $preparedLines, $subtotal, $totalDiscount, $totalTax, $total,
+            $preparedLines, $subtotal, $totalDiscount, $totalTax, $totalWithholding, $total,
             $account, $warehouse, $request
         ) {
             // 1. Insert invoice (posted)
@@ -136,6 +143,7 @@ final class InvoiceService
                 'subtotal'           => $subtotal,
                 'discount'           => $totalDiscount,
                 'tax'                => $totalTax,
+                'withholding'        => $totalWithholding,
                 'total'              => $total,
                 'paid'               => 0,
                 'notes'              => $data['notes'] ?? null,
@@ -156,9 +164,11 @@ final class InvoiceService
             }
             DB::insertMany('invoice_items', $rows);
 
-            // 3. Current account movement
+            // 3. Current account movement (net of withholding — the amount the
+            //    counterparty actually owes / is owed).
             $movementType = $type === 'sales' ? 'debt' : 'credit';
-            $this->recordAccountMovement($tenantId, $companyId, (int) $account['id'], $movementType, $date, $total, $data['notes'] ?? null, 'invoice', (string) $invoiceId);
+            $netPayable = round($total - $totalWithholding, 2);
+            $this->recordAccountMovement($tenantId, $companyId, (int) $account['id'], $movementType, $date, $netPayable, $data['notes'] ?? null, 'invoice', (string) $invoiceId);
 
             // 4. Stock movement (sales reduce stock; purchases increase it)
             if ($warehouse) {
@@ -182,7 +192,7 @@ final class InvoiceService
             }
 
             // 5. Accounting entry (double-entry, debit = credit enforced)
-            $this->postInvoiceJournal($tenantId, $companyId, $periodId, $type, $date, $number, $subtotal, $totalDiscount, $totalTax, $total, $invoiceId);
+            $this->postInvoiceJournal($tenantId, $companyId, $periodId, $type, $date, $number, $subtotal, $totalDiscount, $totalTax, $totalWithholding, $total, $invoiceId);
 
             AuditLogService::record('invoice.create', 'invoice', 'invoices', (string) $invoiceId, null, ['number' => $number, 'total' => $total, 'type' => $type], $companyId, $tenantId, null, $request);
             return $invoiceId;
@@ -214,26 +224,29 @@ final class InvoiceService
 
     private function postInvoiceJournal(
         int $tenantId, int $companyId, int $periodId, string $type,
-        string $date, string $number, float $subtotal, float $discount, float $tax, float $total,
-        int $invoiceId
+        string $date, string $number, float $subtotal, float $discount, float $tax,
+        float $withholding, float $total, int $invoiceId
     ): void {
         $lines = [];
         $net = round($subtotal - $discount, 2);
+        // Withholding reduces both the receivable/payable and the KDV account.
+        $netVat = round($tax - $withholding, 2);
+        $netPayable = round($net + $netVat, 2);
 
         if ($type === 'sales') {
-            // Debit 120 Alıcılar (receivable), credit 600 Satışlar + 391 KDV
-            $lines[] = ['account_code' => '120', 'debit' => $total, 'credit' => 0];
+            // Debit 120 Alıcılar (net), credit 600 Satışlar + 391 net KDV
+            $lines[] = ['account_code' => '120', 'debit' => $netPayable, 'credit' => 0];
             $lines[] = ['account_code' => '600', 'debit' => 0, 'credit' => $net];
-            if ($tax > 0) {
-                $lines[] = ['account_code' => '391', 'debit' => 0, 'credit' => $tax];
+            if ($netVat > 0) {
+                $lines[] = ['account_code' => '391', 'debit' => 0, 'credit' => $netVat];
             }
         } else {
-            // Purchase: debit 153/620 (inventory) + 191 KDV, credit 320 Satıcılar
+            // Purchase: debit 620 (inventory) + 191 net KDV, credit 320 Satıcılar (net)
             $lines[] = ['account_code' => '620', 'debit' => $net, 'credit' => 0];
-            if ($tax > 0) {
-                $lines[] = ['account_code' => '191', 'debit' => $tax, 'credit' => 0];
+            if ($netVat > 0) {
+                $lines[] = ['account_code' => '191', 'debit' => $netVat, 'credit' => 0];
             }
-            $lines[] = ['account_code' => '320', 'debit' => 0, 'credit' => $total];
+            $lines[] = ['account_code' => '320', 'debit' => 0, 'credit' => $netPayable];
         }
 
         AccountingService::postEntry(

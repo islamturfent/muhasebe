@@ -33,6 +33,13 @@ Session::forget('_form_errors');
             <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('cash.account_name')) ?> *</label>
             <input name="name" required class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
         </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('cash.opening_balance')) ?></label>
+                <input type="number" name="opening_balance" value="0" step="0.01" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                <p class="mt-1 text-xs text-slate-400"><?= e(__('cash.opening_balance_help')) ?></p></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('cash.opening_date')) ?></label>
+                <input type="date" name="opening_date" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none"></div>
+        </div>
         <?php if ($errors): ?><div class="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700"><?php foreach ($errors as $er): ?><div><?= e($er) ?></div><?php endforeach; ?></div><?php endif; ?>
         <button class="w-full px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700"><?= e(__('common.save')) ?></button>
     </form>

@@ -29,4 +29,7 @@ return [
     'virman' => 'Virman',
     'virman_done' => 'Virman işlemi tamamlandı.',
     'to_account' => 'Hedef hesap',
+    'opening_balance' => 'Açılış Bakiyesi',
+    'opening_balance_help' => 'Oluşturulurken girilen bakiye (opsiyonel).',
+    'opening_date' => 'Açılış Tarihi',
 ];

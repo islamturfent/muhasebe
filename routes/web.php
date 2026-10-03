@@ -137,6 +137,8 @@ return function (Router $router): void {
         $g->get('/app/profile', [\Muh\Controllers\ProfileController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/profile', [\Muh\Controllers\ProfileController::class, 'update'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/settings', [\Muh\Controllers\SettingsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/settings/efatura', [\Muh\Controllers\SettingsController::class, 'efatura'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/settings/efatura', [\Muh\Controllers\SettingsController::class, 'saveEfatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/settings/subscription', [\Muh\Controllers\SubscriptionController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/subscription/subscribe', [\Muh\Controllers\SubscriptionController::class, 'subscribe'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/subscription/checkout', [\Muh\Controllers\SubscriptionController::class, 'checkout'], [\Muh\Middleware\TenantMiddleware::class]);

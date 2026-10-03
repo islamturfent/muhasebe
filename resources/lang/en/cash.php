@@ -29,4 +29,7 @@ return [
     'virman' => 'Transfer',
     'virman_done' => 'Transfer completed.',
     'to_account' => 'Target account',
+    'opening_balance' => 'Opening Balance',
+    'opening_balance_help' => 'Opening balance applied at creation (optional).',
+    'opening_date' => 'Opening Date',
 ];

@@ -57,6 +57,28 @@ final class CashService
             'created_at' => now(), 'updated_at' => now(),
         ]);
         AuditLogService::record('cash.create', 'cash', 'cash_accounts', (string)$id, null, $data, $companyId, $tenantId);
+
+        // Optional opening balance -> post an opening transaction + journal entry.
+        $opening = (float) ($data['opening_balance'] ?? 0);
+        if ($opening > 0) {
+            $date = $data['opening_date'] ?: date('Y-m-d');
+            self::addTransaction($tenantId, $companyId, $id, 'opening', $date, $opening, __('cash.opening_balance'));
+            $periodId = (int) DB::scalar(
+                'SELECT id FROM fiscal_periods WHERE company_id = :c AND :d BETWEEN start_date AND end_date ORDER BY start_date DESC LIMIT 1',
+                ['c' => $companyId, 'd' => $date]
+            ) ?: (int) DB::scalar('SELECT id FROM fiscal_periods WHERE company_id = :c ORDER BY start_date DESC LIMIT 1', ['c' => $companyId]);
+            if ($periodId) {
+                \Muh\Services\AccountingService::postEntry(
+                    $tenantId, $companyId, $periodId, 'opening', $date, __('cash.opening_balance'),
+                    [
+                        ['account_code' => '100', 'debit' => $opening, 'credit' => 0],
+                        ['account_code' => '500', 'debit' => 0, 'credit' => $opening],
+                    ],
+                    null, 'opening', null
+                );
+            }
+            AuditLogService::record('cash.opening', 'cash', 'cash_accounts', (string)$id, null, ['opening' => $opening], $companyId, $tenantId);
+        }
         return $id;
     }
 

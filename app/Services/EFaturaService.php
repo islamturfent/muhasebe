@@ -26,15 +26,102 @@ final class EFaturaService
             $this->gateway = $gateway;
             return;
         }
-        $provider = config('efatura.provider', 'simulated');
-        if (in_array($provider, ['rest', 'entegrator', 'entegrator'], true)) {
-            $rest = new RESTEFaturaGateway();
+        $cfg = $this->tenantConfig();
+        $provider = $cfg['provider'];
+        if (in_array($provider, ['rest', 'entegrator'], true)) {
+            $rest = new RESTEFaturaGateway($cfg);
             if ($rest->configured()) {
                 $this->gateway = $rest;
                 return;
             }
         }
         $this->gateway = new SimulatedEFaturaGateway();
+    }
+
+    /**
+     * Effective e-Fatura config for the current tenant: tenant-stored settings
+     * override the global env config. Falls back to simulated when unset.
+     */
+    private function tenantConfig(): array
+    {
+        $tenantId = (int) Auth::tenantId();
+        $keys = ['provider', 'mode', 'test_url', 'production_url', 'username', 'password'];
+        $stored = [];
+        if ($tenantId) {
+            foreach (DB::select(
+                "SELECT `key`, value FROM settings WHERE tenant_id = :t AND `group` = 'efatura'",
+                ['t' => $tenantId]
+            ) as $row) {
+                $stored[$row['key']] = $row['value'];
+            }
+        }
+        return [
+            'provider'       => $stored['provider'] ?? config('efatura.provider', 'simulated'),
+            'mode'           => $stored['mode'] ?? config('efatura.mode', 'test'),
+            'test_url'       => $stored['test_url'] ?? '',
+            'production_url' => $stored['production_url'] ?? '',
+            'username'       => $stored['username'] ?? '',
+            'password'       => $stored['password'] ?? '',
+        ];
+    }
+
+    /**
+     * Persist the tenant e-Fatura settings (group = 'efatura').
+     */
+    public static function saveTenantConfig(array $data): void
+    {
+        $tenantId = (int) Auth::tenantId();
+        $map = [
+            'provider' => (string) ($data['provider'] ?? ''),
+            'mode' => (string) ($data['mode'] ?? 'test'),
+            'test_url' => trim((string) ($data['test_url'] ?? '')),
+            'production_url' => trim((string) ($data['production_url'] ?? '')),
+            'username' => trim((string) ($data['username'] ?? '')),
+            'password' => (string) ($data['password'] ?? ''),
+        ];
+        foreach ($map as $key => $value) {
+            $exists = DB::first(
+                "SELECT id FROM settings WHERE tenant_id = :t AND `group` = 'efatura' AND `key` = :k",
+                ['t' => $tenantId, 'k' => $key]
+            );
+            if ($exists) {
+                DB::execute(
+                    "UPDATE settings SET value = :v, updated_at = :n WHERE id = :id",
+                    ['v' => $value, 'n' => now(), 'id' => (int) $exists['id']]
+                );
+            } else {
+                DB::insert('settings', [
+                    'tenant_id' => $tenantId, 'group' => 'efatura', 'key' => $key,
+                    'value' => $value, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Current tenant e-Fatura settings for the settings screen.
+     */
+    public static function tenantSettings(): array
+    {
+        $tenantId = (int) Auth::tenantId();
+        $defaults = [
+            'provider' => config('efatura.provider', 'simulated'),
+            'mode' => config('efatura.mode', 'test'),
+            'test_url' => config('efatura.test_url', ''),
+            'production_url' => config('efatura.production_url', ''),
+            'username' => config('efatura.username', ''),
+            'password' => config('efatura.password', ''),
+        ];
+        if (!$tenantId) {
+            return $defaults;
+        }
+        foreach (DB::select(
+            "SELECT `key`, value FROM settings WHERE tenant_id = :t AND `group` = 'efatura'",
+            ['t' => $tenantId]
+        ) as $row) {
+            $defaults[$row['key']] = $row['value'];
+        }
+        return $defaults;
     }
 
     public function allowed(): bool

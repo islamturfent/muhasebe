@@ -28,4 +28,7 @@ return [
     'extract' => 'Account Statement',
     'company' => 'Company',
     'new_transaction' => 'New Transaction',
+    'opening_balance' => 'Opening Balance',
+    'opening_balance_help' => 'Opening balance applied at creation (optional).',
+    'opening_date' => 'Opening Date',
 ];

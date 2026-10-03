@@ -115,11 +115,12 @@ final class ReportsController extends Controller
     {
         $format = $request->query('format', 'csv');
         [$companyId, $periodId] = $this->ctx($request);
-        // line_total = tax base (net), tax = VAT, total = VAT-inclusive amount.
+        // line_total = tax base (net), tax = VAT, withholding = tevkifat, total = VAT-inclusive.
         $rows = DB::select(
             "SELECT i.type, ii.tax_rate AS rate,
                     SUM(ii.line_total) AS net,
                     SUM(ii.tax) AS tax,
+                    SUM(COALESCE(ii.withholding,0)) AS withholding,
                     SUM(ii.total) AS total
                FROM invoice_items ii
                JOIN invoices i ON i.id = ii.invoice_id
@@ -129,21 +130,22 @@ final class ReportsController extends Controller
               ORDER BY i.type, ii.tax_rate",
             ['c' => $companyId, 'p' => $periodId]
         );
-        $headers = [__('report.vat_type'), __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.total_incl')];
+        $headers = [__('report.vat_type'), __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.vat_withholding'), __('report.total_incl')];
         $out = [];
-        $tBase = 0.0; $tVat = 0.0; $tTotal = 0.0;
+        $tBase = 0.0; $tVat = 0.0; $tW = 0.0; $tTotal = 0.0;
         foreach ($rows as $r) {
-            $net = (float) $r['net']; $vat = (float) $r['tax']; $tot = (float) $r['total'];
-            $tBase += $net; $tVat += $vat; $tTotal += $tot;
+            $net = (float) $r['net']; $vat = (float) $r['tax']; $w = (float) $r['withholding']; $tot = (float) $r['total'];
+            $tBase += $net; $tVat += $vat; $tW += $w; $tTotal += $tot;
             $out[] = [
                 $r['type'] === 'sales' ? __('report.vat_sales_out') : __('report.vat_purchase_in'),
                 number_format((float) $r['rate'], 0, ',', '.') . '%',
                 number_format($net, 2, ',', '.'),
                 number_format($vat, 2, ',', '.'),
+                number_format($w, 2, ',', '.'),
                 number_format($tot, 2, ',', '.'),
             ];
         }
-        $out[] = [__('common.total'), '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
+        $out[] = [__('common.total'), '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tW, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
         return $this->export($format, __('report.vat_summary'), 'C:' . $companyId . ' P:' . $periodId, $headers, $out, 'kdv');
     }
 
@@ -159,7 +161,8 @@ final class ReportsController extends Controller
         $company = DB::first('SELECT id, name FROM companies WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $companyId, 't' => Auth::tenantId()]);
         $rows = DB::select(
             "SELECT i.number, i.date, i.type, ca.name AS cari,
-                    ii.tax_rate AS rate, ii.line_total AS net, ii.tax AS vat, ii.total AS incl
+                    ii.tax_rate AS rate, ii.line_total AS net, ii.tax AS vat,
+                    COALESCE(ii.withholding,0) AS withholding, ii.total AS incl
                FROM invoice_items ii
                JOIN invoices i ON i.id = ii.invoice_id
                LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
@@ -170,13 +173,13 @@ final class ReportsController extends Controller
         );
         $headers = [
             __('accounting.number'), __('common.date'), __('report.vat_type'), __('current_account.name'),
-            __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.total_incl'),
+            __('report.vat_rate'), __('report.tax_base'), __('report.vat'), __('report.vat_withholding'), __('report.total_incl'),
         ];
         $out = [];
-        $tBase = 0.0; $tVat = 0.0; $tTotal = 0.0;
+        $tBase = 0.0; $tVat = 0.0; $tW = 0.0; $tTotal = 0.0;
         foreach ($rows as $r) {
-            $net = (float) $r['net']; $vat = (float) $r['vat']; $tot = (float) $r['incl'];
-            $tBase += $net; $tVat += $vat; $tTotal += $tot;
+            $net = (float) $r['net']; $vat = (float) $r['vat']; $w = (float) $r['withholding']; $tot = (float) $r['incl'];
+            $tBase += $net; $tVat += $vat; $tW += $w; $tTotal += $tot;
             $out[] = [
                 $r['number'], format_date($r['date']),
                 $r['type'] === 'sales' ? __('report.vat_sales_out') : __('report.vat_purchase_in'),
@@ -184,10 +187,11 @@ final class ReportsController extends Controller
                 number_format((float) $r['rate'], 0, ',', '.') . '%',
                 number_format($net, 2, ',', '.'),
                 number_format($vat, 2, ',', '.'),
+                number_format($w, 2, ',', '.'),
                 number_format($tot, 2, ',', '.'),
             ];
         }
-        $out[] = [__('common.total'), '', '', '', '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
+        $out[] = [__('common.total'), '', '', '', '', number_format($tBase, 2, ',', '.'), number_format($tVat, 2, ',', '.'), number_format($tW, 2, ',', '.'), number_format($tTotal, 2, ',', '.')];
         return $this->export($format, __('report.vat_detail'), ($company['name'] ?? 'C:' . $companyId) . ' — P:' . $periodId, $headers, $out, 'kdv-detay');
     }
 

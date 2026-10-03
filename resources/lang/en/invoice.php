@@ -19,6 +19,8 @@ return [
     'line_price' => 'Unit Price',
     'line_discount' => 'Discount %',
     'line_vat' => 'VAT %',
+    'line_withholding' => 'With.',
+    'line_withholding_hint' => 'Withholding rate (as % of VAT). 0 = none.',
     'add_line' => 'Add Line',
     'subtotal' => 'Subtotal',
     'discount' => 'Discount',
