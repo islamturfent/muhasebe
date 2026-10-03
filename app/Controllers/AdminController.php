@@ -440,11 +440,13 @@ final class AdminController extends Controller
         };
         $announcement = $platform('announcement') ?? '';
         $maintenance = ((string) $platform('maintenance') === '1');
+        $sessionLifetime = (int) ($platform('session_lifetime_minutes') ?? \Muh\Core\Config::get('app.session.lifetime', 480));
 
         return $this->view('admin.settings', [
             'layout' => 'layouts.admin',
             'announcement' => $announcement,
             'maintenance' => $maintenance,
+            'sessionLifetime' => $sessionLifetime,
         ]);
     }
 
@@ -452,9 +454,14 @@ final class AdminController extends Controller
     {
         $maintenance = (bool) $request->input('maintenance');
         $announcement = trim((string) $request->input('announcement'));
+        $sessionLifetime = (int) $request->input('session_lifetime_minutes');
+        if ($sessionLifetime < 5 || $sessionLifetime > 432000) {
+            $sessionLifetime = 480;
+        }
         $this->platformSetting('maintenance', $maintenance ? '1' : '0');
         $this->platformSetting('announcement', $announcement);
-        AuditLogService::record('admin.settings.save', 'admin', 'settings', null, null, ['maintenance' => $maintenance]);
+        $this->platformSetting('session_lifetime_minutes', (string) $sessionLifetime);
+        AuditLogService::record('admin.settings.save', 'admin', 'settings', null, null, ['maintenance' => $maintenance, 'session_lifetime_minutes' => $sessionLifetime]);
         Session::flash('success', __('admin.settings_saved'));
         return Response::redirect('/admin/settings');
     }

@@ -21,7 +21,7 @@ return [
     'default_country'  => 'TR',
 
     'session' => [
-        'lifetime' => 120,      // minutes
+        'lifetime' => 480,      // minutes — default (may be overridden per-platform by the super admin panel)
         'name'     => 'muh_session',
         'secure'   => (getenv('SESSION_SECURE') ?: 'false') === 'true', // true behind HTTPS
         'httponly' => true,

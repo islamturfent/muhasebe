@@ -1,5 +1,5 @@
 <?php
-/** @var string $announcement @var bool $maintenance */
+/** @var string $announcement @var bool $maintenance @var int $sessionLifetime */
 ?>
 <div class="max-w-2xl mx-auto space-y-6">
     <h1 class="text-2xl font-bold text-slate-900"><?= e(__('admin.platform_settings')) ?></h1>
@@ -19,6 +19,15 @@
         <div>
             <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('admin.announcement')) ?></label>
             <textarea name="announcement" rows="3" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="<?= e(__('admin.announcement_hint')) ?>"><?= e($announcement) ?></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('admin.session_lifetime')) ?></label>
+            <div class="flex items-center gap-2">
+                <input type="number" name="session_lifetime_minutes" min="5" max="432000" value="<?= (int) $sessionLifetime ?>" class="w-40 px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                <span class="text-sm text-slate-500"><?= e(__('admin.session_lifetime_unit')) ?></span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1"><?= e(__('admin.session_lifetime_hint')) ?></p>
         </div>
 
         <button class="w-full px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700"><?= e(__('common.save')) ?></button>

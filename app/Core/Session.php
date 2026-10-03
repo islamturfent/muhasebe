@@ -20,9 +20,26 @@ final class Session
         }
 
         $config = Config::get('app.session', []);
+        $lifetime = $config['lifetime'] ?? 120; // minutes, fallback
+
+        // Platform setting (super admin panel) can override the session lifetime.
+        // DB is connected before Session::start() in Application::boot().
+        try {
+            $v = DB::scalar("SELECT value FROM settings WHERE `group` = 'platform' AND `key` = 'session_lifetime_minutes'");
+            if ($v !== null && is_numeric($v) && (int) $v > 0) {
+                $lifetime = min(max((int) $v, 5), 432000); // clamp 5min..30 days
+            }
+        } catch (\Throwable $e) {
+            // DB unavailable during CLI/migration — keep config default.
+        }
+
         session_name($config['name'] ?? 'muh_session');
+        // Server-side session files must not be GC'd sooner than the cookie lifetime.
+        ini_set('session.gc_maxlifetime', (string) ($lifetime * 60));
+        ini_set('session.gc_probability', '1');
+        ini_set('session.gc_divisor', '100');
         session_set_cookie_params([
-            'lifetime' => ($config['lifetime'] ?? 120) * 60,
+            'lifetime' => $lifetime * 60,
             'path'     => '/',
             'secure'   => $config['secure'] ?? false,
             'httponly' => $config['httponly'] ?? true,
