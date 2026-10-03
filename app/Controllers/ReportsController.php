@@ -900,7 +900,7 @@ final class ReportsController extends Controller
         $tenantId = (int) Auth::tenantId();
         $companyId2 = (int) ($request->query('company_id') ?? 0);
         $status = $request->query('status') ?: null;
-        $sql = "SELECT i.number, i.date, i.type, i.total, i.efatura_status, c.name AS company_name, ca.name AS cari
+        $sql = "SELECT i.number, i.date, i.type, i.total, i.efatura_status, i.efatura_doc_type, c.name AS company_name, ca.name AS cari
                   FROM invoices i JOIN companies c ON c.id = i.company_id LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
                  WHERE i.tenant_id = :t AND i.deleted_at IS NULL";
         $params = ['t' => $tenantId];
@@ -908,10 +908,10 @@ final class ReportsController extends Controller
         if ($status && in_array($status, ['draft', 'sending', 'sent', 'accepted', 'rejected', 'error'], true)) { $sql .= ' AND i.efatura_status = :st'; $params['st'] = $status; }
         $sql .= ' ORDER BY i.date DESC, i.id DESC';
         $rows = DB::select($sql, $params);
-        $headers = [__('accounting.number'), __('common.date'), __('invoice.type'), __('invoice.company'), __('current_account.name'), __('report.amount'), __('efatura.status')];
+        $headers = [__('accounting.number'), __('common.date'), __('invoice.type'), __('invoice.company'), __('current_account.name'), __('report.amount'), __('efatura.doc_type'), __('efatura.status')];
         $out = [];
         foreach ($rows as $r) {
-            $out[] = [$r['number'], format_date($r['date']), __('invoice.type_' . $r['type']), $r['company_name'], $r['cari'] ?? '', number_format((float) $r['total'], 2, ',', '.'), __('efatura.st_' . $r['efatura_status'])];
+            $out[] = [$r['number'], format_date($r['date']), __('invoice.type_' . $r['type']), $r['company_name'], $r['cari'] ?? '', number_format((float) $r['total'], 2, ',', '.'), $r['efatura_doc_type'] ? __('efatura.type_' . $r['efatura_doc_type']) : '—', __('efatura.st_' . $r['efatura_status'])];
         }
         return $this->view('app.reports.screen', [
             'layout' => 'layouts.app', 'title' => __('report.efatura_status'), 'subtitle' => __('report.efatura_sub'),

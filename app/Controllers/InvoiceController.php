@@ -291,6 +291,9 @@ final class InvoiceController extends Controller
             Session::flash('error', __('efatura.select_invoices'));
             return Response::redirect('/app/invoices');
         }
+        $docType = in_array($request->input('doc_type', 'invoice'), ['invoice', 'archive', 'despatch'], true)
+            ? $request->input('doc_type', 'invoice')
+            : 'invoice';
         $service = new \Muh\Services\EFaturaService();
         $results = [];
         foreach ($ids as $invId) {
@@ -300,7 +303,7 @@ final class InvoiceController extends Controller
                 continue;
             }
             try {
-                $status = $service->sendInvoice($invId, 'invoice');
+                $status = $service->sendInvoice($invId, $docType);
                 $results[] = ['no' => $inv['number'], 'ok' => in_array($status, ['sent', 'accepted'], true), 'status' => $status];
             } catch (\Throwable $e) {
                 $results[] = ['no' => $inv['number'], 'ok' => false, 'status' => 'error'];
