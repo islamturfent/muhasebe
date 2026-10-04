@@ -64,6 +64,61 @@ switch ($command) {
         exit($fail > 0 ? 1 : 0);
         break;
 
+    case 'test:email-template':
+        // Focused gate (B3): branded, localized e-mail template rendering.
+        $ok = true;
+        $checks = [];
+        $tr = \Muh\Services\EmailTemplateService::layout('tr', 'Deneme', '<p>Merhaba</p>');
+        $en = \Muh\Services\EmailTemplateService::layout('en', 'Test', '<p>Hello</p>');
+        $checks['TR şablon marka içeriyor'] = str_contains($tr, 'Hesap360');
+        $checks['EN şablon marka içeriyor'] = str_contains($en, 'Hesap360');
+        $trHint = \Muh\Services\EmailTemplateService::translate('tr', 'mail.help_line', ['brand' => 'Hesap360']);
+        $enHint = \Muh\Services\EmailTemplateService::translate('en', 'mail.help_line', ['brand' => 'Hesap360']);
+        $checks['TR dil ayrımı (otomatik)'] = str_contains($trHint, 'otomatik') && !str_contains($trHint, 'automatically');
+        $checks['EN dil ayrımı (automatically)'] = str_contains($enHint, 'automatically') && !str_contains($enHint, 'otomatik');
+        $btn = \Muh\Services\EmailTemplateService::button('tr', '/x', 'Detay');
+        $checks['CTA buton render'] = str_contains($btn, 'href="' . '/x' . '"') && str_contains($btn, 'Detay');
+        $sub = \Muh\Services\EmailTemplateService::translate('tr', 'notify.summary_intro', ['count' => 3]);
+        $checks['Yer tutucu (count)'] = str_contains($sub, '3');
+        $checks['send() log modu'] = \Muh\Services\EmailTemplateService::send('tr', 'gate@example.com', 'T', '<p>x</p>');
+        foreach ($checks as $n => $v) {
+            echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
+            if (!$v) { $ok = false; }
+        }
+        echo $ok ? "Email template gate: OK\n" : "Email template gate: FAIL\n";
+        exit($ok ? 0 : 1);
+        break;
+
+    case 'test:backup':
+        // Focused gate (B3): backup creation + retention rotation.
+        $dir = dirname(__DIR__) . '/storage/backups';
+        if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
+        $ok = true;
+        $checks = [];
+        $file = (new \Muh\Database\Backup())->run();
+        $checks['Yedek dosyası üretildi'] = is_file($file) && filesize($file) > 0;
+        $made = [];
+        for ($i = 0; $i < 3; $i++) {
+            $f = $dir . '/muh-' . date('Ymd-His', time() - mt_rand(100, 9999)) . '-gate.sql';
+            file_put_contents($f, '-- gate\n');
+            $made[] = $f;
+        }
+        $pruned = \Muh\Database\Backup::prune(2);
+        $after = count(glob($dir . '/muh-*.sql'));
+        $checks['Rotasyon (prune>0)'] = $pruned > 0;
+        $checks['Saklama sınırı (son<=2)'] = $after <= 2;
+        $ping = \Muh\Database\Backup::ping();
+        $checks['DB ping'] = !empty($ping['ok']);
+        $checks['Liste'] = is_array(\Muh\Database\Backup::list(5));
+        foreach ($made as $f) { if (is_file($f)) { @unlink($f); } }
+        foreach ($checks as $n => $v) {
+            echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
+            if (!$v) { $ok = false; }
+        }
+        echo $ok ? "Backup rotation gate: OK\n" : "Backup rotation gate: FAIL\n";
+        exit($ok ? 0 : 1);
+        break;
+
     case 'backup':
         $file = (new \Muh\Database\Backup())->run();
         echo "Backup saved: {$file}\n";
