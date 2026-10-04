@@ -27,6 +27,11 @@ return function (Router $router): void {
         $g->get('/login', [AuthController::class, 'showLogin']);
         $g->get('/register', [AuthController::class, 'showRegister']);
         $g->post('/login', [AuthController::class, 'login']);
+        $g->get('/forgot-password', [AuthController::class, 'showForgot']);
+        $g->post('/forgot-password', [AuthController::class, 'sendResetLink']);
+        $g->get('/reset-password', [AuthController::class, 'showReset']);
+        $g->post('/reset-password', [AuthController::class, 'resetPassword']);
+        $g->get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
         $g->post('/register', [AuthController::class, 'register']);
     });
 
@@ -41,6 +46,7 @@ return function (Router $router): void {
     // ---- App (authenticated + tenant) ----
     $router->group(['middleware' => [\Muh\Middleware\AuthMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
         $g->get('/app/dashboard', [DashboardController::class, 'office'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/portal', [\Muh\Controllers\PortalController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/switch-company', [DashboardController::class, 'switchCompany'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/impersonate/stop', [DashboardController::class, 'stopImpersonation'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/company', [DashboardController::class, 'company'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -66,6 +72,8 @@ return function (Router $router): void {
         $g->get('/app/inventory', [\Muh\Controllers\ProductController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/export', [\Muh\Controllers\ProductController::class, 'export'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/create', [\Muh\Controllers\ProductController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/inventory/transfer', [\Muh\Controllers\ProductController::class, 'transferForm'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/inventory/transfer', [\Muh\Controllers\ProductController::class, 'transfer'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/inventory', [\Muh\Controllers\ProductController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/inventory/{id}/edit', [\Muh\Controllers\ProductController::class, 'edit'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/inventory/{id}', [\Muh\Controllers\ProductController::class, 'update'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -180,6 +188,7 @@ return function (Router $router): void {
         $g->get('/app/reports/cari-ekstre/export', [\Muh\Controllers\ReportsController::class, 'cariEkstre'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/efatura/export', [\Muh\Controllers\ReportsController::class, 'efatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/stok-maliyet/export', [\Muh\Controllers\ReportsController::class, 'stokMaliyet'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/satis/export', [\Muh\Controllers\ReportsController::class, 'satis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/alis/export', [\Muh\Controllers\ReportsController::class, 'alis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/kasa/export', [\Muh\Controllers\ReportsController::class, 'kasa'], [\Muh\Middleware\TenantMiddleware::class]);

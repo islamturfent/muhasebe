@@ -108,6 +108,22 @@ final class InvoiceService
         $totalWithholding = round($totalWithholding, 2);
         $total = round($total, 2);
 
+        // --- Multi-currency: invoice currency + TRY (base) conversion rate ---
+        $companyCurrency = (string) (DB::scalar('SELECT currency FROM companies WHERE id = :c', ['c' => $companyId]) ?? 'TRY');
+        $baseCurrency = strtoupper($companyCurrency);
+        $currencyCode = strtoupper((string) ($data['currency_code'] ?? $baseCurrency));
+        $tryRate = 1.0;
+        if ($currencyCode !== $baseCurrency) {
+            $r = (float) ($data['exchange_rate'] ?? 0);
+            if ($r <= 0) {
+                $r = \Muh\Services\CurrencyService::rateToTry($currencyCode, $date);
+            }
+            if ($r <= 0) {
+                $r = 1.0;
+            }
+            $tryRate = $r;
+        }
+
         $period = DB::first(
             'SELECT id FROM fiscal_periods WHERE company_id = :c AND is_current = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1',
             ['c' => $companyId]
@@ -124,7 +140,7 @@ final class InvoiceService
         $invoiceId = (int) DB::transaction(function () use (
             $tenantId, $companyId, $periodId, $type, $date, $dueDate, $data,
             $preparedLines, $subtotal, $totalDiscount, $totalTax, $totalWithholding, $total,
-            $account, $warehouse, $request
+            $account, $warehouse, $request, $currencyCode, $baseCurrency, $tryRate
         ) {
             // 1. Insert invoice (posted)
             $number = $this->nextInvoiceNumber($companyId, $type);
@@ -146,6 +162,8 @@ final class InvoiceService
                 'tax'                => $totalTax,
                 'withholding'        => $totalWithholding,
                 'total'              => $total,
+                'currency_code'      => $currencyCode,
+                'exchange_rate'      => $currencyCode !== $baseCurrency ? (float) $tryRate : null,
                 'paid'               => 0,
                 'notes'              => $data['notes'] ?? null,
                 'created_at'         => now(),
@@ -174,7 +192,7 @@ final class InvoiceService
                     'sales', 'purchase_return' => 'debt',
                     'purchase', 'sales_return' => 'credit',
                 };
-                $netPayable = round($total - $totalWithholding, 2);
+                $netPayable = round(($total - $totalWithholding) * $tryRate, 2); // base-currency amount for cari
                 $this->recordAccountMovement($tenantId, $companyId, (int) $account['id'], $movementType, $date, $netPayable, $data['notes'] ?? null, 'invoice', (string) $invoiceId);
 
                 // 4. Stock movement. Sales/purchase returns reverse the flow.
@@ -200,7 +218,9 @@ final class InvoiceService
                 }
 
                 // 5. Accounting entry (double-entry, debit = credit enforced)
-                $this->postInvoiceJournal($tenantId, $companyId, $periodId, $type, $date, $number, $subtotal, $totalDiscount, $totalTax, $totalWithholding, $total, $invoiceId);
+                $this->postInvoiceJournal($tenantId, $companyId, $periodId, $type, $date, $number,
+                    round($subtotal * $tryRate, 2), round($totalDiscount * $tryRate, 2), round($totalTax * $tryRate, 2),
+                    round($totalWithholding * $tryRate, 2), round($total * $tryRate, 2), $invoiceId);
             }
 
             AuditLogService::record('invoice.create', 'invoice', 'invoices', (string) $invoiceId, null, ['number' => $number, 'total' => $total, 'type' => $type], $companyId, $tenantId, null, $request);

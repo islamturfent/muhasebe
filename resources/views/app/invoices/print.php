@@ -9,7 +9,10 @@ $brand = $brand ?? [
     'website' => $invoice['website'] ?? '', 'currency' => $invoice['currency'] ?? 'TRY', 'iban' => '',
 ];
 $symbols = ['TRY' => '₺', 'USD' => '$', 'EUR' => '€', 'GBP' => '£'];
-$cur = strtoupper((string) ($brand['currency'] ?: $invoice['currency'] ?? 'TRY'));
+// Fatura dövizini kur bilgisiyle birlikte kullan.
+$cur = strtoupper((string) ($invoice['currency_code'] ?? $brand['currency']));
+$fxRate = (float) ($invoice['exchange_rate'] ?? 0);
+$fxNote = ($fxRate > 0 && $cur !== 'TRY') ? '1 ' . e($cur) . ' = ' . e(number_format($fxRate, 4, ',', '.')) . ' ₺' : '';
 $sym = $symbols[$cur] ?? $cur;
 $init = mb_strtoupper(mb_substr(trim($brand['name']) ?: 'H', 0, 1));
 ?>
@@ -82,6 +85,7 @@ $init = mb_strtoupper(mb_substr(trim($brand['name']) ?: 'H', 0, 1));
         <div class="meta">
           <div><?= e(__('invoice.date')) ?>: <?= e(format_date($invoice['date'])) ?></div>
           <div><?= e(__('invoice.due_date')) ?>: <?= e(format_date($invoice['due_date'])) ?></div>
+          <?php if ($fxNote): ?><div class=""><?= e($cur) ?> · <?= e($fxNote) ?></div><?php endif; ?>
         </div>
       </div>
     </div>

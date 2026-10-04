@@ -13,6 +13,7 @@ use Muh\Core\Session;
 use Muh\Core\Validator;
 use Muh\Core\ValidationException;
 use Muh\Services\AuditLogService;
+use Muh\Services\AuthTokenService;
 use Muh\Services\TenantOnboardingService;
 
 final class AuthController extends Controller
@@ -107,5 +108,79 @@ final class AuthController extends Controller
         Auth::clearRememberMe($userId);
         Auth::logout();
         return Response::redirect('/');
+    }
+
+    // ---- Forgot password ----
+    public function showForgot(Request $request): Response
+    {
+        return $this->view('auth.forgot', ['layout' => 'layouts.guest']);
+    }
+
+    public function sendResetLink(Request $request): Response
+    {
+        $email = strtolower(trim((string) $request->input('email', '')));
+        $user = DB::first('SELECT id, email FROM users WHERE email = :e AND deleted_at IS NULL', ['e' => $email]);
+        if ($user) {
+            $token = AuthTokenService::create($email, 'reset', 60);
+            $link = url('/reset-password?token=' . $token . '&email=' . urlencode($email));
+            (new \Muh\Services\Mailer())->send(
+                $email,
+                __('auth.reset_mail_subject'),
+                '<p>' . e(__('auth.reset_mail_body')) . '</p><p><a href="' . e($link) . '">' . e(__('auth.reset_mail_button')) . '</a></p><p><a href="' . e($link) . '">' . e($link) . '</a></p>'
+            );
+            AuditLogService::record('auth.password.forgot', 'auth', 'users', (string) $user['id']);
+        }
+        // Always show generic success (avoid user enumeration).
+        Session::flash('success', __('auth.reset_sent'));
+        return Response::redirect('/login');
+    }
+
+    // ---- Reset password ----
+    public function showReset(Request $request): Response
+    {
+        return $this->view('auth.reset', [
+            'layout' => 'layouts.guest',
+            'token' => (string) $request->query('token', ''),
+            'email' => (string) $request->query('email', ''),
+        ]);
+    }
+
+    public function resetPassword(Request $request): Response
+    {
+        $email = strtolower(trim((string) $request->input('email', '')));
+        $token = (string) $request->input('token', '');
+        $password = (string) $request->input('password', '');
+        $confirm = (string) $request->input('password_confirmation', '');
+
+        if ($password !== $confirm || mb_strlen($password) < (int) config('app.security.password_min_length', 8)) {
+            Session::flash('error', __('auth.password_short'));
+            return Response::redirect('/reset-password?token=' . urlencode($token) . '&email=' . urlencode($email));
+        }
+        if (!AuthTokenService::consume($email, $token, 'reset')) {
+            Session::flash('error', __('auth.reset_invalid'));
+            return Response::redirect('/forgot-password');
+        }
+        $updated = DB::update('users', ['password' => \Muh\Core\Hash::make($password), 'email_verified_at' => now(), 'updated_at' => now()], 'email = :e AND deleted_at IS NULL', ['e' => $email]);
+        if (!$updated) {
+            Session::flash('error', __('auth.reset_invalid'));
+            return Response::redirect('/forgot-password');
+        }
+        AuditLogService::record('auth.password.reset', 'auth', 'users', null, null, ['email' => $email]);
+        Session::flash('success', __('auth.reset_done'));
+        return Response::redirect('/login');
+    }
+
+    // ---- E-mail verification ----
+    public function verifyEmail(Request $request, $token): Response
+    {
+        $email = strtolower((string) ($request->query('email') ?? $request->input('email')));
+        $user = DB::first('SELECT id, email FROM users WHERE email = :e AND deleted_at IS NULL', ['e' => $email]);
+        if (!$user || !AuthTokenService::consume($email, (string) $token, 'verify')) {
+            Session::flash('error', __('auth.verify_invalid'));
+            return Response::redirect('/login');
+        }
+        DB::update('users', ['email_verified_at' => now(), 'updated_at' => now()], 'id = :id', ['id' => (int) $user['id']]);
+        Session::flash('success', __('auth.verify_done'));
+        return Response::redirect('/login');
     }
 }

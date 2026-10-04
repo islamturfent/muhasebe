@@ -83,4 +83,6 @@ return [
     'budget_variance' => 'Budget Variance',
     'ledger' => 'General Ledger',
     'ledger_sub' => 'All movements per account with a cumulative balance',
+    'stock_cost' => 'Stock Cost (Weighted Average)',
+    'avg_cost' => 'Avg. Cost',
 ];

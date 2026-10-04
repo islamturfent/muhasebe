@@ -2,6 +2,7 @@
 
 return [
     'dashboard' => 'Dashboard',
+    'portal' => 'Portal',
     'companies' => 'Companies',
     'current_accounts' => 'Accounts',
     'sales' => 'Sales',

@@ -390,6 +390,33 @@ final class ReportsController extends Controller
         return $this->export($format, __('report.stock'), 'C:' . $companyId, $headers, $out, 'stok');
     }
 
+    // ---- Report: Stok maliyet (ağırlıklı ortalama) ----
+    public function stokMaliyet(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $products = DB::select(
+            'SELECT id, code, name, stock_quantity, purchase_price FROM products WHERE company_id = :c AND deleted_at IS NULL ORDER BY code',
+            ['c' => $companyId]
+        );
+        $headers = [__('inventory.code'), __('inventory.name'), __('report.stock_qty'), __('report.avg_cost'), __('report.stock_value'), __('inventory.purchase_price')];
+        $out = [];
+        $total = 0.0;
+        foreach ($products as $p) {
+            $avg = \Muh\Services\InventoryService::avgCost((int) $p['id']);
+            $value = $avg['cost'] > 0 ? (float) $p['stock_quantity'] * $avg['cost'] : (float) $p['stock_quantity'] * (float) $p['purchase_price'];
+            $total += $value;
+            $out[] = [
+                $p['code'], $p['name'], number_format((float) $p['stock_quantity'], 2, ',', '.'),
+                number_format($avg['cost'], 4, ',', '.'), number_format($value, 2, ',', '.'),
+                number_format((float) $p['purchase_price'], 2, ',', '.'),
+            ];
+        }
+        $out[] = ['', __('common.total'), '', '', number_format($total, 2, ',', '.'), ''];
+        return $this->export($format, __('report.stock_cost'), 'C:' . $companyId, $headers, $out, 'stok-maliyet');
+    }
+
     // ---- Report: Satış (sales) ----
     public function satis(Request $request): Response
     {

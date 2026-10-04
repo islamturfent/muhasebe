@@ -20,7 +20,7 @@
             </div>
             <div class="flex items-center justify-between text-sm">
                 <label class="flex items-center gap-2 text-slate-600"><input type="checkbox" name="remember" class="rounded"> <?= e(__('auth.remember_me')) ?></label>
-                <a href="#" class="text-brand-600 hover:underline"><?= e(__('auth.forgot_password')) ?></a>
+                <a href="<?= e(url('/forgot-password')) ?>" class="text-brand-600 hover:underline"><?= e(__('auth.forgot_password')) ?></a>
             </div>
             <button type="submit" class="w-full px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700"><?= e(__('auth.login')) ?></button>
         </form>

@@ -27,6 +27,7 @@ $reports = [
     ['kdv', 'report.vat_summary'],
     ['kdv-beyanname', 'report.vat_declaration'],
     ['stok', 'report.stock'],
+    ['stok-maliyet', 'report.stock_cost'],
     ['satis', 'report.sales'],
     ['alis', 'report.purchases'],
     ['kasa', 'report.cash'],

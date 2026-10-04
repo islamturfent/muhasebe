@@ -199,6 +199,49 @@ final class InventoryService
     }
 
     /**
+     * Transfer stock between two warehouses. Records a transfer_in (to) and a
+     * transfer_out (from) movement; net product stock stays unchanged since
+     * the global running quantity is not company/warehouse specific.
+     */
+    public function transfer(int $productId, int $fromWarehouseId, int $toWarehouseId, float $quantity, ?string $description = null): void
+    {
+        if ($fromWarehouseId === $toWarehouseId || $quantity <= 0) {
+            throw new \Muh\Core\ValidationException(['transfer' => __('inventory.transfer_invalid')]);
+        }
+        $tenantId = $this->tenantId();
+        $prod = DB::first('SELECT id, company_id, purchase_price FROM products WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL', ['id' => $productId, 't' => $tenantId]);
+        if (!$prod) {
+            throw new \Muh\Core\ValidationException(['product' => __('validation.in')]);
+        }
+        $companyId = (int) $prod['company_id'];
+        $unitPrice = (float) ($prod['purchase_price'] ?? 0);
+
+        DB::transaction(function () use ($tenantId, $companyId, $productId, $fromWarehouseId, $toWarehouseId, $quantity, $unitPrice, $description) {
+            self::recordMovement($tenantId, $companyId, $toWarehouseId, $productId, 'transfer_in', date('Y-m-d'), $quantity, $unitPrice, $description ?: __('inventory.transfer'), 'transfer', null);
+            self::recordMovement($tenantId, $companyId, $fromWarehouseId, $productId, 'transfer_out', date('Y-m-d'), -$quantity, $unitPrice, $description ?: __('inventory.transfer'), 'transfer', null);
+        });
+    }
+
+    /**
+     * Weighted-average unit cost and stock value for a product, derived from
+     * its purchase/opening movements (no static-price assumption).
+     *
+     * @return array{qty:float,cost:float,total:float}
+     */
+    public static function avgCost(int $productId): array
+    {
+        $rows = DB::select(
+            "SELECT SUM(quantity) AS qty, SUM(quantity * unit_price) AS cost
+               FROM stock_movements
+              WHERE product_id = :id AND quantity > 0 AND unit_price > 0",
+            ['id' => $productId]
+        );
+        $qty = (float) ($rows[0]['qty'] ?? 0);
+        $cost = (float) ($rows[0]['cost'] ?? 0);
+        return ['qty' => $qty, 'cost' => $qty > 0 ? round($cost / $qty, 4) : 0.0, 'total' => round($cost, 2)];
+    }
+
+    /**
      * Physical stock count (sayım): set the real counted quantity for a
      * product. Records an 'adjustment' movement equal to counted - current so
      * the stock ledger always reconciles; runs inside a transaction.

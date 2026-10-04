@@ -199,4 +199,39 @@ final class ProductController extends Controller
         Session::flash('success', __('inventory.deleted_product'));
         return Response::redirect('/app/inventory');
     }
+
+    /** Depo transfer formu. */
+    public function transferForm(Request $request): Response
+    {
+        Auth::requireCan('inventory.create');
+        $tenantId = Auth::tenantId();
+        $products = DB::select('SELECT id, code, name, stock_quantity FROM products WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY name', ['t' => $tenantId]);
+        $warehouses = (new InventoryService())->warehouses();
+        return $this->view('app.inventory.transfer', [
+            'layout' => 'layouts.app',
+            'products' => $products,
+            'warehouses' => $warehouses,
+        ]);
+    }
+
+    /** Depo transferini uygula. */
+    public function transfer(Request $request): Response
+    {
+        Auth::requireCan('inventory.create');
+        try {
+            (new InventoryService())->transfer(
+                (int) $request->input('product_id'),
+                (int) $request->input('from_warehouse'),
+                (int) $request->input('to_warehouse'),
+                (float) str_replace(',', '.', (string) $request->input('quantity')),
+                trim((string) $request->input('description')) ?: null
+            );
+        } catch (\Muh\Core\ValidationException $e) {
+            Session::set('_form_errors', $e->errors);
+            Session::flash('error', __('inventory.transfer_invalid'));
+            return Response::redirect('/app/inventory/transfer');
+        }
+        Session::flash('success', __('inventory.transferred'));
+        return Response::redirect('/app/inventory/transfer');
+    }
 }

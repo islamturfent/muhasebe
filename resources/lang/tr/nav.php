@@ -2,6 +2,7 @@
 
 return [
     'dashboard' => 'Panel',
+    'portal' => 'Portal',
     'companies' => 'Firmalar',
     'current_accounts' => 'Cari',
     'sales' => 'Satış',

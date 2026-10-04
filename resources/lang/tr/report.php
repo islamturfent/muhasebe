@@ -79,6 +79,8 @@ return [
     'comparative_sub' => 'Bu dönem / geçen dönem / bütçe karşılaştırması',
     'ledger' => 'Büyük Defter',
     'ledger_sub' => 'Hesap bazında tüm hareketler ve kümülatif bakiye',
+    'stock_cost' => 'Stok Maliyet (Ağırlıklı Ortalama)',
+    'avg_cost' => 'Ort. Maliyet',
     'period_current' => 'Bu Dönem',
     'period_previous' => 'Geçen Dönem',
     'budget' => 'Bütçe',

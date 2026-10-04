@@ -58,6 +58,7 @@ function navItem(string $path, string $label): string {
 }
 $menu = [
     '/app/dashboard' => __('nav.dashboard'),
+    '/app/portal' => __('nav.portal'),
     '/app/companies' => __('nav.companies'),
     '/app/current-accounts' => __('nav.current_accounts'),
     '/app/customers' => __('nav.customers'),

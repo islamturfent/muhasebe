@@ -588,6 +588,61 @@ final class AppTester
         }
         $results[] = ['name' => 'Çoklu para birimi (CurrencyService)', 'ok' => $curOk, 'detail' => $curDetail];
 
+        // ---- Şifre sıfırlama token (AuthTokenService) — rollback ----
+        $atOk = false; $atDetail = '';
+        try {
+            DB::transaction(function () use (&$atOk, &$atDetail) {
+                $email = 'reset_test@muh.local';
+                $tok = \Muh\Services\AuthTokenService::create($email, 'reset');
+                $valid = \Muh\Services\AuthTokenService::validate($email, $tok, 'reset');
+                $consumed = \Muh\Services\AuthTokenService::consume($email, $tok, 'reset');
+                $atOk = $valid && $consumed;
+                $atDetail = $atOk ? 'token üret/doğrula/tüket ok' : 'hata (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $atOk = false; $atDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Şifre sıfırlama token (AuthTokenService)', 'ok' => $atOk, 'detail' => $atDetail];
+
+        // ---- Stok: depo transferi + ağırlıklı ortalama maliyet — rollback ----
+        $invOk = false; $invDetail = '';
+        try {
+            Auth::loginById(1);
+            DB::transaction(function () use (&$invOk, &$invDetail) {
+                $comp = DB::first('SELECT * FROM companies WHERE tenant_id = 1 LIMIT 1');
+                $cid = (int) $comp['id'];
+                $tid = (int) $comp['tenant_id'];
+                $w1 = (int) DB::insert('warehouses', ['tenant_id' => $tid, 'company_id' => $cid, 'name' => 'W A', 'code' => 'WA_T', 'is_default' => 1, 'created_at' => now(), 'updated_at' => now()]);
+                $w2 = (int) DB::insert('warehouses', ['tenant_id' => $tid, 'company_id' => $cid, 'name' => 'W B', 'code' => 'WB_T', 'is_default' => 0, 'created_at' => now(), 'updated_at' => now()]);
+                $prod = (int) DB::insert('products', ['tenant_id' => $tid, 'company_id' => $cid, 'code' => 'TSTX', 'name' => 'Test', 'type' => 'product', 'purchase_price' => 10, 'sale_price' => 20, 'vat_rate' => 20, 'stock_quantity' => 0, 'created_at' => now(), 'updated_at' => now()]);
+                \Muh\Services\InventoryService::recordMovement($tid, $cid, $w1, $prod, 'opening', date('Y-m-d'), 100, 10.0, 'open');
+                (new \Muh\Services\InventoryService())->transfer($prod, $w1, $w2, 20.0, 'transfer test');
+                $avg = \Muh\Services\InventoryService::avgCost($prod);
+                $moves = (int) DB::scalar("SELECT COUNT(*) FROM stock_movements WHERE product_id = :p AND type IN ('transfer_in','transfer_out')", ['p' => $prod]);
+                $invOk = abs($avg['cost'] - 10.0) < 0.001 && $moves === 2;
+                $invDetail = $invOk ? ('depo transferi + ort. maliyet ok (ort=' . $avg['cost'] . ')') : 'hata (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $invOk = false; $invDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Stok: depo transferi + ort. maliyet', 'ok' => $invOk, 'detail' => $invDetail];
+
+        // ---- Firma yetkilisi portalmada firma kapsamı (companiesForUser) ----
+        $portOk = false; $portDetail = '';
+        try {
+            Auth::loginById(1);
+            $companies = \Muh\Services\CurrentContextService::companiesForUser();
+            $portOk = is_array($companies);
+            $portDetail = $portOk ? ('portal firma kapsamı ok (n=' . count($companies) . ')') : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $portOk = false; $portDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Firma Yetkilisi Portalı (firma kapsamı)', 'ok' => $portOk, 'detail' => $portDetail];
+
         return $results;
     }
 }
