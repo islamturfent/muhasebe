@@ -105,6 +105,20 @@ running `php bin/muh backup --upload`. Restore with `php bin/muh backup:restore 
 (imports the dump back into MySQL), or import the `.sql` manually and re-run
 `php bin/muh migrate` if the schema changed.
 
+**DR rehearsal (prova):** periodically verify the off-box dump really restores.
+Restore into a throwaway database, check integrity, then drop it:
+
+```bash
+BACKUP_REMOTE_DIR=/mnt/backups php bin/muh backup --upload
+mysql -uroot -e 'CREATE DATABASE muh_dr'   # throwaway scratch DB
+DB_DATABASE=muh_dr php bin/muh backup:restore $(ls -1t /mnt/backups/*.sql | head -1)
+mysql -uroot muh_dr -e 'SELECT COUNT(*) FROM companies; SELECT COUNT(*) FROM audit_logs;'
+mysql -uroot -e 'DROP DATABASE muh_dr'
+```
+
+If `mysqldump`/`mysql` client binaries are absent PHP falls back to a pure-PDO
+dump / statement-by-statement import automatically.
+
 Other daily ops (notifications + daily digest) — requires SMTP for real e-mail:
 
 ```cron
