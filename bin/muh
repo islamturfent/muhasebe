@@ -123,6 +123,13 @@ switch ($command) {
         // Focused gate (#3): real SMTP client (SmtpMailer) end-to-end against a
         // local loopback SMTP relay — verifies EHLO (multiline), AUTH LOGIN,
         // MAIL/RCPT/DATA/QUIT and actual message delivery.
+        // Diagnostic: surface any PHP fatal as a GitHub ::error:: annotation.
+        register_shutdown_function(function () {
+            $e = error_get_last();
+            if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+                fwrite(STDERR, "::error::SMTP gate fatal: {$e['message']} @ {$e['file']}:{$e['line']}\n");
+            }
+        });
         // Pick a free local port so the loopback relay never collides.
         $probe = @stream_socket_server('tcp://127.0.0.1:0', $err, $err2);
         $port = 2525;
@@ -236,7 +243,7 @@ SRV;
         }
         foreach ($checks as $n => $v) {
             echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
-            if (!$v) { $ok = false; }
+            if (!$v) { fwrite(STDERR, "::error::SMTP gate check failed: {$n}\n"); $ok = false; }
         }
         foreach (glob($out . '/*') ?: [] as $f) { @unlink($f); }
         @rmdir($out); @unlink($serverFile); @unlink($ready); @unlink($log);
