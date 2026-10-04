@@ -265,6 +265,7 @@ return function (Router $router): void {
         $g->post('/app/settings/security/mfa/verify', [\Muh\Controllers\SecurityController::class, 'verifyMfa'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/security/mfa/disable', [\Muh\Controllers\SecurityController::class, 'disableMfa'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/audit/export', [\Muh\Controllers\AuditLogController::class, 'export'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/audit/{id}', [\Muh\Controllers\AuditLogController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/audit', [\Muh\Controllers\AuditLogController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/api/health', function () {
@@ -281,6 +282,7 @@ return function (Router $router): void {
         $g->post('/admin/tenants/{id}/toggle', [\Muh\Controllers\AdminController::class, 'toggleTenant']);
         $g->post('/admin/tenants/{id}/impersonate', [\Muh\Controllers\AdminController::class, 'impersonate']);
         $g->post('/admin/tenants/{id}/plan', [\Muh\Controllers\AdminController::class, 'setTenantPlan']);
+        $g->get('/admin/audit/export', [\Muh\Controllers\AdminController::class, 'auditExport']);
         $g->get('/admin/audit', [\Muh\Controllers\AdminController::class, 'audit']);
         $g->get('/admin/subscriptions', [\Muh\Controllers\AdminController::class, 'subscriptions']);
         $g->get('/admin/plans', [\Muh\Controllers\AdminController::class, 'plans']);

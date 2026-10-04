@@ -54,7 +54,7 @@ $qs = 'module=' . rawurlencode((string) ($module ?? '')) . '&action=' . rawurlen
                     <td class="px-5 py-2.5 text-slate-500 whitespace-nowrap"><?= e(format_datetime($l['created_at'])) ?></td>
                     <td class="px-5 py-2.5 text-slate-700"><?= e($l['user_name'] ?? '—') ?></td>
                     <td class="px-5 py-2.5 text-slate-500"><?= e($l['company_name'] ?? '—') ?></td>
-                    <td class="px-5 py-2.5 font-mono text-xs text-brand-600"><?= e($l['action']) ?></td>
+                    <td class="px-5 py-2.5"><a href="<?= e(url('/app/audit/' . (int) $l['id'])) ?>" class="font-mono text-xs text-brand-600 hover:underline" title="<?= e(__('audit.view_detail')) ?>"><?= e($l['action']) ?> →</a></td>
                     <td class="px-5 py-2.5 text-slate-500"><?= e($l['module'] ?? '') ?></td>
                     <td class="px-5 py-2.5 text-slate-400"><?= e($l['ip'] ?? '') ?></td>
                 </tr>

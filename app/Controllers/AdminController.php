@@ -265,7 +265,8 @@ final class AdminController extends Controller
     }
 
     // ---- Global audit log (all tenants) ----
-    public function audit(Request $request): Response
+    /** Build the global (all-tenant) audit filter clause. */
+    private function adminAuditFilters(Request $request): array
     {
         $where = ' WHERE 1 = 1';
         $params = [];
@@ -277,6 +278,24 @@ final class AdminController extends Controller
             $where .= ' AND a.module = :m';
             $params['m'] = $module;
         }
+        if ($action = $request->query('action')) {
+            $where .= ' AND a.action LIKE :a';
+            $params['a'] = '%' . $action . '%';
+        }
+        if ($from = $request->query('from')) {
+            $where .= ' AND a.created_at >= :from';
+            $params['from'] = $from . ' 00:00:00';
+        }
+        if ($to = $request->query('to')) {
+            $where .= ' AND a.created_at <= :to';
+            $params['to'] = $to . ' 23:59:59';
+        }
+        return [$where, $params];
+    }
+
+    public function audit(Request $request): Response
+    {
+        [$where, $params] = $this->adminAuditFilters($request);
 
         $perPage = 50;
         $page = max(1, (int) ($request->query('page') ?? 1));
@@ -301,11 +320,42 @@ final class AdminController extends Controller
             'layout' => 'layouts.admin',
             'logs' => $logs, 'tenants' => $tenants, 'modules' => $modules,
             'tenantId' => (int) $request->query('tenant_id'), 'module' => $request->query('module'),
+            'action' => $request->query('action'), 'from' => $request->query('from'), 'to' => $request->query('to'),
             'page' => $page, 'lastPage' => $lastPage, 'total' => $total,
         ]);
     }
 
+    /** Export global (all-tenant) audit logs. */
+    public function auditExport(Request $request): Response
+    {
+        [$where, $params] = $this->adminAuditFilters($request);
+        $format = $request->query('format', 'csv');
+        $logs = DB::select(
+            'SELECT a.*, u.name AS user_name, c.name AS company_name, t.name AS tenant_name
+               FROM audit_logs a
+               LEFT JOIN users u ON u.id = a.user_id
+               LEFT JOIN companies c ON c.id = a.company_id
+               LEFT JOIN tenants t ON t.id = a.tenant_id
+             ' . $where . ' ORDER BY a.id DESC LIMIT 5000',
+            $params
+        );
+        $headers = [__('admin.tenant'), __('audit.when'), __('audit.user'), __('audit.company'), __('audit.action'), __('audit.module'), __('audit.ip')];
+        $rows = array_map(fn ($l) => [
+            $l['tenant_name'] ?? ('#' . $l['tenant_id']), $l['created_at'], $l['user_name'] ?? '—',
+            $l['company_name'] ?? '—', $l['action'], $l['module'] ?? '', $l['ip'] ?? '',
+        ], $logs);
+        switch ($format) {
+            case 'pdf':
+                return \Muh\Services\ReportExportService::pdf(__('admin.audit'), __('common.records') . ': ' . count($rows), $headers, $rows, 'audit-global.pdf');
+            case 'excel':
+                return \Muh\Services\ReportExportService::excel(__('admin.audit'), $headers, $rows, 'audit-global.xls');
+            default:
+                return \Muh\Services\ReportExportService::csv($headers, $rows, 'audit-global.csv');
+        }
+    }
+
     // ---- Subscriptions / billing across tenants ----
+
     public function subscriptions(Request $request): Response
     {
         $rows = DB::select(
@@ -592,7 +642,12 @@ final class AdminController extends Controller
             'tables' => count(DB::select('SHOW TABLES')),
             'db_size' => 0,
             'version' => '',
+            'storage' => \Muh\Database\Backup::storageWritable(),
+            'db_ok' => \Muh\Database\Backup::ping(),
+            'retention' => (int) (getenv('BACKUP_RETENTION') ?: 14),
+            'remote' => (string) (getenv('BACKUP_REMOTE_DIR') ?: ''),
         ];
+        $health['latest'] = $files[0] ?? null;
         if ($health['driver'] === 'mysql') {
             $row = DB::first(
                 "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS mb FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()"

@@ -17,4 +17,8 @@ return [
     'filter_user' => 'User',
     'filter_company' => 'Company',
     'export' => 'Export',
+    'entity' => 'Entity',
+    'old_value' => 'Old Value',
+    'new_value' => 'New Value',
+    'view_detail' => 'View detail',
 ];

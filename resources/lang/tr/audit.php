@@ -17,4 +17,8 @@ return [
     'filter_user' => 'Kullanıcı',
     'filter_company' => 'Firma',
     'export' => 'Dışa aktar',
+    'entity' => 'Varlık',
+    'old_value' => 'Eski Değer',
+    'new_value' => 'Yeni Değer',
+    'view_detail' => 'Detayı görüntüle',
 ];

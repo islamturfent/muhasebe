@@ -18,7 +18,13 @@ $locale = Translator::instance()->locale();
             <option value=""><?= e(__('audit.filter_module')) ?></option>
             <?php foreach ($modules as $m): ?><option value="<?= e($m) ?>" <?= $module===$m?'selected':'' ?>><?= e($m) ?></option><?php endforeach; ?>
         </select>
+        <input name="action" value="<?= e($action ?? '') ?>" placeholder="<?= e(__('audit.filter_action')) ?>" class="flex-1 min-w-[9rem] text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
+        <input type="date" name="from" value="<?= e($from ?? '') ?>" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
+        <input type="date" name="to" value="<?= e($to ?? '') ?>" class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
         <button class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold"><?= e(__('common.search')) ?></button>
+        <a href="<?= e(url('/admin/audit/export?tenant_id=' . (int) $tenantId . '&module=' . urlencode($module ?? '') . '&action=' . urlencode($action ?? '') . '&from=' . urlencode($from ?? '') . '&to=' . urlencode($to ?? '') . '&format=csv')) ?>" class="px-3 py-2 self-center rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">CSV</a>
+        <a href="<?= e(url('/admin/audit/export?tenant_id=' . (int) $tenantId . '&module=' . urlencode($module ?? '') . '&action=' . urlencode($action ?? '') . '&from=' . urlencode($from ?? '') . '&to=' . urlencode($to ?? '') . '&format=excel')) ?>" class="px-3 py-2 self-center rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">Excel</a>
+        <a href="<?= e(url('/admin/audit/export?tenant_id=' . (int) $tenantId . '&module=' . urlencode($module ?? '') . '&action=' . urlencode($action ?? '') . '&from=' . urlencode($from ?? '') . '&to=' . urlencode($to ?? '') . '&format=pdf')) ?>" class="px-3 py-2 self-center rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300">PDF</a>
     </form>
 
     <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -51,9 +57,9 @@ $locale = Translator::instance()->locale();
         </div>
         <?php if ($lastPage > 1): ?>
         <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-sm">
-            <a href="<?= e(url('/admin/audit?tenant_id=' . $tenantId . '&module=' . urlencode($module ?? '') . '&page=' . max(1, $page-1))) ?>" class="text-brand-600 hover:underline">← <?= e(__('admin.prev')) ?></a>
+            <a href="<?= e(url('/admin/audit?tenant_id=' . $tenantId . '&module=' . urlencode($module ?? '') . '&action=' . urlencode($action ?? '') . '&from=' . urlencode($from ?? '') . '&to=' . urlencode($to ?? '') . '&page=' . max(1, $page-1))) ?>" class="text-brand-600 hover:underline">← <?= e(__('admin.prev')) ?></a>
             <span class="text-slate-500"><?= (int) $page ?> / <?= (int) $lastPage ?></span>
-            <a href="<?= e(url('/admin/audit?tenant_id=' . $tenantId . '&module=' . urlencode($module ?? '') . '&page=' . min($lastPage, $page+1))) ?>" class="text-brand-600 hover:underline"><?= e(__('admin.next')) ?> →</a>
+            <a href="<?= e(url('/admin/audit?tenant_id=' . $tenantId . '&module=' . urlencode($module ?? '') . '&action=' . urlencode($action ?? '') . '&from=' . urlencode($from ?? '') . '&to=' . urlencode($to ?? '') . '&page=' . min($lastPage, $page+1))) ?>" class="text-brand-600 hover:underline"><?= e(__('admin.next')) ?> →</a>
         </div>
         <?php endif; ?>
     </div>

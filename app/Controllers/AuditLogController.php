@@ -95,6 +95,40 @@ final class AuditLogController extends Controller
         ]);
     }
 
+    /** Show a single audit log with full old/new value detail (spec #21). */
+    public function show(Request $request, $id): Response
+    {
+        Auth::requireCan('audit.view');
+        $tenantId = Auth::tenantId();
+        $log = DB::first(
+            'SELECT a.*, u.name AS user_name, u.email AS user_email, c.name AS company_name
+               FROM audit_logs a
+               LEFT JOIN users u ON u.id = a.user_id
+               LEFT JOIN companies c ON c.id = a.company_id
+              WHERE a.id = :id AND a.tenant_id = :t',
+            ['id' => (int) $id, 't' => $tenantId]
+        );
+        if (!$log) {
+            return Response::redirect('/app/audit');
+        }
+
+        // Decode JSON payloads for a clean diff view.
+        $decode = function ($v): array {
+            if ($v === null || $v === '') {
+                return [];
+            }
+            $j = json_decode((string) $v, true);
+            return is_array($j) ? $j : ['raw' => (string) $v];
+        };
+        $log['old_decoded'] = $decode($log['old_value']);
+        $log['new_decoded'] = $decode($log['new_value']);
+
+        return $this->view('app.settings.audit-show', [
+            'layout' => 'layouts.app',
+            'log' => $log,
+        ]);
+    }
+
     /** Export filtered audit logs as CSV / Excel / PDF. */
     public function export(Request $request): Response
     {
