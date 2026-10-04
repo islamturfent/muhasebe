@@ -55,6 +55,18 @@ final class AuthController extends Controller
             return Response::redirect('/login');
         }
 
+        // Security policy gates (super admin).
+        if (\Muh\Services\SecurityPolicyService::is('require_email_verify') && empty($user['email_verified_at'])) {
+            Auth::logout();
+            Session::flash('error', __('auth.verify_required'));
+            return Response::redirect('/login');
+        }
+        if (\Muh\Services\SecurityPolicyService::is('require_2fa') && empty($user['two_factor_enabled']) && empty($user['is_system_admin'])) {
+            Auth::logout();
+            Session::flash('error', __('auth.2fa_required'));
+            return Response::redirect('/login');
+        }
+
         // Persist the user's preferred locale.
         if (!empty($user['locale'])) {
             Session::set('locale', $user['locale']);

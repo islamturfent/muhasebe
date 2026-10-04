@@ -86,6 +86,7 @@ return function (Router $router): void {
         $g->post('/app/inventory/warehouses', [\Muh\Controllers\WarehouseController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/app/invoices', [\Muh\Controllers\InvoiceController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/invoices/bulk-print', [\Muh\Controllers\InvoiceController::class, 'bulkPrint'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/create', [\Muh\Controllers\InvoiceController::class, 'create'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/bulk/create', [\Muh\Controllers\InvoiceController::class, 'bulkCreate'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/bulk', [\Muh\Controllers\InvoiceController::class, 'bulk'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -190,6 +191,7 @@ return function (Router $router): void {
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok-maliyet/export', [\Muh\Controllers\ReportsController::class, 'stokMaliyet'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/doviz/export', [\Muh\Controllers\ReportsController::class, 'doviz'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/stok-depo/export', [\Muh\Controllers\ReportsController::class, 'stokDepo'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/satis/export', [\Muh\Controllers\ReportsController::class, 'satis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/alis/export', [\Muh\Controllers\ReportsController::class, 'alis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/kasa/export', [\Muh\Controllers\ReportsController::class, 'kasa'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -285,6 +287,8 @@ return function (Router $router): void {
         $g->post('/admin/settings/session', [\Muh\Controllers\AdminController::class, 'saveSessionSettings']);
         $g->get('/admin/settings/localization', [\Muh\Controllers\AdminController::class, 'localizationSettings']);
         $g->post('/admin/settings/localization', [\Muh\Controllers\AdminController::class, 'saveLocalizationSettings']);
+        $g->get('/admin/settings/security', [\Muh\Controllers\AdminController::class, 'securitySettings']);
+        $g->post('/admin/settings/security', [\Muh\Controllers\AdminController::class, 'saveSecuritySettings']);
         $g->get('/admin/backups', [\Muh\Controllers\AdminController::class, 'backups']);
         $g->post('/admin/backups/run', [\Muh\Controllers\AdminController::class, 'runBackup']);
         $g->get('/admin/backups/{file}/download', [\Muh\Controllers\AdminController::class, 'downloadBackup']);
@@ -301,5 +305,5 @@ return function (Router $router): void {
     });
 
     // ---- Billing webhook (provider→app, auth via shared secret signature) ----
-    $router->post('/api/billing/webhook', [\Muh\Controllers\BillingWebhookController::class, 'handle']);
+    $router->post('/api/billing/webhook', [\Muh\Controllers\BillingWebhookController::class, 'handle'], [\Muh\Middleware\WebhookRateLimitMiddleware::class]);
 };

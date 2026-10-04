@@ -210,6 +210,8 @@ final class InvoiceController extends Controller
         $id = (int) $id;
         Auth::requireCan('invoice.read');
 
+        \Muh\Services\CurrentContextService::guardRecord((int) Auth::tenantId(), 'invoices', $id);
+
         $invoice = DB::first(
             'SELECT i.*, c.name AS company_name, c.trade_name, c.tax_number, c.tax_office, c.address,
                     c.email AS company_email, c.phone AS company_phone,
@@ -338,6 +340,80 @@ final class InvoiceController extends Controller
         return $this->view('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
     }
 
+    /** Toplu fatura basımı: filtreye uyan faturaları tek, yazdırılabilir belgede birleştirir. */
+    public function bulkPrint(Request $request): Response
+    {
+        Auth::requireCan('invoice.read');
+        $userId = (int) Auth::id();
+        $tenantId = Auth::tenantId();
+        $companyId = (int) ($request->query('company_id') ?? 0);
+        $type = $request->query('type') ?: null;
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+
+        $sql = 'SELECT i.id FROM invoices i
+                 JOIN companies c ON c.id = i.company_id
+                WHERE i.tenant_id = :t AND i.deleted_at IS NULL';
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND i.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        if ($type && in_array($type, ['sales', 'purchase', 'sales_return', 'purchase_return', 'proforma'], true)) {
+            $sql .= ' AND i.type = :type';
+            $params['type'] = $type;
+        }
+        if ($from) {
+            $sql .= ' AND i.date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND i.date <= :to';
+            $params['to'] = $to;
+        }
+        $sql .= ' ORDER BY i.id DESC LIMIT 200';
+        $ids = array_column(DB::select($sql, $params), 'id');
+
+        $parts = [];
+        foreach ($ids as $id) {
+            $parts[] = $this->printHtml((int) $id, $tenantId);
+        }
+        $joined = implode('<div class=\'page-break\'></div>', array_filter($parts));
+        $body = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' . e(__('invoice.title')) . ' · Toplu</title>'
+            . '<style>@media print{ .page-break{ page-break-before: always; } } body{margin:0;padding:0;}</style></head><body>'
+            . $joined . '</body></html>';
+        return Response::make($body, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+    }
+
+    /** Build the standalone printable HTML for a single invoice (used by print/bulk). */
+    private function printHtml(int $id, int $tenantId): string
+    {
+        $invoice = DB::first(
+            'SELECT i.*, c.name AS company_name, c.trade_name, c.tax_number, c.tax_office, c.mersis, c.address,
+                    c.email AS company_email, c.phone AS company_phone, c.website, c.logo_path, c.currency,
+                    ca.name AS account_name, ca.address AS account_address, ca.tax_number AS account_tax
+               FROM invoices i
+               JOIN companies c ON c.id = i.company_id
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.id = :id AND i.tenant_id = :t AND i.deleted_at IS NULL',
+            ['id' => $id, 't' => $tenantId]
+        );
+        if (!$invoice) {
+            return '';
+        }
+        $items = DB::select(
+            'SELECT ii.*, p.name AS product_name FROM invoice_items ii
+              LEFT JOIN products p ON p.id = ii.product_id WHERE ii.invoice_id = :id ORDER BY ii.id',
+            ['id' => $id]
+        );
+        $brand = \Muh\Services\BrandingService::forCompany([
+            'id' => (int) $invoice['company_id'], 'name' => $invoice['company_name'], 'trade_name' => $invoice['trade_name'] ?? '',
+            'logo_path' => $invoice['logo_path'] ?? '', 'tax_number' => $invoice['tax_number'] ?? '', 'tax_office' => $invoice['tax_office'] ?? '',
+            'mersis' => $invoice['mersis'] ?? '', 'address' => $invoice['address'] ?? '', 'phone' => $invoice['company_phone'] ?? '',
+            'email' => $invoice['company_email'] ?? '', 'website' => $invoice['website'] ?? '', 'currency' => $invoice['currency'] ?? 'TRY',
+        ]);
+        return \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
+    }
     public function sendEfatura(Request $request, $id): Response
     {
         $id = (int) $id;

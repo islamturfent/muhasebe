@@ -37,6 +37,7 @@ return [
     'cancelled' => 'İptal',
     'status' => 'Durum',
     'thanks' => 'İş birliğiniz için teşekkür ederiz.',
+    'bulk_print' => 'Toplu PDF',
     'back' => 'Faturalara dön',
     'print' => 'Yazdır / PDF',
     'stock_sales' => ':no satış faturası stok çıkışı',

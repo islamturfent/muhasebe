@@ -37,6 +37,7 @@ return [
     'cancelled' => 'Cancelled',
     'status' => 'Status',
     'thanks' => 'Thank you for your business.',
+    'bulk_print' => 'Bulk PDF',
     'back' => 'Back to invoices',
     'print' => 'Print / PDF',
     'stock_sales' => ':no sales invoice stock-out',

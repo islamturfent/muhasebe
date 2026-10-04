@@ -74,6 +74,30 @@ final class CurrentContextService
         }
     }
 
+    /**
+     * Object/record-level guard: if a record (owned by a company of the active
+     * tenant) exists and its company is not accessible to the user, throw 403.
+     * Returns the record's company_id (or 0/null) so callers can 404 otherwise.
+     *
+     * @return int|null company_id if the record exists, else null
+     */
+    public static function guardRecord(int $tenantId, string $table, int $id, string $companyColumn = 'company_id'): ?int
+    {
+        $col = DB::quoteIdentifier($companyColumn);
+        $row = DB::first(
+            'SELECT ' . $col . ' AS cid FROM ' . $table . ' WHERE id = :id AND tenant_id = :t',
+            ['id' => $id, 't' => $tenantId]
+        );
+        if (!$row) {
+            return null; // not found → caller decides (404/redirect)
+        }
+        $cid = (int) ($row['cid'] ?? 0);
+        if ($cid > 0) {
+            self::guardCompany($cid);
+        }
+        return $cid;
+    }
+
     /** Companies visible to the active user (all for owner/admin, else assigned). */
     public static function companiesForUser(): array
     {

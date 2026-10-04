@@ -448,6 +448,34 @@ final class ReportsController extends Controller
         return $this->export($format, __('report.fx'), 'C:' . $companyId, $headers, $data, 'doviz');
     }
 
+    // ---- Report: Depo bazlı stok (per-warehouse) ----
+    public function stokDepo(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select(
+            "SELECT p.code, p.name, w.name AS warehouse, SUM(sm.quantity) AS qty, SUM(sm.quantity * sm.unit_price) AS val
+               FROM stock_movements sm
+               JOIN products p ON p.id = sm.product_id
+               JOIN warehouses w ON w.id = sm.warehouse_id
+              WHERE p.company_id = :c AND p.deleted_at IS NULL
+              GROUP BY p.id, w.id
+              ORDER BY p.code, w.name",
+            ['c' => $companyId]
+        );
+        $headers = [__('inventory.code'), __('inventory.name'), __('inventory.warehouse'), __('report.stock_qty'), __('report.stock_value')];
+        $data = [];
+        $total = 0.0;
+        foreach ($rows as $r) {
+            $v = (float) ($r['val'] ?? 0);
+            $total += $v;
+            $data[] = [$r['code'], $r['name'], $r['warehouse'], number_format((float) $r['qty'], 2, ',', '.'), number_format($v, 2, ',', '.')];
+        }
+        $data[] = ['', __('common.total'), '', '', number_format($total, 2, ',', '.')];
+        return $this->export($format, __('report.warehouse_stock'), 'C:' . $companyId, $headers, $data, 'stok-depo');
+    }
+
     // ---- Report: Satış (sales) ----
     public function satis(Request $request): Response
     {

@@ -8,7 +8,11 @@ $locale = Translator::instance()->locale();
         <h1 class="text-2xl font-bold text-slate-900"><?= e(__('invoice.title')) ?></h1>
         <p class="text-slate-500"><?= (int) ($total ?? count($invoices)) ?> <?= e(__('common.records')) ?></p>
     </div>
-    <a href="<?= e(url('/app/invoices/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('invoice.new')) ?></a>
+    <div class="flex items-center gap-2">
+        <?php $fq = 'company_id=' . (int)$companyId . '&type=' . e($type ?? '') . '&from=' . e($from ?? '') . '&to=' . e($to ?? ''); ?>
+        <a href="<?= e(url('/app/invoices/bulk-print?' . $fq)) ?>" target="_blank" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300" title="<?= e(__('invoice.bulk_print')) ?>">🖨 <?= e(__('invoice.bulk_print')) ?></a>
+        <a href="<?= e(url('/app/invoices/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('invoice.new')) ?></a>
+    </div>
 </div>
 
 <?php $bulkResults = \Muh\Core\Session::get('_bulk_efatura'); if ($bulkResults): \Muh\Core\Session::forget('_bulk_efatura'); ?>

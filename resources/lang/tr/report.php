@@ -86,6 +86,7 @@ return [
     'fx_rate' => 'Kur',
     'fx_total' => 'Döviz Tutar',
     'try_total' => 'TL Karşılığı',
+    'warehouse_stock' => 'Depo Bazlı Stok',
     'period_current' => 'Bu Dönem',
     'period_previous' => 'Geçen Dönem',
     'budget' => 'Bütçe',

@@ -148,6 +148,8 @@ final class ProductController extends Controller
         $id = (int) $id;
         Auth::requireCan('inventory.read');
 
+        \Muh\Services\CurrentContextService::guardRecord((int) Auth::tenantId(), 'products', $id);
+
         $service = new InventoryService();
         $product = $service->product(Auth::tenantId(), $id);
         if (!$product) {

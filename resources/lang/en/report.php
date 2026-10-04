@@ -90,4 +90,5 @@ return [
     'fx_rate' => 'Rate',
     'fx_total' => 'FX Amount',
     'try_total' => 'TRY Equivalent',
+    'warehouse_stock' => 'Stock by Warehouse',
 ];

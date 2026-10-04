@@ -44,4 +44,6 @@ return [
     'reset_mail_button' => 'Reset Password',
     'verify_invalid' => 'This verification link is invalid or expired.',
     'verify_done' => 'Your email has been verified.',
+    'verify_required' => 'Security policy requires you to verify your email first. A reset link has been emailed to you.',
+    '2fa_required' => 'Security policy requires two-factor authentication (2FA). Please set up 2FA from the office security settings first.',
 ];

@@ -488,6 +488,24 @@ final class AdminController extends Controller
         return Response::redirect('/admin/settings/session');
     }
 
+    // ---- Ayarlar menüsü: Güvenlik Politikası ----
+    public function securitySettings(Request $request): Response
+    {
+        return $this->view('admin.settings_security', [
+            'layout' => 'layouts.admin',
+            'activeTab' => 'security',
+            'policy' => \Muh\Services\SecurityPolicyService::get(),
+        ]);
+    }
+
+    public function saveSecuritySettings(Request $request): Response
+    {
+        \Muh\Services\SecurityPolicyService::save($request->all());
+        AuditLogService::record('admin.settings.security.save', 'admin', 'settings', null, null, $request->all());
+        Session::flash('success', __('admin.settings_saved'));
+        return Response::redirect('/admin/settings/security');
+    }
+
     // ---- Ayarlar menüsü: Yerelleştirme ----
     public function localizationSettings(Request $request): Response
     {

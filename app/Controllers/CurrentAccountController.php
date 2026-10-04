@@ -151,6 +151,8 @@ final class CurrentAccountController extends Controller
         $id = (int) $id;
         Auth::requireCan('current_account.read');
 
+        \Muh\Services\CurrentContextService::guardRecord((int) Auth::tenantId(), 'current_accounts', $id);
+
         $service = new CurrentAccountService();
         $account = $service->findForTenant(Auth::tenantId(), $id);
         if (!$account) {

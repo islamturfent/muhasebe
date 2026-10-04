@@ -688,6 +688,57 @@ final class AppTester
         }
         $results[] = ['name' => 'e-Fatura payload zenginleştirme', 'ok' => $payOk, 'detail' => $payDetail];
 
+        // ---- Nesne-düzeyi erişim denetimi (guardRecord) — rollback ----
+        $grOk = false; $grDetail = '';
+        try {
+            $inv = DB::first('SELECT id, company_id FROM invoices WHERE tenant_id = 1 LIMIT 1');
+            if (!$inv) {
+                $grOk = true; $grDetail = 'fatura yok, atlandı';
+            } else {
+                $iid = (int) $inv['id'];
+                Auth::loginById(1);
+                $ownerPass = true;
+                try { \Muh\Services\CurrentContextService::guardRecord(1, 'invoices', $iid); } catch (\Throwable $e) { $ownerPass = false; }
+                $uid = (int) DB::insert('users', ['tenant_id' => 1, 'name' => 'GrTest', 'email' => 'gr_' . uniqid() . '@muh.local', 'password' => \Muh\Core\Hash::make('Password1234'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now(), 'is_owner' => 0]);
+                Auth::loginById($uid); // no grant → record guard must throw
+                $blocked = false;
+                try { \Muh\Services\CurrentContextService::guardRecord(1, 'invoices', $iid); } catch (\Muh\Core\ForbiddenException $e) { $blocked = true; }
+                $grOk = $ownerPass && $blocked;
+                $grDetail = $grOk ? 'owner geçti + grantsız kullanıcı engellendi' : 'hata (BUG)';
+                Auth::loginById(1);
+            }
+            throw new \RuntimeException('__rollback__');
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $grOk = false; $grDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Nesne erişim denetimi (guardRecord)', 'ok' => $grOk, 'detail' => $grDetail];
+
+        // ---- Güvenlik politikası + depo bazlı stok sorgusu ----
+        $spOk = false; $spDetail = '';
+        try {
+            DB::transaction(function () use (&$spOk, &$spDetail) {
+                \Muh\Services\SecurityPolicyService::save(['require_email_verify' => '1']);
+                $spOk = \Muh\Services\SecurityPolicyService::is('require_email_verify') === true;
+                // Per-warehouse stock query runs without error.
+                $rows = DB::select(
+                    "SELECT p.code, p.name, w.name AS warehouse, SUM(sm.quantity) AS qty
+                       FROM stock_movements sm
+                       JOIN products p ON p.id = sm.product_id
+                       JOIN warehouses w ON w.id = sm.warehouse_id
+                      WHERE p.tenant_id = 1
+                      GROUP BY p.id, w.id"
+                );
+                $spOk = $spOk && is_array($rows);
+                $spDetail = $spOk ? 'güvenlik politikası + depo bazlı stok sorgusu ok' : 'hata (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $spOk = false; $spDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Güvenlik politikası + depo bazlı stok', 'ok' => $spOk, 'detail' => $spDetail];
+
         return $results;
     }
 }

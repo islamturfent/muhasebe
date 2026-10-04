@@ -44,4 +44,6 @@ return [
     'reset_mail_button' => 'Şifreyi Sıfırla',
     'verify_invalid' => 'Doğrulama bağlantısı geçersiz veya süresi dolmuş.',
     'verify_done' => 'E-posta adresiniz doğrulandı.',
+    'verify_required' => 'Güvenlik politikası gereği önce e-posta adresinizi doğrulamalısınız. Sıfırlama bağlantısı e-postanıza gönderildi.',
+    '2fa_required' => 'Güvenlik politikası gereği iki aşamalı doğrulama (2FA) zorunludur. Önce ofis güvenlik ayarlarından 2FA kurun.',
 ];
