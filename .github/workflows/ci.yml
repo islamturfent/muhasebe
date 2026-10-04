@@ -103,6 +103,12 @@ jobs:
 
       - name: i18n gate (tr/en translation parity + undefined keys)
         env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: muh
+          DB_USERNAME: root
+          DB_PASSWORD: root
           APP_ENV: production
           APP_DEBUG: 'false'
         run: |
