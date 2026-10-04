@@ -584,8 +584,8 @@ final class InvoiceController extends Controller
         Auth::requireCan('invoice.read');
         $invoice = DB::first(
             'SELECT i.*, c.name AS company_name, c.email AS company_email, c.trade_name, c.tax_number, c.tax_office, c.mersis, c.address,
-                    c.phone AS company_phone, c.website, c.logo_path, c.currency,
-                    ca.name AS account_name, ca.email AS account_email, ca.address AS account_address, ca.tax_number AS account_tax
+                    c.phone AS company_phone, c.website, c.logo_path, c.currency, c.locale AS company_locale,
+                    ca.name AS account_name, ca.email AS account_email, ca.address AS account_address, ca.tax_number AS account_tax, ca.locale AS account_locale
                FROM invoices i
                JOIN companies c ON c.id = i.company_id
                LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
@@ -622,11 +622,22 @@ final class InvoiceController extends Controller
             return Response::redirect('/app/invoices/' . $id);
         }
 
-        $html = \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
-        $subject = __('invoice.email_subject', ['no' => $invoice['number'], 'company' => $invoice['company_name']]);
+        // Render subject + invoice (print) HTML in the recipient's language.
+        $target = \Muh\Services\EmailTemplateService::norm((string) ($invoice['account_locale'] ?: $invoice['company_locale']));
+        $translator = \Muh\Core\Translator::instance();
+        $prev = $translator->locale();
+        $translator->setLocale($target);
+        try {
+            $html = \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
+            $subject = __('invoice.email_subject', ['no' => $invoice['number'], 'company' => $invoice['company_name']]);
+            $body = '<p>' . __('invoice.email_body') . '</p><p>' . __('invoice.email_regards', ['company' => $invoice['company_name']]) . '</p>';
+        } finally {
+            $translator->setLocale($prev);
+        }
+        $html = $body . $html;
 
         $ok = (new \Muh\Services\Mailer())->send($to, $subject, $html);
-        \Muh\Services\AuditLogService::record('invoice.email', 'invoice', 'invoices', (string) $id, null, ['to' => $to], (int) $invoice['company_id'], (int) Auth::tenantId());
+        \Muh\Services\AuditLogService::record('invoice.email', 'invoice', 'invoices', (string) $id, null, ['to' => $to, 'locale' => $target], (int) $invoice['company_id'], (int) Auth::tenantId());
 
         Session::flash('success', $ok ? __('invoice.email_sent') : __('invoice.email_failed'));
         return Response::redirect('/app/invoices/' . $id);

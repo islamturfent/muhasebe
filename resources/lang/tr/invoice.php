@@ -55,6 +55,8 @@ return [
     'email_failed' => 'E-posta gönderilemedi.',
     'email_subject' => ':no — :company faturası',
     'no_email' => 'Bu cari/firma için e-posta adresi tanımlı değil.',
+    'email_body' => 'Ekli fatura bilgilerini aşağıda bulabilirsiniz.',
+    'email_regards' => 'Saygılarımızla, :company',
     'risk_limit_warning' => 'Cari risk limiti aşılacak: limit :limit, tahmini bakiye :projected. İşlem engellendi.',
     'type' => 'Tür',
     'type_sales' => 'Satış',

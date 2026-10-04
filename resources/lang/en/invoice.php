@@ -55,6 +55,8 @@ return [
     'email_failed' => 'Could not send email.',
     'email_subject' => ':no — invoice from :company',
     'no_email' => 'No e-mail address defined for this account/company.',
+    'email_body' => 'Please find the invoice details below.',
+    'email_regards' => 'Best regards, :company',
     'risk_limit_warning' => 'Account risk limit would be exceeded: limit :limit, projected :projected. Blocked.',
     'type' => 'Type',
     'type_sales' => 'Sales',
