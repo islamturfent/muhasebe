@@ -263,6 +263,9 @@ final class EFaturaService
         );
 
         $payload = $this->buildPayload($invoice, $items, $docType);
+        // Attach the real UBL-TR XML document so the REST integrator receives the
+        // GİB standard payload instead of (or in addition to) the JSON summary.
+        $payload['ubl_xml'] = \Muh\Services\EFatura\UblTrGenerator::generate($invoice, $items, $docType === 'despatch');
 
         // Set to "sending"
         DB::update('invoices', ['efatura_status' => 'sending', 'efatura_doc_type' => $docType], 'id = :id', ['id' => $invoiceId]);

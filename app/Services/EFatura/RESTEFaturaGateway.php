@@ -53,7 +53,11 @@ final class RESTEFaturaGateway implements EFaturaGateway
             return ['status' => 'error', 'uuid' => $payload['uuid'] ?? '', 'message' => 'e-Fatura REST integrator not configured.'];
         }
         $eps = EFaturaProviders::endpoints($this->provider);
-        $res = $this->request('POST', $eps['documents'], $payload);
+        // Prefer the real UBL-TR XML document if present (GİB standard);
+        // otherwise fall back to the normalized JSON payload.
+        $res = !empty($payload['ubl_xml'])
+            ? $this->requestXml('POST', $eps['documents'], (string) $payload['ubl_xml'])
+            : $this->request('POST', $eps['documents'], $payload);
         return [
             'status' => in_array($res['status'] ?? null, ['sent', 'accepted', 'rejected', 'error'], true) ? $res['status'] : 'error',
             'uuid' => $res['uuid'] ?? ($payload['uuid'] ?? ''),
@@ -102,5 +106,32 @@ final class RESTEFaturaGateway implements EFaturaGateway
         }
         $decoded = json_decode((string) $raw, true);
         return is_array($decoded) ? $decoded : [];
+    }
+
+    /** Send a raw UBL-TR XML document body to the integrator. */
+    private function requestXml(string $method, string $path, string $xml): array
+    {
+        $ch = curl_init($this->baseUrl . $path);
+        $headers = [
+            'Content-Type: application/xml; charset=utf-8',
+            'Content-Transfer-Encoding: binary',
+            'Accept: application/json',
+            'Authorization: Basic ' . base64_encode($this->username . ':' . $this->password),
+        ];
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POSTFIELDS => $xml,
+            CURLOPT_TIMEOUT => 30,
+        ]);
+        $raw = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code >= 400) {
+            return ['status' => 'error', 'message' => "HTTP {$code}"];
+        }
+        $decoded = json_decode((string) $raw, true);
+        return is_array($decoded) ? $decoded : ['status' => 'sent'];
     }
 }

@@ -770,6 +770,31 @@ final class AppTester
         }
         $results[] = ['name' => 'Süper admin analitik sorguları', 'ok' => $anOk, 'detail' => $anDetail];
 
+        // ---- Depo bazlı stok miktarı (product_warehouses sync) — rollback ----
+        $pwOk = false; $pwDetail = '';
+        try {
+            Auth::loginById(1);
+            DB::transaction(function () use (&$pwOk, &$pwDetail) {
+                $comp = DB::first('SELECT * FROM companies WHERE tenant_id = 1 LIMIT 1');
+                $cid = (int) $comp['id'];
+                $tid = (int) $comp['tenant_id'];
+                $w1 = (int) DB::insert('warehouses', ['tenant_id' => $tid, 'company_id' => $cid, 'name' => 'PW A', 'code' => 'PWA_' . uniqid(), 'is_default' => 1, 'created_at' => now(), 'updated_at' => now()]);
+                $w2 = (int) DB::insert('warehouses', ['tenant_id' => $tid, 'company_id' => $cid, 'name' => 'PW B', 'code' => 'PWB_' . uniqid(), 'is_default' => 0, 'created_at' => now(), 'updated_at' => now()]);
+                $prod = (int) DB::insert('products', ['tenant_id' => $tid, 'company_id' => $cid, 'code' => 'PWT', 'name' => 'PW Test', 'type' => 'product', 'purchase_price' => 10, 'sale_price' => 20, 'vat_rate' => 20, 'stock_quantity' => 0, 'created_at' => now(), 'updated_at' => now()]);
+                \Muh\Services\InventoryService::recordMovement($tid, $cid, $w1, $prod, 'opening', date('Y-m-d'), 10, 10.0, 'open');
+                (new \Muh\Services\InventoryService())->transfer($prod, $w1, $w2, 4.0, 't');
+                $q1 = (float) DB::scalar('SELECT quantity FROM product_warehouses WHERE product_id = :p AND warehouse_id = :w', ['p' => $prod, 'w' => $w1]);
+                $q2 = (float) DB::scalar('SELECT quantity FROM product_warehouses WHERE product_id = :p AND warehouse_id = :w', ['p' => $prod, 'w' => $w2]);
+                $pwOk = abs($q1 - 6.0) < 0.01 && abs($q2 - 4.0) < 0.01;
+                $pwDetail = $pwOk ? ('per-depo kantite ok (w1=' . $q1 . ' w2=' . $q2 . ')') : 'hata (BUG)';
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $pwOk = false; $pwDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Depo bazlı stok miktarı (product_warehouses)', 'ok' => $pwOk, 'detail' => $pwDetail];
+
         return $results;
     }
 }

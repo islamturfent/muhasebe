@@ -91,4 +91,8 @@ return [
     'fx_total' => 'FX Amount',
     'try_total' => 'TRY Equivalent',
     'warehouse_stock' => 'Stock by Warehouse',
+    'recorded_try' => 'Recorded TRY',
+    'current_try' => 'Current TRY',
+    'fx_diff' => 'FX Gain/Loss (Revaluation)',
+    'subtotal_currency' => 'Subtotal (:c)',
 ];

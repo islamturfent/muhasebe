@@ -185,6 +185,18 @@ final class InventoryService
             'UPDATE products SET stock_quantity = stock_quantity + :q, updated_at = :u WHERE id = :id',
             ['q' => $quantity, 'u' => now(), 'id' => $productId]
         );
+        // Keep the per-warehouse quantity in sync.
+        if ($warehouseId > 0) {
+            $exists = DB::first('SELECT id FROM product_warehouses WHERE product_id = :p AND warehouse_id = :w', ['p' => $productId, 'w' => $warehouseId]);
+            if ($exists) {
+                DB::execute('UPDATE product_warehouses SET quantity = quantity + :q, updated_at = :u WHERE id = :id', ['q' => $quantity, 'u' => now(), 'id' => (int) $exists['id']]);
+            } else {
+                DB::insert('product_warehouses', [
+                    'tenant_id' => $tenantId, 'company_id' => $companyId, 'product_id' => $productId,
+                    'warehouse_id' => $warehouseId, 'quantity' => $quantity, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        }
         return $id;
     }
 

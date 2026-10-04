@@ -29,6 +29,7 @@ $reports = [
     ['stok', 'report.stock'],
     ['stok-maliyet', 'report.stock_cost'],
     ['doviz', 'report.fx'],
+    ['kur-farki', 'report.fx_diff'],
     ['stok-depo', 'report.warehouse_stock'],
     ['satis', 'report.sales'],
     ['alis', 'report.purchases'],

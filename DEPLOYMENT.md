@@ -145,3 +145,40 @@ GET /api/health   →  {"ok":true,"time":"..."}
 - [x] File permissions: `storage/` writable by web server, project root not
       directly web-accessible
 - [x] `APP_MAINTENANCE` toggled off
+
+---
+
+## 9. Live Deployment Runbook (sıralı kurulum adımları)
+
+> Bu runbook, canlıya geçiş hazırlığını tek sırayla tarif eder. **Kurulum
+> yalnızca proje tamamen bitince yapılacaktır.**
+
+1. **Ortam** — `.env.production.example` → sunucuda gerçek `.env`'e kopyala,
+   `APP_ENV=production`, `APP_DEBUG=false`, `APP_HTTPS=true`, `SESSION_SECURE=true`,
+   gerçek `APP_KEY` (`php bin/muh key:generate`) ve güçlü DB parolası.
+2. **Veritabanı** — `php bin/muh migrate && php bin/muh seed` çalıştır.
+3. **Hazırlık gate** — `APP_ENV=production php bin/muh doctor` → tüm kontroller
+   PASS olmalı (maintenance/security indeksleri/storage).
+4. **Apache/Nginx vhost** — proje kökünü docroot yapma, `public/` docroot; TLS +
+   HTTP→HTTPS (bkz. bölüm 7).
+5. **Zamanlanmış işler (cron)**:
+   ```cron
+   # her gün 03:00 — veritabanı yedeği
+   0 3 * * *  cd /srv/hesap360 && php bin/muh backup >> storage/logs/cron.log 2>&1
+   # her gün 06:00 — vade/ödenmemiş fatura e-posta hatırlatmaları
+   0 6 * * *  cd /srv/hesap360 && php bin/muh reminders >> storage/logs/cron.log 2>&1
+   # her 15 dk — bildirim üretimi + e-Fatura durum sorgulama
+   */15 * * * * cd /srv/hesap360 && php bin/muh notifications && php bin/muh efatura:poll >> storage/logs/cron.log 2>&1
+   ```
+6. **Stripe (ödeme)** — Stripe dashboard'da webhook uç noktasını
+   `https://{domain}/api/billing/webhook` olarak ekle, imza anahtarını `BILLING_WEBHOOK_SECRET`'e
+   yaz (bkz. bölüm 5). Güvenlik ayarı açıksa webhook IP-bazlı rate-limit ile korunur.
+7. **e-Fatura entegratörü** — Ofis ayarları → e-Fatura: sağlayıcı (Logo/Foriba/İzibiz/Genel),
+   test/üretim URL'i, kullanıcı adı/şifre. Gerçek gönderim UBL-TR XML ile yapılır;
+   `php bin/muh efatura:poll` entegratörden durumları toplar.
+8. **Güvenlik politikaları** — `/admin/settings/security`: e-posta doğrulama/2FA zorunluluğu,
+   webhook rate-limit gereken şekilde aç.
+9. **Doğrulama** — demo akış (kayıt→onboarding→firma→fatura→e-Fatura→abonelik) + `php bin/muh test`
+   production ortamında PASS olmalı.
+10. **Gözetime alma** — `/api/health` 200, yedekler off-box'a aktarılıyor, `/admin/analytics`
+    ofis metrikleri izlenir.

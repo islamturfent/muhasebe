@@ -192,6 +192,7 @@ return function (Router $router): void {
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok-maliyet/export', [\Muh\Controllers\ReportsController::class, 'stokMaliyet'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/doviz/export', [\Muh\Controllers\ReportsController::class, 'doviz'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/kur-farki/export', [\Muh\Controllers\ReportsController::class, 'kurFarki'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok-depo/export', [\Muh\Controllers\ReportsController::class, 'stokDepo'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/satis/export', [\Muh\Controllers\ReportsController::class, 'satis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/alis/export', [\Muh\Controllers\ReportsController::class, 'alis'], [\Muh\Middleware\TenantMiddleware::class]);
