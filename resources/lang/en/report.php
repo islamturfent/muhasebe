@@ -84,6 +84,8 @@ return [
     'ledger' => 'General Ledger',
     'ledger_sub' => 'All movements per account with a cumulative balance',
     'stock_cost' => 'Stock Cost (Weighted Average)',
+    'stock_fifo' => 'Stock Cost (FIFO)',
+    'fifo_cost' => 'FIFO Cost',
     'avg_cost' => 'Avg. Cost',
     'fx' => 'FX / Currency Report',
     'currency' => 'Currency',

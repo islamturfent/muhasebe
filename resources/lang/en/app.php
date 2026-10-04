@@ -3,6 +3,7 @@
 return [
     'welcome' => 'Welcome to MUH Cloud Accounting',
     'all_companies' => 'All Companies',
+    'demo_banner' => 'Demo company: :company — this is sample data, not real financial data.',
     'company_switched' => 'Company switched.',
     'company_created' => 'Company created.',
     'logo_uploaded' => 'Company logo updated.',

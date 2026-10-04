@@ -80,6 +80,8 @@ return [
     'ledger' => 'Büyük Defter',
     'ledger_sub' => 'Hesap bazında tüm hareketler ve kümülatif bakiye',
     'stock_cost' => 'Stok Maliyet (Ağırlıklı Ortalama)',
+    'stock_fifo' => 'Stok Maliyet (FIFO)',
+    'fifo_cost' => 'FIFO Maliyet',
     'avg_cost' => 'Ort. Maliyet',
     'fx' => 'Döviz / Kur Raporu',
     'currency' => 'Döviz',

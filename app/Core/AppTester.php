@@ -795,6 +795,77 @@ final class AppTester
         }
         $results[] = ['name' => 'Depo bazlı stok miktarı (product_warehouses)', 'ok' => $pwOk, 'detail' => $pwDetail];
 
+        // ---- FIFO stok değerleme (layered) ----
+        $fifoOk = false; $fifoDetail = '';
+        try {
+            DB::transaction(function () use (&$fifoOk, &$fifoDetail) {
+                $comp = DB::first('SELECT * FROM companies WHERE tenant_id = 1 LIMIT 1');
+                $cid = (int) $comp['id']; $tid = (int) $comp['tenant_id'];
+                $wh = (int) DB::insert('warehouses', ['tenant_id' => $tid, 'company_id' => $cid, 'name' => 'FIFO Wh', 'code' => 'FIFOWH' . uniqid(), 'is_default' => 1, 'created_at' => now(), 'updated_at' => now()]);
+                $prod = (int) DB::insert('products', ['tenant_id' => $tid, 'company_id' => $cid, 'code' => 'FIFO' . uniqid(), 'name' => 'FIFO Test', 'type' => 'product', 'purchase_price' => 10, 'sale_price' => 20, 'vat_rate' => 20, 'stock_quantity' => 0, 'created_at' => now(), 'updated_at' => now()]);
+                // 10 adet @10 TL, sonra 10 adet @20 TL
+                \Muh\Services\InventoryService::recordMovement($tid, $cid, $wh, $prod, 'purchase', date('Y-m-d'), 10, 10.0, 'in1');
+                \Muh\Services\InventoryService::recordMovement($tid, $cid, $wh, $prod, 'purchase', date('Y-m-d'), 10, 20.0, 'in2');
+                // 12 satış → 10@10 + 2@20 tüketir, kalan 8@20
+                \Muh\Services\InventoryService::recordMovement($tid, $cid, $wh, $prod, 'sale', date('Y-m-d'), -12, 20.0, 'out1');
+                $fifo = \Muh\Services\InventoryService::fifoCost($prod);
+                $okQty = abs($fifo['qty'] - 8.0) < 0.01;
+                $okVal = abs($fifo['total'] - 160.0) < 0.01; // 8 × 20
+                $fifoOk = $okQty && $okVal;
+                $fifoDetail = $fifoOk ? ('FIFO katman ok (kalan=' . $fifo['qty'] . ' değer=' . $fifo['total'] . ')') : ('hata (BUG) qty=' . $fifo['qty'] . ' val=' . $fifo['total']);
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $fifoOk = false; $fifoDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Stok FIFO değerleme (katmanlı)', 'ok' => $fifoOk, 'detail' => $fifoDetail];
+
+        // ---- Toplu UBL-ZIP (ZipArchive + UBL birleştirme) ----
+        $zipOk = false; $zipDetail = '';
+        try {
+            $inv = ['number' => 'F-200', 'type' => 'SATIS', 'date' => date('Y-m-d'), 'currency_code' => 'TRY', 'subtotal' => 50, 'total' => 60, 'tax' => 10, 'company_tax' => '1', 'company_name' => 'ACME', 'account_tax' => '2', 'account_name' => 'M A'];
+            $items = [['product_name' => 'X', 'quantity' => 1, 'unit_price' => 50, 'total' => 50]];
+            $xmls = [\Muh\Services\EFatura\UblTrGenerator::generate($inv, $items, false), \Muh\Services\EFatura\UblTrGenerator::generate($inv, $items, true)];
+            if (class_exists('ZipArchive')) {
+                $tmp = tempnam(sys_get_temp_dir(), 'ublt') . '.zip';
+                $zip = new \ZipArchive();
+                $zipOk = $zip->open($tmp, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true;
+                $zip->addFromString('F-200.xml', $xmls[0]);
+                $zip->addFromString('irsaliye-F-200.xml', $xmls[1]);
+                $zip->close();
+                $zipOk = $zipOk && is_file($tmp) && filesize($tmp) > 0;
+                @unlink($tmp);
+                $zipDetail = $zipOk ? 'ZipArchive + UBL birleştirme ok' : 'hata (BUG)';  
+            } else {
+                $zipDetail = 'ZipArchive yok (kütüphane eksik)';  
+                $zipOk = false;  
+            }
+        } catch (\Throwable $e) {
+            $zipOk = false; $zipDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Toplu UBL-ZIP (ZipArchive)', 'ok' => $zipOk, 'detail' => $zipDetail];
+
+        // ---- Demo veri işareti (companies.is_demo) ----
+        $demoOk = false; $demoDetail = '';
+        try {
+            DB::transaction(function () use (&$demoOk, &$demoDetail) {
+                $cols = DB::select('SHOW COLUMNS FROM companies');
+                $has = false;
+                foreach ($cols as $c) { if (strtolower((string) $c['Field']) === 'is_demo') { $has = true; break; } }
+                $comp = DB::first('SELECT id FROM companies WHERE tenant_id = 1 LIMIT 1');
+                DB::execute('UPDATE companies SET is_demo = 1, updated_at = :n WHERE id = :id', ['n' => now(), 'id' => (int) $comp['id']]);
+                $demoOk = $has && (int) DB::scalar('SELECT is_demo FROM companies WHERE id = :id', ['id' => (int) $comp['id']]) === 1;
+                $demoDetail = $demoOk ? 'is_demo kolonu + işaretleme ok' : 'hata (BUG)';  
+                DB::execute('UPDATE companies SET is_demo = 0 WHERE id = :id', ['id' => (int) $comp['id']]);
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $demoOk = false; $demoDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Demo veri işareti (companies.is_demo)', 'ok' => $demoOk, 'detail' => $demoDetail];
+
         return $results;
     }
 }

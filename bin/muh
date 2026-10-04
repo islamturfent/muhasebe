@@ -67,6 +67,21 @@ switch ($command) {
     case 'backup':
         $file = (new \Muh\Database\Backup())->run();
         echo "Backup saved: {$file}\n";
+        if (in_array('--upload', $args, true)) {
+            $remote = \Muh\Database\Backup::upload($file);
+            echo $remote ? "Off-box uploaded: {$remote}\n" : "Off-box: BACKUP_REMOTE_DIR not set or copy failed.\n";
+        }
+        break;
+
+    case 'backup:restore':
+    case 'restore':
+        $backupFile = $args[1] ?? '';
+        if ($backupFile === '') {
+            echo "Usage: php bin/muh backup:restore <path.sql>\n";
+            exit(1);
+        }
+        $n = \Muh\Database\Backup::restore($backupFile);
+        echo $n > 0 ? "Restore ok ({$n} statement group executed).\n" : "Restore: nothing executed (check mysql client / file).\n";
         break;
 
     case 'key:generate':
@@ -94,6 +109,23 @@ switch ($command) {
             DB::execute('UPDATE users SET is_system_admin = 1, updated_at = :n WHERE id = :id', ['n' => now(), 'id' => (int) $user['id']]);
             echo "Promoted to super admin: {$email} ({$user['name']})\n";
         }
+        break;
+
+    case 'company:demo':
+        // Mark/unmark a company as demo (sample) data. Usage: php bin/muh company:demo <id> [0|1]
+        $companyId = (int) ($args[1] ?? 0);
+        $on = ($args[2] ?? '1') !== '0';
+        if ($companyId <= 0) {
+            echo "Usage: php bin/muh company:demo <company_id> [0|1]\n";
+            exit(1);
+        }
+        $co = DB::first('SELECT id, name FROM companies WHERE id = :id AND deleted_at IS NULL', ['id' => $companyId]);
+        if (!$co) {
+            echo "Company not found: {$companyId}\n";
+            exit(1);
+        }
+        DB::execute('UPDATE companies SET is_demo = :d, updated_at = :n WHERE id = :id', ['d' => (int) $on, 'n' => now(), 'id' => $companyId]);
+        echo "Company #{$companyId} ({$co['name']}) " . ($on ? 'demo olarak işaretlendi' : 'demo olmaktan çıkarıldı') . ".\n";
         break;
 
     case 'reminders':
@@ -200,6 +232,74 @@ switch ($command) {
 
     case 'test-db':
         echo "Driver: " . DB::driver() . "\n";
+        break;
+
+    case 'i18n:check':
+        // Translation completeness check: report tr/en key differences and any
+        // __('...') keys used in code that are missing from both language files.
+        $langDir = dirname(__DIR__) . '/resources/lang';
+        $load = function (string $dir) {
+            $keys = [];
+            foreach (glob($dir . '/*.php') as $file) {
+                $base = basename($file, '.php');
+                foreach ((array) include $file as $k => $v) {
+                    $keys[$base . '.' . $k] = $v;
+                }
+            }
+            return $keys;
+        };
+        $tr = $load($langDir . '/tr');
+        $en = $load($langDir . '/en');
+        $missingEn = array_diff_key($tr, $en);
+        $missingTr = array_diff_key($en, $tr);
+
+        // Scan source for __('key') / __('key', [...]) usages.
+        $used = [];
+        $scanDir = dirname(__DIR__) . '/app';
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($scanDir));
+        foreach ($it as $f) {
+            if (!$f->isFile() || substr($f->getFilename(), -4) !== '.php') {
+                continue;
+            }
+            $c = (string) file_get_contents($f->getPathname());
+            if (preg_match_all("/__\s*\(\s*'([^']+)'\)/", $c, $m)) {
+                foreach ($m[1] as $key) {
+                    $used[$key] = true;
+                }
+            }
+        }
+        $unknown = [];
+        foreach (array_keys($used) as $key) {
+            if (!isset($tr[$key]) && !isset($en[$key])) {
+                $unknown[$key] = true;
+            }
+        }
+
+        $fails = 0;
+        echo "TR/EN anahtar farkı:\n";
+        if (!$missingEn && !$missingTr) {
+            echo "  [OK] tr ve en anahtar kümeleri eşit (" . count($tr) . " anahtar).\n";
+        } else {
+            foreach ($missingEn as $k => $v) {
+                $fails++;
+                echo "  [FAIL] en eksik: {$k}\n";
+            }
+            foreach ($missingTr as $k => $v) {
+                $fails++;
+                echo "  [FAIL] tr eksik: {$k}\n";
+            }
+        }
+        echo "Tanımsız __() anahtarları:\n";
+        if (!$unknown) {
+            echo "  [OK] kodda tanımsız `__()` anahtarı yok (" . count($used) . " kullanım denetlendi).\n";
+        } else {
+            foreach (array_keys($unknown) as $k) {
+                $fails++;
+                echo "  [FAIL] tanımsız: {$k}\n";
+            }
+        }
+        echo "\nToplam " . count($tr) . " (tr) / " . count($en) . " (en) anahtar; {$fails} sorun.\n";
+        exit($fails > 0 ? 1 : 0);
         break;
 
     default:

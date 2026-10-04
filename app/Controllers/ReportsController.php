@@ -417,6 +417,29 @@ final class ReportsController extends Controller
         return $this->export($format, __('report.stock_cost'), 'C:' . $companyId, $headers, $out, 'stok-maliyet');
     }
 
+    // ---- Report: Stok FIFO değerleme ----
+    public function stokFifo(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $products = DB::select(
+            'SELECT id, code, name, stock_quantity FROM products WHERE company_id = :c AND deleted_at IS NULL ORDER BY code',
+            ['c' => $companyId]
+        );
+        $headers = [__('inventory.code'), __('inventory.name'), __('report.stock_qty'), __('report.fifo_cost'), __('report.stock_value')];
+        $out = [];
+        $total = 0.0;
+        foreach ($products as $p) {
+            $fifo = \Muh\Services\InventoryService::fifoCost((int) $p['id']);
+            $total += $fifo['total'];
+            $out[] = [$p['code'], $p['name'], number_format((float) $p['stock_quantity'], 2, ',', '.'),
+                number_format($fifo['cost'], 4, ',', '.'), number_format($fifo['total'], 2, ',', '.')];
+        }
+        $out[] = ['', __('common.total'), '', '', number_format($total, 2, ',', '.')];
+        return $this->export($format, __('report.stock_fifo'), 'C:' . $companyId, $headers, $out, 'stok-fifo');
+    }
+
     // ---- Report: Döviz / Kur (foreign-currency invoices) ----
     public function doviz(Request $request): Response
     {

@@ -79,4 +79,70 @@ final class Backup
         $out .= "SET FOREIGN_KEY_CHECKS=1;\n";
         file_put_contents($file, $out);
     }
+
+    /**
+     * Off-box upload: copy a backup file to BACKUP_REMOTE_DIR (local mount or
+     * mounted network drive) when configured. Returns the remote path or null.
+     */
+    public static function upload(string $file): ?string
+    {
+        $remote = (string) (getenv('BACKUP_REMOTE_DIR') ?: '');
+        if ($remote === '' || !is_file($file)) {
+            return null;
+        }
+        if (!is_dir($remote)) {
+            @mkdir($remote, 0775, true);
+        }
+        $dest = rtrim($remote, '/') . '/' . basename($file);
+        return @copy($file, $dest) ? $dest : null;
+    }
+
+    /**
+     * Restore a .sql backup. Uses the mysql client when available; otherwise a
+     * best-effort statement-by-statement PDO import.
+     *
+     * @return int number of statements executed (best-effort)
+     */
+    public static function restore(string $file): int
+    {
+        if (!is_file($file)) {
+            throw new \InvalidArgumentException("Backup file not found: {$file}");
+        }
+        $driver = DB::driver();
+        if ($driver === 'mysql') {
+            $cfg = Config::get('database.connections.mysql', []);
+            $bin = 'mysql';
+            $cmd = sprintf(
+                '"%s" -h %s -P %s -u %s %s %s < "%s" 2>/dev/null',
+                $bin,
+                $cfg['host'] ?? '127.0.0.1',
+                $cfg['port'] ?? '3306',
+                $cfg['username'] ?? 'root',
+                $cfg['password'] !== '' ? '-p' . $cfg['password'] : '',
+                $cfg['database'] ?? 'muh',
+                $file
+            );
+            @exec($cmd, $out, $code);
+            if ($code === 0) {
+                return 1;
+            }
+        }
+        // Best-effort PDO import.
+        $pdo = DB::pdo();
+        $sql = (string) file_get_contents($file);
+        $statements = array_filter(array_map('trim', explode(';', $sql)));
+        $n = 0;
+        foreach ($statements as $stmt) {
+            if ($stmt === '') {
+                continue;
+            }
+            try {
+                $pdo->exec($stmt);
+                $n++;
+            } catch (\Throwable $e) {
+                // ignore per-statement failures for partial/targeted restores
+            }
+        }
+        return $n;
+    }
 }

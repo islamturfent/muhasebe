@@ -3,6 +3,7 @@
 return [
     'welcome' => 'MUH Bulut Muhasebeye hoş geldiniz',
     'all_companies' => 'Tüm Firmalar',
+    'demo_banner' => 'Demo firma: :company — bu örnek veridir, gerçek mali veri değildir.',
     'company_switched' => 'Firma değiştirildi.',
     'company_created' => 'Firma oluşturuldu.',
     'logo_uploaded' => 'Firma logosu güncellendi.',

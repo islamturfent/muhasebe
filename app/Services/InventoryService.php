@@ -254,6 +254,51 @@ final class InventoryService
     }
 
     /**
+     * FIFO layered cost for a product: inbound movements become cost layers;
+     * outbound movements consume them first-in-first-out. Returns remaining
+     * quantity, weighted cost per unit and total FIFO value.
+     *
+     * @return array{qty:float,cost:float,total:float}
+     */
+    public static function fifoCost(int $productId): array
+    {
+        $moves = DB::select(
+            'SELECT quantity, unit_price FROM stock_movements WHERE product_id = :id ORDER BY date, id',
+            ['id' => $productId]
+        );
+        $layers = []; // [qty, price]
+        foreach ($moves as $m) {
+            $qty = (float) $m['quantity'];
+            $price = (float) ($m['unit_price'] ?? 0);
+            if ($qty > 0 && $price > 0) {
+                $layers[] = ['qty' => $qty, 'price' => $price];
+            } elseif ($qty < 0) {
+                $toConsume = -$qty;
+                foreach ($layers as $i => &$layer) {
+                    if ($toConsume <= 0) {
+                        break;
+                    }
+                    $take = min($layer['qty'], $toConsume);
+                    $layer['qty'] -= $take;
+                    $toConsume -= $take;
+                    if ($layer['qty'] <= 0) {
+                        unset($layers[$i]);
+                    }
+                }
+                unset($layer);
+                $layers = array_values($layers);
+            }
+        }
+        $totalVal = 0.0;
+        $totalQty = 0.0;
+        foreach ($layers as $l) {
+            $totalQty += $l['qty'];
+            $totalVal += $l['qty'] * $l['price'];
+        }
+        return ['qty' => $totalQty, 'cost' => $totalQty > 0 ? round($totalVal / $totalQty, 4) : 0.0, 'total' => round($totalVal, 2)];
+    }
+
+    /**
      * Physical stock count (sayım): set the real counted quantity for a
      * product. Records an 'adjustment' movement equal to counted - current so
      * the stock ledger always reconciles; runs inside a transaction.

@@ -59,7 +59,7 @@ bin/                    CLI (muh migrate | seed)
 
 ## Continuous integration
 A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
-- **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (24 checks).
+- **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (50 checks).
 - **security**: starts the app with the PHP built-in server and runs `php bin/muh security` (live HTTP CSRF / tenant isolation / RBAC checks).
 
 No Composer or external package install is required — the app is dependency-free.
@@ -132,20 +132,20 @@ To use PostgreSQL:
 | 2 | Tenant + office + company management | ✅ (registration/onboarding, company mgmt) |
 | 3 | Users + roles + permissions | ✅ (RBAC seed + Auth::can) |
 | 4 | Customers + current accounts | ✅ current accounts (list/create/edit/delete, balances, movements, audit)
-| 5 | Inventory + warehouse | ✅ products, warehouses, stock movements, opening stock |
+| 5 | Inventory + warehouse | ✅ products, warehouses, stock movements, opening stock, per-warehouse stock, FIFO değerleme |
 | 6 | Sales + purchase + invoices | ✅ invoice posting → cari + stock + VAT + journal in one transaction |
 | 7 | Cash + bank + checks | ✅ kasa, banka ekstre, çek + senet portföy, durum takibi |
 | 8 | Accounting engine (double-entry) | ✅ balanced journal, mizan, bilanço, gelir tablosu |
-| 9 | Reports | ✅ report pages + PDF/Excel/CSV export (custom PDF engine, no libs) |
+| 9 | Reports | ✅ report pages + PDF/Excel/CSV export (custom PDF engine, no libs); FIFO stok raporu |
 | 10 | Subscription + billing | ✅ payment gateway abstraction (`SimulatedGateway` default + `StripePaymentGateway` real), webhook auto-update + signature verify, plan limits enforced |
 | 11 | Notifications + documents | ✅ file upload/download per company, notification centre + auto scans |
-| 12 | Security + audit + backups | ✅ audit viewer, TOTP 2FA, `bin/muh backup` SQL dumps |
+| 12 | Security + audit + backups | ✅ audit viewer, TOTP 2FA, `bin/muh backup` SQL dumps + off-box upload (`--upload`) + restore (`backup:restore`) |
 | 13 | TR/EN localization | ✅ all UI text via translation files (hard-coded Turkish removed) |
-| 14 | Testing/perf/production | ✅ `php bin/muh test` (24 self-tests), `php bin/muh security` (HTTP: CSRF, tenant izolasyonu, RBAC /admin), security headers, .env, maintenance mode, pagination |
-| Opt. | e-Fatura / e-Arşiv | ✅ `EFaturaGateway` interface + simulated (default) + `RESTEFaturaGateway` (gerçek HTTP entegratör, test/prod, Basic auth); e-Fatura + e-Arşiv send, doc type + envelope id |
+| 14 | Testing/perf/production | ✅ `php bin/muh test` (50 self-tests), `php bin/muh security`, `php bin/muh i18n:check`, security headers, .env, maintenance mode, pagination |
+| Opt. | e-Fatura / e-Arşiv | ✅ `EFaturaGateway` interface + simulated (default) + `RESTEFaturaGateway` (gerçek HTTP entegratör, test/prod, Basic auth); e-Fatura + e-Arşiv send, doc type + envelope id, UBL-TR XML + irsaliye + **toplu UBL/ZIP indirme** (`/app/invoices/ubl-bulk`) |
 | Opt. | Global search | ✅ grouped results across company/cari/invoice/product/entry/bank/cash/check/note |
 | Opt. | Import / Export | ✅ CSV import of current accounts & stock (mapping, preview, error report); CSV/Excel/PDF export |
-| Opt. | Demo data | ✅ `0004_demo_company` seeder provisions a full demo firm (chart, warehouse, cari, stock, posted invoices) |
+| Opt. | Demo data | ✅ `0004_demo_company` seeder provisions a full demo firm (chart, warehouse, cari, stock, posted invoices); `companies.is_demo` işareti + banner (`php bin/muh company:demo <id>`), off-box backup (`BACKUP_REMOTE_DIR`) |
 | Opt. | Production prep | ✅ `APP_ENV`/`APP_DEBUG`/`APP_KEY` via `.env`, HTTPS + HSTS + CSP, `php bin/muh key:generate`, see `DEPLOYMENT.md` |
 | Opt. | Raporlar (spec #16) | ✅ Stok, Satış, Alış, Kasa, Banka, Kârlılık, Borç/Alacak + Mizan/Yevmiye/Bilanço/Gelir/KDV/Cari; PDF/Excel/CSV |
 | Opt. | Vergi oranları | ✅ tenant-scoped `tax_rates` management screen (KDV / tevkifat) |
@@ -156,6 +156,33 @@ To use PostgreSQL:
 
 Financial values are stored as `DECIMAL(15,2)` and all multi-step writes run inside
 DB transactions to keep DR/CR balanced and consistent.
+
+---
+
+## CLI & ops commands
+
+`php bin/muh <command>` (XAMPP/PHP CLI, no Composer needed):
+
+| Command | Purpose |
+|---------|---------|
+| `migrate [--fresh]` | Run DB migrations (`--fresh` drops & recreates all tables) |
+| `seed` | Seed plans/roles/permissions/KDV rates + demo office & company |
+| `test` | Run the self-test suite (currently 50 checks) against the configured DB |
+| `security` | Live HTTP security check (CSRF, tenant isolation, RBAC) |
+| `doctor` | Production-readiness self-check (no deploy) |
+| `i18n:check` | Translation completeness — tr/en key diff + undefined `__()` keys |
+| `backup` | SQL dump to `storage/backups` (uses `mysqldump` if present, else pure-PDO dump) |
+| `backup --upload` | Also copy the dump to `BACKUP_REMOTE_DIR` (off-box / mounted network drive) |
+| `backup:restore <file.sql>` | Restore a `.sql` backup (mysql client, else statement-based PDO import) |
+| `company:demo <id> [0\|1]` | Mark/unmark a company as demo data (`companies.is_demo`, shows a UI banner) |
+| `admin:make <email>` | Promote a user to super admin |
+| `key:generate` | Generate a random `APP_KEY` |
+| `reminders` / `notifications` | Send automatic due-invoice e-mails / generate notifications |
+| `efatura:poll` | Advance e-Fatura statuses for all tenants via the configured gateway |
+
+**Off-box backup** is opt-in: set `BACKUP_REMOTE_DIR` to a local mount or mounted
+network drive and run `php bin/muh backup --upload`. Restore with
+`php bin/muh backup:restore <file.sql>`.
 
 ---
 

@@ -91,6 +91,7 @@ return function (Router $router): void {
         $g->get('/app/invoices/bulk/create', [\Muh\Controllers\InvoiceController::class, 'bulkCreate'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/bulk', [\Muh\Controllers\InvoiceController::class, 'bulk'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices', [\Muh\Controllers\InvoiceController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/invoices/ubl-bulk', [\Muh\Controllers\InvoiceController::class, 'ublBulk'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}', [\Muh\Controllers\InvoiceController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}/ubl', [\Muh\Controllers\InvoiceController::class, 'ubl'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}/print', [\Muh\Controllers\InvoiceController::class, 'print'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -191,6 +192,7 @@ return function (Router $router): void {
         $g->get('/app/reports/efatura/export', [\Muh\Controllers\ReportsController::class, 'efatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok-maliyet/export', [\Muh\Controllers\ReportsController::class, 'stokMaliyet'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/stok-fifo/export', [\Muh\Controllers\ReportsController::class, 'stokFifo'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/doviz/export', [\Muh\Controllers\ReportsController::class, 'doviz'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/kur-farki/export', [\Muh\Controllers\ReportsController::class, 'kurFarki'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok-depo/export', [\Muh\Controllers\ReportsController::class, 'stokDepo'], [\Muh\Middleware\TenantMiddleware::class]);

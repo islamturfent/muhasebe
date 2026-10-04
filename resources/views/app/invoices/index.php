@@ -11,6 +11,8 @@ $locale = Translator::instance()->locale();
     <div class="flex items-center gap-2">
         <?php $fq = 'company_id=' . (int)$companyId . '&type=' . e($type ?? '') . '&from=' . e($from ?? '') . '&to=' . e($to ?? ''); ?>
         <a href="<?= e(url('/app/invoices/bulk-print?' . $fq)) ?>" target="_blank" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300" title="<?= e(__('invoice.bulk_print')) ?>">🖨 <?= e(__('invoice.bulk_print')) ?></a>
+        <a href="<?= e(url('/app/invoices/ubl-bulk?' . $fq . '&doc_type=invoice')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300" title="<?= e(__('invoice.ubl_bulk')) ?>">🗜 <?= e(__('invoice.ubl_bulk')) ?></a>
+        <a href="<?= e(url('/app/invoices/ubl-bulk?' . $fq . '&doc_type=despatch')) ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:border-brand-300" title="<?= e(__('invoice.ubl_bulk_despatch')) ?>">📦 <?= e(__('invoice.ubl_bulk_despatch')) ?></a>
         <a href="<?= e(url('/app/invoices/create')) ?>" class="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">+ <?= e(__('invoice.new')) ?></a>
     </div>
 </div>

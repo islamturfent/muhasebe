@@ -28,6 +28,7 @@ $reports = [
     ['kdv-beyanname', 'report.vat_declaration'],
     ['stok', 'report.stock'],
     ['stok-maliyet', 'report.stock_cost'],
+    ['stok-fifo', 'report.stock_fifo'],
     ['doviz', 'report.fx'],
     ['kur-farki', 'report.fx_diff'],
     ['stok-depo', 'report.warehouse_stock'],

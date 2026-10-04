@@ -38,6 +38,8 @@ return [
     'status' => 'Durum',
     'thanks' => 'İş birliğiniz için teşekkür ederiz.',
     'bulk_print' => 'Toplu PDF',
+    'ubl_bulk' => 'UBL ZIP (e-Fatura)',
+    'ubl_bulk_despatch' => 'UBL ZIP (İrsaliye)',
     'back' => 'Faturalara dön',
     'print' => 'Yazdır / PDF',
     'stock_sales' => ':no satış faturası stok çıkışı',

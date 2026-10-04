@@ -11,6 +11,8 @@ return [
     'bad_module' => 'Geçersiz veri türü seçildi.',
     'file_required' => 'Lütfen bir dosya yükleyin.',
     'bad_format' => 'Yalnızca .xlsx veya .csv dosyaları desteklenir.',
+    'invalid_row' => 'Geçersiz satır.',
+    'dup_code' => 'Bu kod zaten kayıtlı.',
     'empty_file' => 'Dosyada veri bulunamadı.',
     'duplicate' => ':code kodu bu firmada zaten var.',
     'required' => 'Zorunlu alanlar eksik: :fields',

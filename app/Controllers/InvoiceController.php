@@ -447,6 +447,87 @@ final class InvoiceController extends Controller
         ]);
     }
 
+    /** Toplu UBL-TR ZIP indir: filtreye uyan faturaların UBL XML'lerini tek bir arşivde toplar. */
+    public function ublBulk(Request $request): Response
+    {
+        Auth::requireCan('invoice.read');
+        $tenantId = Auth::tenantId();
+        $companyId = (int) ($request->query('company_id') ?? 0);
+        $type = $request->query('type') ?: null;
+        $from = $request->query('from') ?: null;
+        $to = $request->query('to') ?: null;
+        $despatch = (string) ($request->query('doc_type', 'invoice') ?: 'invoice') === 'despatch';
+
+        $sql = 'SELECT i.id FROM invoices i
+                 JOIN companies c ON c.id = i.company_id
+                WHERE i.tenant_id = :t AND i.deleted_at IS NULL';
+        $params = ['t' => $tenantId];
+        if ($companyId) {
+            $sql .= ' AND i.company_id = :c';
+            $params['c'] = $companyId;
+        }
+        if ($type && in_array($type, ['sales', 'purchase', 'sales_return', 'purchase_return', 'proforma'], true)) {
+            $sql .= ' AND i.type = :type';
+            $params['type'] = $type;
+        }
+        if ($from) {
+            $sql .= ' AND i.date >= :from';
+            $params['from'] = $from;
+        }
+        if ($to) {
+            $sql .= ' AND i.date <= :to';
+            $params['to'] = $to;
+        }
+        $sql .= ' ORDER BY i.id DESC LIMIT 200';
+        $ids = array_column(DB::select($sql, $params), 'id');
+
+        $zip = new \ZipArchive();
+        $tmp = tempnam(sys_get_temp_dir(), 'ubl') . '.zip';
+        if ($zip->open($tmp, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return Response::redirect('/app/invoices');
+        }
+
+        $added = 0;
+        foreach ($ids as $id) {
+            $inv = DB::first(
+                'SELECT i.*, c.name AS company_name, c.tax_number AS company_tax, c.address AS company_address,
+                        c.currency AS company_currency, ca.name AS account_name, ca.tax_number AS account_tax
+                   FROM invoices i
+                   JOIN companies c ON c.id = i.company_id
+                   LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+                  WHERE i.id = :id AND i.tenant_id = :t AND i.deleted_at IS NULL',
+                ['id' => (int) $id, 't' => $tenantId]
+            );
+            if (!$inv) {
+                continue;
+            }
+            $items = DB::select(
+                'SELECT ii.*, p.name AS product_name FROM invoice_items ii
+                  LEFT JOIN products p ON p.id = ii.product_id WHERE ii.invoice_id = :id ORDER BY ii.id',
+                ['id' => (int) $id]
+            );
+            $xml = \Muh\Services\EFatura\UblTrGenerator::generate($inv, $items, $despatch);
+            $local = ($despatch ? 'irsaliye-' : '') . (string) ($inv['number'] ?: ('fatura-' . $inv['id'])) . '.xml';
+            $local = preg_replace('/[^A-Za-z0-9._-]/', '-', $local);
+            $zip->addFromString($local, $xml);
+            $added++;
+        }
+        $zip->close();
+
+        if ($added === 0 || !is_file($tmp)) {
+            @unlink($tmp);
+            Session::flash('error', __('efatura.select_invoices'));
+            return Response::redirect('/app/invoices');
+        }
+
+        $content = (string) file_get_contents($tmp);
+        @unlink($tmp);
+        return Response::make($content, 200, [
+            'Content-Type' => 'application/zip',
+            'Content-Disposition' => 'attachment; filename="' . ($despatch ? 'irsaliye-ubl' : 'efatura-ubl') . '-' . date('Ymd-His') . '.zip"',
+        ]);
+    }
+
     public function sendEfatura(Request $request, $id): Response
     {
         $id = (int) $id;

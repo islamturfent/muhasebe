@@ -11,6 +11,8 @@ return [
     'bad_module' => 'Invalid data type selected.',
     'file_required' => 'Please upload a file.',
     'bad_format' => 'Only .xlsx or .csv files are supported.',
+    'invalid_row' => 'Invalid row.',
+    'dup_code' => 'This code is already in use.',
     'empty_file' => 'No data found in the file.',
     'duplicate' => 'Code :code already exists for this company.',
     'required' => 'Required fields missing: :fields',

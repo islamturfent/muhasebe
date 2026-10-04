@@ -38,6 +38,8 @@ return [
     'status' => 'Status',
     'thanks' => 'Thank you for your business.',
     'bulk_print' => 'Bulk PDF',
+    'ubl_bulk' => 'UBL ZIP (e-Invoice)',
+    'ubl_bulk_despatch' => 'UBL ZIP (Despatch)',
     'back' => 'Back to invoices',
     'print' => 'Print / PDF',
     'stock_sales' => ':no sales invoice stock-out',

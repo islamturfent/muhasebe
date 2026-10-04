@@ -156,6 +156,12 @@ $menu = [
             </div>
         </header>
 
+        <?php if (!empty($activeCompany['is_demo'])): ?>
+        <div class="bg-sky-100 border-b border-sky-300 px-4 py-2 text-center text-sm text-sky-800">
+            🧪 <?= e(__('app.demo_banner', ['company' => $activeCompany['name'] ?? ''])) ?>
+        </div>
+        <?php endif; ?>
+
         <?php if ($impersonator = \Muh\Core\Session::get('_impersonator')): ?>
         <div class="bg-amber-100 border-b border-amber-300 px-4 py-2 flex items-center justify-center gap-3 text-sm text-amber-800">
             <span>👁 <?= e(__('admin.impersonation_bar')) ?></span>
