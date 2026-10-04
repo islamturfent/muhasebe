@@ -166,6 +166,13 @@ jobs:
         run: |
           php bin/muh test:email-template
 
+      - name: SMTP client gate (loopback relay)
+        env:
+          APP_ENV: production
+          APP_DEBUG: 'false'
+        run: |
+          php bin/muh test:smtp
+
   backup-rotation:
     name: Gate — yedek rotasyonu (backup)
     runs-on: ubuntu-latest

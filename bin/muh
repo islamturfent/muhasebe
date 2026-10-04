@@ -119,6 +119,101 @@ switch ($command) {
         exit($ok ? 0 : 1);
         break;
 
+    case 'test:smtp':
+        // Focused gate (#3): real SMTP client (SmtpMailer) end-to-end against a
+        // local loopback SMTP relay — verifies EHLO (multiline), AUTH LOGIN,
+        // MAIL/RCPT/DATA/QUIT and actual message delivery.
+        $port = 2525;
+        $tmp = sys_get_temp_dir();
+        $out = $tmp . '/muh_smtp_out_' . getmypid();
+        @mkdir($out, 0777, true);
+        $ready = $tmp . '/muh_smtp_ready_' . getmypid();
+        $log = $tmp . '/muh_smtp_log_' . getmypid() . '.txt';
+        @unlink($ready); @unlink($log);
+
+        $serverCode = <<<'SRV'
+<?php
+$port=(int)($argv[1]??2525); $out=$argv[2]; $ready=$argv[3]; $log=$argv[4];
+function lg($m){ file_put_contents($GLOBALS['log'], $m."\n", FILE_APPEND); }
+@unlink($GLOBALS['ready']);
+$srv=stream_socket_server("tcp://127.0.0.1:$port",$e,$s);
+if(!$srv){ lg("bind fail"); exit(1); }
+file_put_contents($GLOBALS['ready'],'1');
+$n=0;
+while($n<2){
+  $c=@stream_socket_accept($srv,15); if(!$c){ lg("accept timeout"); continue; }
+  $n++; lg("accepted $n");
+  stream_set_timeout($c,10);
+  fwrite($c,"220 localhost ESMTP\r\n");
+  $inData=false; $data='';
+  $seq='';
+  while(!feof($c)){
+    $l=fgets($c); if($l===false){break;} $l=rtrim($l,"\r\n"); $u=strtoupper($l); $seq.=substr($l,0,16)."|";
+    if($inData){ if($l==='.'){ $inData=false; fwrite($c,"250 ok\r\n"); } else { $data.=$l."\n"; } continue; }
+    if(str_starts_with($u,'EHLO')){ fwrite($c,"250-localhost\r\n250 AUTH LOGIN\r\n"); }
+    elseif($u==='AUTH LOGIN'){ fwrite($c,"334 VXNlcm5hbWU6\r\n"); }
+    elseif($l==='YWRtaW4='){ fwrite($c,"334 UGFzc3dvcmQ6\r\n"); }
+    elseif($l==='c2VjcmV0'){ fwrite($c,"235 ok\r\n"); }
+    elseif(str_starts_with($u,'MAIL FROM')||str_starts_with($u,'RCPT TO')){ fwrite($c,"250 ok\r\n"); }
+    elseif($u==='DATA'){ fwrite($c,"354 go\r\n"); $inData=true; }
+    elseif($u==='QUIT'){ fwrite($c,"221 bye\r\n"); file_put_contents("$out/msg-$n.eml",$data); file_put_contents("$out/seq-$n.txt",$seq); break; }
+    else { fwrite($c,"250 ok\r\n"); }
+  }
+  @fclose($c);
+}
+SRV;
+        $serverFile = $tmp . '/muh_smtp_srv_' . getmypid() . '.php';
+        file_put_contents($serverFile, $serverCode . PHP_EOL);
+
+        $proc = null;
+        $pipes = [];
+        $desc = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+        $ok = true; $checks = [];
+        try {
+            $proc = proc_open([PHP_BINARY, $serverFile, (string) $port, $out, $ready, $log], $desc, $pipes);
+            if (!is_resource($proc)) { throw new \RuntimeException('proc_open failed'); }
+            // wait for the relay to bind
+            $waited = 0;
+            while (!file_exists($ready) && $waited < 40) { usleep(200000); $waited++; }
+            $base = ['enabled' => true, 'host' => '127.0.0.1', 'port' => $port, 'encryption' => 'none', 'from' => 'NoReply <no-reply@muh.local>'];
+            $r1 = (new \Muh\Services\Mailer())->send('hesap@firma.com', 'Test: vade bildirimi', '<p>Fatura vadesi yaklaşıyor.</p>', $base);
+            $auth = $base; $auth['username'] = 'admin'; $auth['password'] = 'secret';
+            $r2 = (new \Muh\Services\Mailer())->send('cari@example.com', 'Test: AUTH LOGIN', '<p>kimlik doğrulamalı gönderim</p>', $auth);
+            $checks['Düz e-posta (no-auth)'] = $r1 === true;
+            $checks['AUTH LOGIN e-posta'] = $r2 === true;
+            $m1 = file_get_contents($out . '/msg-1.eml');
+            $m2 = file_get_contents($out . '/msg-2.eml');
+            $checks['İçerik teslimi (plain)'] = str_contains((string) $m1, 'vade bildirimi') && str_contains((string) $m1, 'Fatura vadesi yaklaşıyor');
+            $checks['İçerik teslimi (auth)'] = str_contains((string) $m2, 'AUTH LOGIN') && str_contains((string) $m2, 'kimlik doğrulamalı');
+            // A multiline EHLO (250-/250 AUTH LOGIN) must NOT desync the session:
+            // assert the server saw a clean EHLO->MAIL->RCPT->DATA->QUIT flow.
+            $s1 = (string) file_get_contents($out . '/seq-1.txt');
+            $s2 = (string) file_get_contents($out . '/seq-2.txt');
+            $full = $s1 . '|' . $s2;
+            $checks['Çok satırlı EHLO (oturum senkron)'] =
+                str_contains($full, 'EHLO muh.local')
+                && substr_count($full, 'MAIL FROM') >= 2
+                && substr_count($full, 'RCPT TO') >= 2
+                && substr_count($full, 'DATA') >= 2
+                && substr_count($full, 'QUIT') >= 2
+                && $r1 === true && $r2 === true;
+        } catch (\Throwable $e) {
+            $checks['istisna'] = false;
+            fwrite(STDERR, "  SMTP gate exception: {$e->getMessage()}\n");
+            $ok = false;
+        } finally {
+            if (is_resource($proc)) { @fclose($pipes[0]); @fclose($pipes[1]); @fclose($pipes[2]); proc_terminate($proc); @proc_close($proc); }
+        }
+        foreach ($checks as $n => $v) {
+            echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
+            if (!$v) { $ok = false; }
+        }
+        foreach (glob($out . '/*') ?: [] as $f) { @unlink($f); }
+        @rmdir($out); @unlink($serverFile); @unlink($ready); @unlink($log);
+        echo $ok ? "SMTP gate: OK\n" : "SMTP gate: FAIL\n";
+        exit($ok ? 0 : 1);
+        break;
+
     case 'backup':
         $file = (new \Muh\Database\Backup())->run();
         echo "Backup saved: {$file}\n";

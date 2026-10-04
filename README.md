@@ -60,7 +60,7 @@ bin/                    CLI (muh migrate | seed)
 ## Continuous integration
 A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
 - **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (53 checks), then `php bin/muh doctor` (readiness) and `php bin/muh i18n:check` (tr/en parity + undefined-key scan).
-- **email-templates**: gate for branded/localized e-mail template rendering (`php bin/muh test:email-template`).
+- **email-templates**: gate for branded/localized e-mail template rendering (`php bin/muh test:email-template`) + real SMTP client over a loopback relay (`php bin/muh test:smtp`, verifies multiline EHLO + AUTH LOGIN + delivery).
 - **backup-rotation**: gate for backup creation + retention rotation (`php bin/muh test:backup`).
 - **security**: starts the app with the PHP built-in server and runs `php bin/muh security` (live HTTP CSRF / tenant isolation / RBAC checks).
 
@@ -174,6 +174,7 @@ DB transactions to keep DR/CR balanced and consistent.
 | `seed` | Seed plans/roles/permissions/KDV rates + demo office & company |
 | `test` | Run the self-test suite (currently 53 checks) against the configured DB |
 | `test:email-template` | Focused gate — branded/localized e-mail template rendering |
+| `test:smtp` | Focused gate — real SMTP client end-to-end (loopback relay; EHLO + AUTH LOGIN + delivery) |
 | `test:backup` | Focused gate — backup creation + retention rotation |
 | `notify:summary` | Daily e-mail digest summarizing each active tenant's notifications |
 | `security` | Live HTTP security check (CSRF, tenant isolation, RBAC) |

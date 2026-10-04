@@ -113,13 +113,33 @@ final class SmtpMailer
     private function command(string $cmd, int|array $expected): string
     {
         $this->sendRaw($cmd);
-        $line = $this->readLine();
+        return $this->readResponse($expected);
+    }
+
+    /**
+     * Read a (possibly multiline) SMTP reply and validate its final status
+     * code. A multiline reply is signalled by a 'NNN-' line; we keep reading
+     * until we reach the last 'NNN ' line so leftover lines never corrupt the
+     * next command/response pairing (e.g. EHLO returns several '250-' lines
+     * on real relays like Postfix / Sendmail / Gmail).
+     */
+    private function readResponse(int|array $expected): string
+    {
         $expected = (array) $expected;
-        $code = (int) substr($line, 0, 3);
-        if (!in_array($code, $expected, true)) {
-            throw new \RuntimeException('SMTP error (' . $code . '): ' . $line);
+        $last = '';
+        while (true) {
+            $line = $this->readLine();
+            $last = $line;
+            $isContinuation = strlen($line) >= 4 && $line[3] === '-';
+            if ($isContinuation) {
+                continue; // intermediate 'NNN-' line, more reply lines follow
+            }
+            $code = (int) substr($line, 0, 3);
+            if (!in_array($code, $expected, true)) {
+                throw new \RuntimeException('SMTP error (' . $code . '): ' . $line);
+            }
+            return $line;
         }
-        return $line;
     }
 
     private function sendRaw(string $data): void
