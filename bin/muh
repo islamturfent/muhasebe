@@ -123,7 +123,14 @@ switch ($command) {
         // Focused gate (#3): real SMTP client (SmtpMailer) end-to-end against a
         // local loopback SMTP relay — verifies EHLO (multiline), AUTH LOGIN,
         // MAIL/RCPT/DATA/QUIT and actual message delivery.
+        // Pick a free local port so the loopback relay never collides.
+        $probe = @stream_socket_server('tcp://127.0.0.1:0', $err, $err2);
         $port = 2525;
+        if ($probe) {
+            $nm = (string) stream_socket_get_name($probe, false);
+            $port = (int) substr((string) strrchr($nm, ':'), 1);
+            @fclose($probe);
+        }
         $tmp = sys_get_temp_dir();
         $out = $tmp . '/muh_smtp_out_' . getmypid();
         @mkdir($out, 0777, true);
@@ -197,12 +204,35 @@ SRV;
                 && substr_count($full, 'DATA') >= 2
                 && substr_count($full, 'QUIT') >= 2
                 && $r1 === true && $r2 === true;
+            // Relay sağlanamazsa ilgili kontroller zaten FAIL dönecektir.
+            if (!file_exists($ready)) {
+                $checks['relay başlamadı'] = false;
+            }
+            // Drain child stdout/stderr (non-blocking) — pipes asla dolmaz ve
+            // relay hata mesajları yüzeye çıkar.
+            if (is_resource($proc)) {
+                stream_set_blocking($pipes[1], false);
+                stream_set_blocking($pipes[2], false);
+                usleep(300000);
+                $childOut = (string) stream_get_contents($pipes[1]);
+                $childErr = (string) stream_get_contents($pipes[2]);
+                if (trim($childOut) !== '') { fwrite(STDOUT, "  [relay stdout] " . trim($childOut) . "\n"); }
+                if (trim($childErr) !== '') { fwrite(STDOUT, "  [relay stderr] " . trim($childErr) . "\n"); }
+            }
         } catch (\Throwable $e) {
             $checks['istisna'] = false;
             fwrite(STDERR, "  SMTP gate exception: {$e->getMessage()}\n");
             $ok = false;
         } finally {
-            if (is_resource($proc)) { @fclose($pipes[0]); @fclose($pipes[1]); @fclose($pipes[2]); proc_terminate($proc); @proc_close($proc); }
+            try {
+                if (is_resource($proc)) {
+                    @fclose($pipes[0]); @fclose($pipes[1]); @fclose($pipes[2]);
+                    @proc_terminate($proc);
+                    @proc_close($proc);
+                }
+            } catch (\Throwable $ignored) {
+                // cleanup must never raise (uncaught => PHP exit 255) — swallow.
+            }
         }
         foreach ($checks as $n => $v) {
             echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
@@ -256,9 +286,13 @@ SRV;
             echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
         }
         if ($ownServer && is_resource($proc)) {
-            proc_terminate($proc);
-            @fclose($pipes[0]); @fclose($pipes[1]); @fclose($pipes[2]);
-            @proc_close($proc);
+            try {
+                @fclose($pipes[0]); @fclose($pipes[1]); @fclose($pipes[2]);
+                @proc_terminate($proc);
+                @proc_close($proc);
+            } catch (\Throwable $ignored) {
+                // cleanup must never raise (uncaught => PHP exit 255) — swallow.
+            }
         }
         echo $ok ? "HTTP smoke gate: OK\n" : "HTTP smoke gate: FAIL\n";
         exit($ok ? 0 : 1);
