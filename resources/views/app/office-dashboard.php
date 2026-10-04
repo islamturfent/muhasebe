@@ -88,6 +88,29 @@ $user = Auth::user();
 </div>
 <?php endif; ?>
 
+<?php if (!empty($companyBars)): ?>
+<!-- Firma bazlı satış/alış performansı -->
+<div class="mt-6 bg-white border border-slate-200 rounded-2xl p-5">
+    <div class="font-semibold text-slate-800 mb-1"><?= e(__('dashboard.company_performance')) ?></div>
+    <div class="text-xs text-slate-400 mb-4"><?= e(__('dashboard.sales')) ?> vs <?= e(__('dashboard.purchases')) ?> · <?= e(__('dashboard.by_company')) ?></div>
+    <?php $maxCB = max(array_map(fn($c) => max($c['sales'], $c['purchase'], 1), $companyBars)); ?>
+    <div class="space-y-3">
+        <?php foreach ($companyBars as $cb): ?>
+        <div>
+            <div class="flex items-center justify-between text-sm mb-1">
+                <span class="font-medium text-slate-700"><?= e($cb['name']) ?></span>
+                <span class="text-xs text-slate-500"><?= e(money($cb['sales'])) ?> / <?= e(money($cb['purchase'])) ?></span>
+            </div>
+            <div class="flex h-2.5 rounded-full overflow-hidden">
+                <div class="bg-brand-500" style="width:<?= round(($cb['sales'] / $maxCB) * 100) ?>%"></div>
+                <div class="bg-rose-400" style="width:<?= round(($cb['purchase'] / $maxCB) * 100) ?>%"></div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php $alerts = $alerts ?? []; ?>
 <?php if (!empty($alerts)): ?>
 <!-- Uyarı panosu -->

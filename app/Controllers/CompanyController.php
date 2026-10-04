@@ -67,6 +67,7 @@ final class CompanyController extends Controller
         if (!$company) {
             return Response::redirect('/app/companies');
         }
+        \Muh\Services\CurrentContextService::guardCompany($id);
 
         $periods = DB::select(
             'SELECT * FROM fiscal_periods WHERE company_id = :c AND deleted_at IS NULL ORDER BY start_date DESC',

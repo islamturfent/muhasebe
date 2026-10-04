@@ -40,6 +40,40 @@ final class CurrentContextService
         return true;
     }
 
+    /**
+     * Whether the active user may access the given company (owner/super-admin:
+     * any tenant company; others: only companies assigned via user_company).
+     */
+    public static function canAccessCompany(int $companyId): bool
+    {
+        $user = Auth::user();
+        if (!$user || !$user['tenant_id']) {
+            return false;
+        }
+        $company = DB::first(
+            'SELECT id FROM companies WHERE id = :id AND tenant_id = :t AND deleted_at IS NULL',
+            ['id' => $companyId, 't' => (int) $user['tenant_id']]
+        );
+        if (!$company) {
+            return false;
+        }
+        if (!empty($user['is_owner']) || !empty($user['is_system_admin'])) {
+            return true;
+        }
+        return (bool) DB::first(
+            'SELECT id FROM user_company WHERE user_id = :u AND company_id = :c',
+            ['u' => (int) $user['id'], 'c' => $companyId]
+        );
+    }
+
+    /** Throw a 403 if the active user may not access the company. */
+    public static function guardCompany(int $companyId): void
+    {
+        if (!self::canAccessCompany($companyId)) {
+            throw new \Muh\Core\ForbiddenException();
+        }
+    }
+
     /** Companies visible to the active user (all for owner/admin, else assigned). */
     public static function companiesForUser(): array
     {

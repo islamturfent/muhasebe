@@ -47,4 +47,6 @@ return [
     'alert_overdue' => 'Overdue: :no (:cari)',
     'alert_efatura' => 'e-Invoice error: :no',
     'no_alerts' => 'Great, no alerts.',
+    'company_performance' => 'Company Performance',
+    'by_company' => 'by company',
 ];

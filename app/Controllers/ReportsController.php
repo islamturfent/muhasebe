@@ -417,6 +417,37 @@ final class ReportsController extends Controller
         return $this->export($format, __('report.stock_cost'), 'C:' . $companyId, $headers, $out, 'stok-maliyet');
     }
 
+    // ---- Report: Döviz / Kur (foreign-currency invoices) ----
+    public function doviz(Request $request): Response
+    {
+        $format = $request->query('format', 'csv');
+        [$companyId, $periodId] = $this->ctx($request);
+        $companyId = $companyId ?: $this->firstCompanyId();
+        $rows = DB::select(
+            "SELECT i.number, i.date, ca.name AS cari, i.total, i.currency_code, i.exchange_rate, i.tax
+               FROM invoices i LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.company_id = :c AND i.status = 'posted' AND i.deleted_at IS NULL
+                AND i.currency_code IS NOT NULL AND i.currency_code <> '' AND i.currency_code <> 'TRY'
+              ORDER BY i.date",
+            ['c' => $companyId]
+        );
+        $headers = [__('accounting.number'), __('common.date'), __('current_account.name'), __('report.currency'), __('report.fx_rate'), __('report.fx_total'), __('report.try_total')];
+        $data = [];
+        $sum = 0.0;
+        foreach ($rows as $r) {
+            $rate = (float) ($r['exchange_rate'] ?? 0) > 0 ? (float) $r['exchange_rate'] : 1.0;
+            $try = round((float) $r['total'] * $rate, 2);
+            $sum += $try;
+            $data[] = [
+                $r['number'], format_date($r['date']), $r['cari'], $r['currency_code'],
+                number_format($rate, 4, ',', '.'), number_format((float) $r['total'], 2, ',', '.'),
+                number_format($try, 2, ',', '.'),
+            ];
+        }
+        $data[] = ['', __('common.total'), '', '', '', '', number_format($sum, 2, ',', '.')];
+        return $this->export($format, __('report.fx'), 'C:' . $companyId, $headers, $data, 'doviz');
+    }
+
     // ---- Report: Satış (sales) ----
     public function satis(Request $request): Response
     {

@@ -44,7 +44,7 @@ return function (Router $router): void {
     });
 
     // ---- App (authenticated + tenant) ----
-    $router->group(['middleware' => [\Muh\Middleware\AuthMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
+    $router->group(['middleware' => [\Muh\Middleware\AuthMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class, \Muh\Middleware\CompanyAccessMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
         $g->get('/app/dashboard', [DashboardController::class, 'office'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/portal', [\Muh\Controllers\PortalController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/switch-company', [DashboardController::class, 'switchCompany'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -189,6 +189,7 @@ return function (Router $router): void {
         $g->get('/app/reports/efatura/export', [\Muh\Controllers\ReportsController::class, 'efatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok/export', [\Muh\Controllers\ReportsController::class, 'stok'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/stok-maliyet/export', [\Muh\Controllers\ReportsController::class, 'stokMaliyet'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/reports/doviz/export', [\Muh\Controllers\ReportsController::class, 'doviz'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/satis/export', [\Muh\Controllers\ReportsController::class, 'satis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/alis/export', [\Muh\Controllers\ReportsController::class, 'alis'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/reports/kasa/export', [\Muh\Controllers\ReportsController::class, 'kasa'], [\Muh\Middleware\TenantMiddleware::class]);

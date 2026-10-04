@@ -139,6 +139,18 @@ final class DashboardController extends Controller
             $efaturaCounts[$r['efatura_status']] = (int) $r['c'];
         }
 
+        // Firma bazlı satış/alış performansı (işlem yoğunluğu) — erişilen firmalar.
+        $companyBars = [];
+        foreach (\Muh\Services\CurrentContextService::companiesForUser() as $comp) {
+            $cid = (int) $comp['id'];
+            $companyBars[] = [
+                'name' => $comp['name'],
+                'sales' => (float) DB::scalar("SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = :c AND type = 'sales' AND status = 'posted' AND deleted_at IS NULL", ['c' => $cid]),
+                'purchase' => (float) DB::scalar("SELECT COALESCE(SUM(total),0) FROM invoices WHERE company_id = :c AND type = 'purchase' AND status = 'posted' AND deleted_at IS NULL", ['c' => $cid]),
+            ];
+        }
+        usort($companyBars, fn ($a, $b) => ($b['sales'] + $b['purchase']) <=> ($a['sales'] + $a['purchase']));
+
         return $this->view('app.office-dashboard', [
             'layout' => 'layouts.app',
             'kpis'    => $kpis,
@@ -148,6 +160,7 @@ final class DashboardController extends Controller
             'chart' => $chart,
             'efaturaCounts' => $efaturaCounts,
             'alerts' => $alerts,
+            'companyBars' => $companyBars,
         ]);
     }
 

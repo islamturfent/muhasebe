@@ -47,4 +47,6 @@ return [
     'alert_overdue' => 'Vadesi geçti: :no (:cari)',
     'alert_efatura' => 'e-Fatura hatası: :no',
     'no_alerts' => 'Tebrikler, uyarı yok.',
+    'company_performance' => 'Firma Performansı',
+    'by_company' => 'firma bazlı',
 ];

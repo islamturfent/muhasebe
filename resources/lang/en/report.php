@@ -85,4 +85,9 @@ return [
     'ledger_sub' => 'All movements per account with a cumulative balance',
     'stock_cost' => 'Stock Cost (Weighted Average)',
     'avg_cost' => 'Avg. Cost',
+    'fx' => 'FX / Currency Report',
+    'currency' => 'Currency',
+    'fx_rate' => 'Rate',
+    'fx_total' => 'FX Amount',
+    'try_total' => 'TRY Equivalent',
 ];

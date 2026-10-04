@@ -643,6 +643,51 @@ final class AppTester
         }
         $results[] = ['name' => 'Firma Yetkilisi Portalı (firma kapsamı)', 'ok' => $portOk, 'detail' => $portDetail];
 
+        // ---- Firma-düzeyi erişim denetimi (canAccessCompany) — rollback ----
+        $accOk = false; $accDetail = '';
+        try {
+            $comp = DB::first('SELECT * FROM companies WHERE tenant_id = 1 LIMIT 1');
+            $cid = (int) $comp['id'];
+            $tid = 1;
+            Auth::loginById(1); // owner → tüm firmalar
+            $ownerOk = \Muh\Services\CurrentContextService::canAccessCompany($cid);
+            $uid = (int) DB::insert('users', ['tenant_id' => $tid, 'name' => 'AccTest', 'email' => 'acct_' . uniqid() . '@muh.local', 'password' => \Muh\Core\Hash::make('Password1234'), 'status' => 'active', 'created_at' => now(), 'updated_at' => now(), 'is_owner' => 0]);
+            Auth::loginById($uid);
+            $noGrant = !\Muh\Services\CurrentContextService::canAccessCompany($cid);
+            DB::insert('user_company', ['user_id' => $uid, 'company_id' => $cid, 'created_at' => now(), 'updated_at' => now()]);
+            Auth::loginById($uid);
+            $withGrant = \Muh\Services\CurrentContextService::canAccessCompany($cid);
+            $accOk = $ownerOk && $noGrant && $withGrant;
+            $accDetail = $accOk ? 'owner + grant denetimi ok' : 'hata (BUG)';
+            Auth::loginById(1);
+            throw new \RuntimeException('__rollback__');
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $accOk = false; $accDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Firma erişim denetimi (canAccessCompany)', 'ok' => $accOk, 'detail' => $accDetail];
+
+        // ---- e-Fatura payload zenginleştirme (buildPayload) ----
+        $payOk = false; $payDetail = '';
+        try {
+            $svc = new \Muh\Services\EFaturaService(new \Muh\Services\EFatura\SimulatedEFaturaGateway());
+            $payload = $svc->buildPayload(
+                ['id' => 1, 'number' => 'F-1', 'type' => 'sales', 'date' => date('Y-m-d'), 'due_date' => date('Y-m-d'),
+                 'total' => 100, 'tax' => 18, 'subtotal' => 82, 'discount' => 0, 'withholding' => 0,
+                 'currency_code' => 'USD', 'exchange_rate' => 32.5, 'company_name' => 'ACME', 'company_tax' => '123',
+                 'company_tax_office' => 'Besiktas', 'company_address' => 'Istanbul', 'account_name' => 'X', 'account_tax' => '456'],
+                [['product_id' => 1, 'product_name' => 'Kalem', 'quantity' => 1, 'unit_price' => 82, 'tax_rate' => 18, 'total' => 100]],
+                'invoice'
+            );
+            $payOk = ($payload['currency'] ?? '') === 'USD'
+                && (float) ($payload['exchange_rate'] ?? 0) === 32.5
+                && isset($payload['supplier']['tax_office'], $payload['supplier']['address'], $payload['items'][0]['name']);
+            $payDetail = $payOk ? 'payload (döviz + vergi dairesi + adres) zengin' : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $payOk = false; $payDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'e-Fatura payload zenginleştirme', 'ok' => $payOk, 'detail' => $payDetail];
+
         return $results;
     }
 }

@@ -187,23 +187,38 @@ final class EFaturaService
             'doc_type' => $docType,
             'type' => $invoice['type'],
             'date' => $invoice['date'],
+            'due_date' => $invoice['due_date'] ?? null,
+            'currency' => $invoice['currency_code'] ?? $invoice['company_currency'] ?? 'TRY',
+            'exchange_rate' => ($invoice['exchange_rate'] ?? null) ? (float) $invoice['exchange_rate'] : null,
             'total' => (float) $invoice['total'],
             'tax' => (float) $invoice['tax'],
             'subtotal' => (float) $invoice['subtotal'],
+            'discount' => (float) ($invoice['discount'] ?? 0),
+            'withholding' => (float) ($invoice['withholding'] ?? 0),
+            'document_no' => $invoice['document_no'] ?? null,
             'supplier' => [
-                'tax_number' => $invoice['company_tax'] ?? null,
                 'name' => $invoice['company_name'] ?? null,
+                'tax_number' => $invoice['company_tax'] ?? null,
+                'tax_office' => $invoice['company_tax_office'] ?? null,
+                'address' => $invoice['company_address'] ?? null,
+                'country' => $invoice['company_country'] ?? 'TR',
             ],
             'customer' => [
                 'name' => $invoice['account_name'] ?? null,
                 'tax_number' => $invoice['account_tax'] ?? null,
+                'address' => $invoice['account_address'] ?? null,
+                'country' => $invoice['account_country'] ?? 'TR',
             ],
             'items' => array_map(fn ($it) => [
-                'code' => $it['product_id'] ?: null,
+                'code' => $it['product_code'] ?? ($it['product_id'] ?: null),
+                'name' => $it['product_name'] ?? $it['description'],
                 'description' => $it['product_name'] ?? $it['description'],
                 'qty' => (float) $it['quantity'],
+                'unit' => $it['unit_abbr'] ?? null,
                 'unit_price' => (float) $it['unit_price'],
+                'discount' => (float) ($it['discount'] ?? 0),
                 'tax_rate' => (float) $it['tax_rate'],
+                'withholding_rate' => (float) ($it['withholding_rate'] ?? 0),
                 'total' => (float) $it['total'],
             ], $items),
         ];
@@ -221,8 +236,9 @@ final class EFaturaService
     {
         $tenantId = Auth::tenantId();
         $invoice = DB::first(
-            'SELECT i.*, c.name AS company_name, c.tax_number AS company_tax,
-                    ca.name AS account_name, ca.tax_number AS account_tax
+            'SELECT i.*, c.name AS company_name, c.tax_number AS company_tax, c.tax_office AS company_tax_office,
+                    c.address AS company_address, c.currency AS company_currency,
+                    ca.name AS account_name, ca.tax_number AS account_tax, ca.address AS account_address
                FROM invoices i
                JOIN companies c ON c.id = i.company_id
                LEFT JOIN current_accounts ca ON ca.id = i.current_account_id

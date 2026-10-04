@@ -26,6 +26,12 @@ final class SessionContext
         Session::set('active_fiscal_period_id', $periodId);
     }
 
+    public static function forgetCompany(): void
+    {
+        Session::forget('active_company_id');
+        Session::forget('active_fiscal_period_id');
+    }
+
     public static function periodId(): ?int
     {
         return Session::get('active_fiscal_period_id');
