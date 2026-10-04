@@ -14,4 +14,7 @@ return [
     'ip' => 'IP',
     'filter_module' => 'Modül filtrele',
     'filter_action' => 'İşlem ara',
+    'filter_user' => 'Kullanıcı',
+    'filter_company' => 'Firma',
+    'export' => 'Dışa aktar',
 ];

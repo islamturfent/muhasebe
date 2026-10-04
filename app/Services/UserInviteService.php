@@ -82,7 +82,7 @@ final class UserInviteService
             }
         }
 
-        $office = DB::first('SELECT name FROM tenants WHERE id = :id', ['id' => $tenantId]);
+        $office = DB::first('SELECT name, locale FROM tenants WHERE id = :id', ['id' => $tenantId]);
         $acceptUrl = \url('/invite/accept?token=' . urlencode($token));
 
         // In-app notification for the office owner/manager.
@@ -93,11 +93,13 @@ final class UserInviteService
             'info', null, null, '/app/users'
         );
 
-        // E-mail.
-        $subject = __('user.invite_email_subject', ['office' => $office['name'] ?? '']);
-        $html = '<p>' . e(__('user.invite_email_greeting', ['office' => $office['name'] ?? ''])) . '</p>'
-              . '<p><a href="' . e($acceptUrl) . '">' . e(__('user.invite_email_cta')) . '</a></p>'
-              . '<p>' . e(__('user.invite_email_expiry', ['days' => $expiresDays])) . '</p>';
+        // E-mail (branded, in the office's own language: invitee can change later).
+        $locale = \Muh\Services\EmailTemplateService::norm((string) ($office['locale'] ?? 'tr'));
+        $subject = \Muh\Services\EmailTemplateService::translate($locale, 'user.invite_email_subject', ['office' => $office['name'] ?? '']);
+        $body = '<p>' . e(\Muh\Services\EmailTemplateService::translate($locale, 'user.invite_email_greeting', ['office' => $office['name'] ?? ''])) . '</p>'
+              . \Muh\Services\EmailTemplateService::button($locale, $acceptUrl, \Muh\Services\EmailTemplateService::translate($locale, 'user.invite_email_cta'))
+              . '<p>' . e(\Muh\Services\EmailTemplateService::translate($locale, 'user.invite_email_expiry', ['days' => $expiresDays])) . '</p>';
+        $html = \Muh\Services\EmailTemplateService::layout($locale, $subject, $body);
         (new Mailer())->send($email, $subject, $html);
 
         AuditLogService::record('user.invite.create', 'user', 'user_invites', (string) $inviteId, null, [

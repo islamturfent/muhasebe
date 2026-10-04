@@ -3,6 +3,7 @@
 return [
     'app_name' => 'Hesap360',
     'tagline' => 'Türkiye için profesyonel bulut muhasebe ve finans platformu',
+    'product_name' => 'Hesap360',
     'welcome' => 'Hoş geldiniz',
     'save' => 'Kaydet',
     'cancel' => 'İptal',
@@ -50,6 +51,7 @@ return [
     'yes' => 'Evet',
     'no' => 'Hayır',
     'close' => 'Kapat',
+    'menu' => 'Menü',
     'tax_number' => 'Vergi No',
     'records' => 'kayıt',
     'debit' => 'Borç',

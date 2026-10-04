@@ -151,6 +151,14 @@ final class DashboardController extends Controller
         }
         usort($companyBars, fn ($a, $b) => ($b['sales'] + $b['purchase']) <=> ($a['sales'] + $a['purchase']));
 
+        // Backup & health indicator.
+        $health = [
+            'backups' => \Muh\Database\Backup::list(3),
+            'retention' => (int) (getenv('BACKUP_RETENTION') ?: 14),
+            'db' => \Muh\Database\Backup::ping(),
+            'storage' => \Muh\Database\Backup::storageWritable(),
+        ];
+
         return $this->view('app.office-dashboard', [
             'layout' => 'layouts.app',
             'kpis'    => $kpis,
@@ -161,6 +169,7 @@ final class DashboardController extends Controller
             'efaturaCounts' => $efaturaCounts,
             'alerts' => $alerts,
             'companyBars' => $companyBars,
+            'health' => $health,
         ]);
     }
 

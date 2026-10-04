@@ -208,3 +208,44 @@ $user = Auth::user();
         </table>
     </div>
 </div>
+
+<!-- Backups & Health -->
+<?php $health = $health ?? []; $db = $health['db'] ?? []; $storage = $health['storage'] ?? []; $backups = $health['backups'] ?? []; ?>
+<div class="mt-6 bg-white border border-slate-200 rounded-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <span class="font-semibold text-slate-800">🛡 <?= e(__('dashboard.backup_health')) ?></span>
+        <a href="<?= e(url('/app/audit')) ?>" class="text-xs text-brand-600 hover:underline"><?= e(__('dashboard.manage')) ?></a>
+    </div>
+    <div class="p-5 grid sm:grid-cols-3 gap-4">
+        <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-full <?= !empty($db['ok']) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' ?> flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v6a4 4 0 004 4h10a2 2 0 002-2V7m-8 6l4-4m0 0l-4-4m4 4H7"/></svg>
+            </span>
+            <div>
+                <div class="text-xs text-slate-400"><?= e(__('dashboard.db_status')) ?></div>
+                <div class="font-semibold text-slate-800"><?= !empty($db['ok']) ? '✓ ' . e($db['driver'] ?? '') : __('dashboard.unhealthy') ?></div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-full <?= !empty($storage['ok']) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' ?> flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            </span>
+            <div>
+                <div class="text-xs text-slate-400"><?= e(__('dashboard.storage_status')) ?></div>
+                <div class="font-semibold text-slate-800"><?= !empty($storage['ok']) ? __('common.active') : __('dashboard.unhealthy') ?></div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.6a2 2 0 011.4.6l1.4 1.4a2 2 0 01.6 1.4V13a2 2 0 01-2 2h-2"/></svg>
+            </span>
+            <div>
+                <div class="text-xs text-slate-400"><?= e(__('dashboard.last_backup')) ?></div>
+                <div class="font-semibold text-slate-800"><?= $backups ? e(format_datetime($backups[0]['time'])) : e(__('dashboard.no_backup_yet')) ?></div>
+            </div>
+        </div>
+    </div>
+    <?php if ($backups): ?>
+    <div class="border-t border-slate-100 px-5 py-3 text-xs text-slate-500"><?= e(__('dashboard.retention_note', ['n' => (int) ($health['retention'] ?? 14), 'count' => count($backups)])) ?> — <code class="text-slate-400">php bin/muh backup</code></div>
+    <?php endif; ?>
+</div>

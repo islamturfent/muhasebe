@@ -52,6 +52,13 @@ Session::forget('_form_errors');
                     <option value="TRY">₺ TRY</option><option value="USD">$ USD</option><option value="EUR">€ EUR</option><option value="GBP">£ GBP</option>
                 </select>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('company.email_language')) ?></label>
+                <select name="locale" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                    <option value="tr">Türkçe</option><option value="en">English</option>
+                </select>
+                <p class="text-xs text-slate-400 mt-1"><?= e(__('company.email_language_help')) ?></p>
+            </div>
         </div>
 
         <div>

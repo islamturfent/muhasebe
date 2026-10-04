@@ -5,6 +5,8 @@ return [
     'all_companies' => 'Tüm Firmalar',
     'demo_banner' => 'Demo firma: :company — bu örnek veridir, gerçek mali veri değildir.',
     'company_switched' => 'Firma değiştirildi.',
+    'email_language' => 'E-posta dili',
+    'email_language_help' => 'Bu firmaya gönderilen otomatik e-postaların dili (fatura hatırlatma vb.).',
     'company_created' => 'Firma oluşturuldu.',
     'logo_uploaded' => 'Firma logosu güncellendi.',
     'logo_required' => 'Bir logo dosyası seçin.',

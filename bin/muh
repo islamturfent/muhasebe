@@ -71,6 +71,24 @@ switch ($command) {
             $remote = \Muh\Database\Backup::upload($file);
             echo $remote ? "Off-box uploaded: {$remote}\n" : "Off-box: BACKUP_REMOTE_DIR not set or copy failed.\n";
         }
+        // Retention: prune old backups (BACKUP_RETENTION, default 14) unless skipped.
+        if (!in_array('--no-prune', $args, true)) {
+            $pruned = \Muh\Database\Backup::prune();
+            if ($pruned > 0) {
+                echo "Retention: {$pruned} eski yedek temizlendi.\n";
+            }
+        }
+        break;
+
+    case 'backup:prune':
+        // Prune old backups keeping the newest BACKUP_RETENTION (env, default 14).
+        $keep = (int) ($args[1] ?? 0);
+        $pruned = \Muh\Database\Backup::prune($keep);
+        echo "Retention: {$pruned} eski yedek temizlendi.";
+        if ($keep > 0) {
+            echo " (son {$keep} korundu)";
+        }
+        echo "\n";
         break;
 
     case 'backup:restore':

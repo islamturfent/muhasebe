@@ -29,4 +29,6 @@ return [
     'test_sent' => 'Test email sent: :to (in log mode it is written to mail.log).',
     'log' => 'Send Log (last 20 lines)',
     'no_log' => 'No send records yet.',
+    'help_line' => 'This e-mail was sent automatically by :brand.',
+    'footer_address' => 'Hesap360 · Cloud accounting for Turkey',
 ];

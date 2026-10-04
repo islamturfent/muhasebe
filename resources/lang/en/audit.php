@@ -14,4 +14,7 @@ return [
     'ip' => 'IP',
     'filter_module' => 'Filter module',
     'filter_action' => 'Search action',
+    'filter_user' => 'User',
+    'filter_company' => 'Company',
+    'export' => 'Export',
 ];

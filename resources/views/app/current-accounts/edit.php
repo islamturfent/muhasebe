@@ -71,6 +71,13 @@ Session::forget('_form_errors');
                     <option value="inactive" <?= $account['status']==='inactive'?'selected':'' ?>><?= e(__('common.pending')) ?></option>
                 </select>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('app.email_language')) ?></label>
+                <select name="locale" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                    <option value="tr" <?= ($account['locale'] ?? '')==='en'?'':'selected' ?>>Türkçe</option>
+                    <option value="en" <?= ($account['locale'] ?? '')==='en'?'selected':'' ?>>English</option>
+                </select>
+            </div>
         </div>
 
         <?php if ($errors): ?>

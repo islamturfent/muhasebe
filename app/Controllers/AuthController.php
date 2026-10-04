@@ -131,15 +131,16 @@ final class AuthController extends Controller
     public function sendResetLink(Request $request): Response
     {
         $email = strtolower(trim((string) $request->input('email', '')));
-        $user = DB::first('SELECT id, email FROM users WHERE email = :e AND deleted_at IS NULL', ['e' => $email]);
+        $user = DB::first('SELECT id, email, locale, tenant_id FROM users WHERE email = :e AND deleted_at IS NULL', ['e' => $email]);
         if ($user) {
+            // Resolve the user's preferred language (fallback: their tenant / tr).
+            $locale = \Muh\Services\EmailTemplateService::norm((string) ($user['locale'] ?: DB::scalar('SELECT locale FROM tenants WHERE id = :t', ['t' => (int) $user['tenant_id']])));
             $token = AuthTokenService::create($email, 'reset', 60);
             $link = url('/reset-password?token=' . $token . '&email=' . urlencode($email));
-            (new \Muh\Services\Mailer())->send(
-                $email,
-                __('auth.reset_mail_subject'),
-                '<p>' . e(__('auth.reset_mail_body')) . '</p><p><a href="' . e($link) . '">' . e(__('auth.reset_mail_button')) . '</a></p><p><a href="' . e($link) . '">' . e($link) . '</a></p>'
-            );
+            $subject = \Muh\Services\EmailTemplateService::translate($locale, 'auth.reset_mail_subject');
+            $body = '<p>' . e(\Muh\Services\EmailTemplateService::translate($locale, 'auth.reset_mail_body')) . '</p>'
+                  . \Muh\Services\EmailTemplateService::button($locale, $link, \Muh\Services\EmailTemplateService::translate($locale, 'auth.reset_mail_button'));
+            \Muh\Services\EmailTemplateService::send($locale, $email, $subject, $body);
             AuditLogService::record('auth.password.forgot', 'auth', 'users', (string) $user['id']);
         }
         // Always show generic success (avoid user enumeration).

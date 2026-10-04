@@ -3,6 +3,7 @@
 return [
     'app_name' => 'Hesap360',
     'tagline' => 'Professional cloud accounting & finance platform for Turkey',
+    'product_name' => 'Hesap360',
     'welcome' => 'Welcome',
     'save' => 'Save',
     'cancel' => 'Cancel',
@@ -50,6 +51,7 @@ return [
     'yes' => 'Yes',
     'no' => 'No',
     'close' => 'Close',
+    'menu' => 'Menu',
     'tax_number' => 'Tax No',
     'records' => 'records',
     'debit' => 'Debit',

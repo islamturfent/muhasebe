@@ -59,7 +59,7 @@ bin/                    CLI (muh migrate | seed)
 
 ## Continuous integration
 A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
-- **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (50 checks).
+- **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (52 checks).
 - **security**: starts the app with the PHP built-in server and runs `php bin/muh security` (live HTTP CSRF / tenant isolation / RBAC checks).
 
 No Composer or external package install is required — the app is dependency-free.
@@ -141,7 +141,7 @@ To use PostgreSQL:
 | 11 | Notifications + documents | ✅ file upload/download per company, notification centre + auto scans |
 | 12 | Security + audit + backups | ✅ audit viewer, TOTP 2FA, `bin/muh backup` SQL dumps + off-box upload (`--upload`) + restore (`backup:restore`) |
 | 13 | TR/EN localization | ✅ all UI text via translation files (hard-coded Turkish removed) |
-| 14 | Testing/perf/production | ✅ `php bin/muh test` (50 self-tests), `php bin/muh security`, `php bin/muh i18n:check`, security headers, .env, maintenance mode, pagination |
+| 14 | Testing/perf/production | ✅ `php bin/muh test` (52 self-tests), `php bin/muh security`, `php bin/muh i18n:check`, security headers, .env, maintenance mode, pagination |
 | Opt. | e-Fatura / e-Arşiv | ✅ `EFaturaGateway` interface + simulated (default) + `RESTEFaturaGateway` (gerçek HTTP entegratör, test/prod, Basic auth); e-Fatura + e-Arşiv send, doc type + envelope id, UBL-TR XML + irsaliye + **toplu UBL/ZIP indirme** (`/app/invoices/ubl-bulk`) |
 | Opt. | Global search | ✅ grouped results across company/cari/invoice/product/entry/bank/cash/check/note |
 | Opt. | Import / Export | ✅ CSV import of current accounts & stock (mapping, preview, error report); CSV/Excel/PDF export |
@@ -167,12 +167,14 @@ DB transactions to keep DR/CR balanced and consistent.
 |---------|---------|
 | `migrate [--fresh]` | Run DB migrations (`--fresh` drops & recreates all tables) |
 | `seed` | Seed plans/roles/permissions/KDV rates + demo office & company |
-| `test` | Run the self-test suite (currently 50 checks) against the configured DB |
+| `test` | Run the self-test suite (currently 52 checks) against the configured DB |
 | `security` | Live HTTP security check (CSRF, tenant isolation, RBAC) |
 | `doctor` | Production-readiness self-check (no deploy) |
 | `i18n:check` | Translation completeness — tr/en key diff + undefined `__()` keys |
 | `backup` | SQL dump to `storage/backups` (uses `mysqldump` if present, else pure-PDO dump) |
 | `backup --upload` | Also copy the dump to `BACKUP_REMOTE_DIR` (off-box / mounted network drive) |
+| `backup --no-prune` | Skip automatic retention pruning |
+| `backup:prune [N]` | Keep the newest N backups (default: `BACKUP_RETENTION`, 14) and remove older ones |
 | `backup:restore <file.sql>` | Restore a `.sql` backup (mysql client, else statement-based PDO import) |
 | `company:demo <id> [0\|1]` | Mark/unmark a company as demo data (`companies.is_demo`, shows a UI banner) |
 | `admin:make <email>` | Promote a user to super admin |
@@ -183,6 +185,15 @@ DB transactions to keep DR/CR balanced and consistent.
 **Off-box backup** is opt-in: set `BACKUP_REMOTE_DIR` to a local mount or mounted
 network drive and run `php bin/muh backup --upload`. Restore with
 `php bin/muh backup:restore <file.sql>`.
+
+---
+
+### E-posta içerikleri (tr/en)
+Automated e-mails (invoice reminders, user invites, subscription expiry, password
+reset) are rendered through `EmailTemplateService` — a consistent branded HTML
+layout localized per recipient. Companies and current accounts each have a
+**language** field (`company.locale`, `current_accounts.locale`) that controls the
+language of reminder e-mails sent to them; office/tenant locale is the fallback.
 
 ---
 

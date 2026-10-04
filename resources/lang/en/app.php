@@ -5,6 +5,8 @@ return [
     'all_companies' => 'All Companies',
     'demo_banner' => 'Demo company: :company — this is sample data, not real financial data.',
     'company_switched' => 'Company switched.',
+    'email_language' => 'E-mail language',
+    'email_language_help' => 'Language of automated e-mails for this company (invoice reminders etc.).',
     'company_created' => 'Company created.',
     'logo_uploaded' => 'Company logo updated.',
     'logo_required' => 'Please choose a logo file.',

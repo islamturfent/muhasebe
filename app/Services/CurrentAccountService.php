@@ -121,6 +121,7 @@ final class CurrentAccountService
                 'iban'         => $data['iban'] ?? null,
                 'risk_limit'   => ($data['risk_limit'] ?? '') === '' ? 0 : (float) $data['risk_limit'],
                 'balance'      => $opening,
+                'locale'       => ($data['locale'] ?? '') === 'en' ? 'en' : 'tr',
                 'status'       => $data['status'] ?? 'active',
                 'created_at'   => now(),
                 'updated_at'   => now(),
@@ -154,7 +155,7 @@ final class CurrentAccountService
             throw new \Muh\Core\NotFoundException();
         }
 
-        $fields = ['name', 'type', 'tax_number', 'email', 'phone', 'address', 'iban', 'risk_limit', 'status'];
+        $fields = ['name', 'type', 'tax_number', 'email', 'phone', 'address', 'iban', 'risk_limit', 'status', 'locale'];
         $save = [];
         foreach ($fields as $f) {
             if (array_key_exists($f, $data)) {

@@ -29,4 +29,6 @@ return [
     'test_sent' => 'Test e-postası gönderildi: :to (log modunda ise mail.log’a yazıldı).',
     'log' => 'Gönderim Logu (son 20 satır)',
     'no_log' => 'Henüz gönderim kaydı yok.',
+    'help_line' => 'Bu e-posta :brand tarafından otomatik gönderildi.',
+    'footer_address' => 'Hesap360 · Türkiye için bulut muhasebe',
 ];

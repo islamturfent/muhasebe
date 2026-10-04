@@ -112,12 +112,52 @@ $menu = [
         </div>
     </aside>
 
+    <!-- Mobile drawer -->
+    <div id="mobileMenu" class="hidden fixed inset-0 z-50 md:hidden">
+        <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('mobileMenu').classList.add('hidden');document.body.classList.remove('overflow-hidden')"></div>
+        <div class="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col">
+            <div class="p-4 flex items-center justify-between border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <img src="<?= e(asset('assets/img/logo-mark.svg')) ?>" alt="Hesap360" class="w-9 h-9">
+                    <div>
+                        <div class="font-bold text-slate-900 leading-none">Hesap360</div>
+                        <div class="text-[11px] text-slate-400"><?= e(__('common.tagline')) ?></div>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('mobileMenu').classList.add('hidden');document.body.classList.remove('overflow-hidden')" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="<?= e(__('common.close')) ?>">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="px-4 pt-2">
+                <form method="get" action="<?= e(url('/app/search')) ?>">
+                    <input type="text" name="q" placeholder="<?= e(__('nav.search')) ?>" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 outline-none">
+                </form>
+            </div>
+            <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+                <?php foreach ($menu as $path => $label): echo navItem($path, $label); endforeach; ?>
+            </nav>
+            <div class="p-3 border-t border-slate-100 flex items-center justify-between">
+                <div class="text-xs text-slate-500">
+                    <div class="font-medium text-slate-700"><?= e($user['name'] ?? '') ?></div>
+                    <div><?= e($user['email'] ?? '') ?></div>
+                </div>
+                <form method="post" action="<?= e(url('/logout')) ?>"><?= csrf_field() ?>
+                    <button type="submit" class="text-xs px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium"><?= e(__('auth.logout')) ?></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Main -->
     <div class="flex-1 flex flex-col overflow-hidden">
 
         <!-- Topbar -->
         <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-1">
+                <!-- Mobile menu toggle -->
+                <button type="button" onclick="document.getElementById('mobileMenu').classList.remove('hidden');document.body.classList.add('overflow-hidden')" class="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600" aria-label="<?= e(__('common.menu')) ?>">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
                 <form method="post" action="<?= e(url('/app/switch-company')) ?>" class="flex items-center gap-2">
                     <?= csrf_field() ?>
                     <select name="company_id" onchange="this.form.submit()" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-brand-500 outline-none">

@@ -145,4 +145,74 @@ final class Backup
         }
         return $n;
     }
+
+    /**
+     * Retention: keep only the newest N backup files in a directory (local
+     * storage/backups and, when set, BACKUP_REMOTE_DIR). Returns the number of
+     * files pruned. N is read from BACKUP_RETENTION (default 14).
+     */
+    public static function prune(int $keep = 0): int
+    {
+        $keep = $keep > 0 ? $keep : (int) (getenv('BACKUP_RETENTION') ?: 14);
+        if ($keep < 1) {
+            $keep = 14;
+        }
+        $pruned = 0;
+        $local = dirname(__DIR__, 2) . '/storage/backups';
+        foreach ([$local, (string) (getenv('BACKUP_REMOTE_DIR') ?: '')] as $dir) {
+            if ($dir === '' || !is_dir($dir)) {
+                continue;
+            }
+            $files = glob(rtrim($dir, '/') . '/muh-*.sql');
+            if (!$files) {
+                continue;
+            }
+            // newest first (filename embeds Ymd-His)
+            usort($files, fn ($a, $b) => strcmp(basename($b), basename($a)));
+            foreach (array_slice($files, $keep) as $old) {
+                if (@unlink($old)) {
+                    $pruned++;
+                }
+            }
+        }
+        return $pruned;
+    }
+
+    /** DB health ping: returns the database driver + a true/false reachability. */
+    public static function ping(): array
+    {
+        try {
+            $ok = DB::scalar('SELECT 1') != null;
+            return ['ok' => true, 'driver' => DB::driver(), 'detail' => 'DB erişilebilir'];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'driver' => DB::driver(), 'detail' => $e->getMessage()];
+        }
+    }
+
+    /** Confirm the backup documents directory is writable. */
+    public static function storageWritable(): array
+    {
+        $dir = dirname(__DIR__, 2) . '/storage/backups';
+        $ok = is_dir($dir) ? is_writable($dir) : is_writable(dirname($dir));
+        return ['ok' => $ok, 'dir' => $dir];
+    }
+
+    /** List backups (newest first) for the health indicator / management. */
+    public static function list(int $limit = 10): array
+    {
+        $dir = dirname(__DIR__, 2) . '/storage/backups';
+        if (!is_dir($dir)) {
+            return [];
+        }
+        $files = glob(rtrim($dir, '/') . '/muh-*.sql');
+        if (!$files) {
+            return [];
+        }
+        usort($files, fn ($a, $b) => strcmp(basename($b), basename($a)));
+        $out = [];
+        foreach (array_slice($files, 0, $limit) as $f) {
+            $out[] = ['file' => basename($f), 'path' => $f, 'size' => filesize($f), 'time' => filemtime($f)];
+        }
+        return $out;
+    }
 }

@@ -866,6 +866,54 @@ final class AppTester
         }
         $results[] = ['name' => 'Demo veri işareti (companies.is_demo)', 'ok' => $demoOk, 'detail' => $demoDetail];
 
+        // ---- Markalı, yerelleştirilmiş e-posta şablonu (EmailTemplateService) ----
+        $mailOk = false; $mailDetail = '';
+        try {
+            $tr = \Muh\Services\EmailTemplateService::layout('tr', 'Deneme', '<p>Merhaba</p>');
+            $en = \Muh\Services\EmailTemplateService::layout('en', 'Test', '<p>Hello</p>');
+            $trHint = \Muh\Services\EmailTemplateService::translate('tr', 'mail.help_line', ['brand' => 'Hesap360']);
+            $enHint = \Muh\Services\EmailTemplateService::translate('en', 'mail.help_line', ['brand' => 'Hesap360']);
+            $mailOk = str_contains($tr, 'Hesap360') && str_contains($en, 'Hesap360')
+                && str_contains($trHint, 'otomatik') && str_contains($enHint, 'automatically')
+                && !str_contains($trHint, 'automatically') && !str_contains($enHint, 'otomatik');
+            $mailDetail = $mailOk ? 'markalı şablon + tr/en dil ayrımı ok' : 'hata (BUG)';  
+        } catch (\Throwable $e) {
+            $mailOk = false; $mailDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Markalı e-posta şablonu (tr/en)', 'ok' => $mailOk, 'detail' => $mailDetail];
+
+        // ---- Yedek rotasyonu (prune) + sağlık (ping/list) ----
+        $bkOk = false; $bkDetail = '';
+        try {
+            $dir = dirname(__DIR__, 2) . '/storage/backups';
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0777, true);
+            }
+            // Create 3 fake backups, keep 2, expect 1 pruned.
+            $made = [];
+            foreach (['a', 'b', 'c'] as $x) {
+                $f = $dir . '/muh-' . (date('Ymd-His', time() - mt_rand(100, 9999))) . '-' . $x . '.sql';
+                file_put_contents($f, "-- test\n");
+                $made[] = $f;
+            }
+            $before = count(glob($dir . '/muh-*.sql'));
+            $pruned = \Muh\Database\Backup::prune(2);
+            $after = count(glob($dir . '/muh-*.sql'));
+            $ping = \Muh\Database\Backup::ping();
+            $list = \Muh\Database\Backup::list(5);
+            // Cleanup only the files this test created (leave any real backups).
+            foreach ($made as $f) {
+                if (is_file($f)) {
+                    @unlink($f);
+                }
+            }
+            $bkOk = $pruned > 0 && ($pruned <= 3) && $after <= $before && !empty($ping['ok']) && is_array($list);
+            $bkDetail = $bkOk ? ('prune ok (pruned=' . $pruned . ' son=' . $after . ') + ping/list ok') : 'hata (BUG)';  
+        } catch (\Throwable $e) {
+            $bkOk = false; $bkDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Yedek rotasyonu + sağlık (prune/ping/list)', 'ok' => $bkOk, 'detail' => $bkDetail];
+
         return $results;
     }
 }

@@ -74,7 +74,9 @@ final class NotificationService
         if (!$to) {
             return false;
         }
-        return (new Mailer())->send($to, $subject, $body, $opts);
+        $locale = \Muh\Services\EmailTemplateService::norm((string) DB::scalar('SELECT locale FROM tenants WHERE id = :t', ['t' => $tenantId]));
+        $html = \Muh\Services\EmailTemplateService::layout($locale, $subject, '<p>' . $body . '</p>');
+        return (new Mailer())->send($to, $subject, $html, $opts);
     }
 
     public function unreadCount(?int $userId = null): int
@@ -285,7 +287,7 @@ final class NotificationService
 
         // 3) Subscription expiry (only the tenant's own subscription).
         $sub = DB::first(
-            'SELECT s.*, t.email AS tenant_email FROM subscriptions s JOIN tenants t ON t.id = s.tenant_id
+            'SELECT s.*, t.email AS tenant_email, t.locale AS tenant_locale FROM subscriptions s JOIN tenants t ON t.id = s.tenant_id
               WHERE s.tenant_id = :tid ORDER BY s.id DESC LIMIT 1',
             ['tid' => $tenantId]
         );
@@ -303,10 +305,12 @@ final class NotificationService
                     null, null, '/app/settings/subscription', ['key' => $key], $tenantId
                 );
                 $created++;
-                // E-posta hatırlatma: 3 gün içinde / sona erenler için (günde bir).
+                // E-posta hatırlatma: 3 gün içinde / sona erenler için (günde bir), ofisin dilinde markalı şablon.
                 if ($daysLeft <= 3 && $sub['tenant_email']) {
-                    $subject = $over ? __('notify.sub_mail_expired') : __('notify.sub_mail_subject');
-                    (new \Muh\Services\Mailer())->send((string) $sub['tenant_email'], $subject, $over ? __('notify.sub_expired') : __('notify.sub_body', ['date' => format_date($sub['ends_at'])]));
+                    $locale = \Muh\Services\EmailTemplateService::norm((string) ($sub['tenant_locale'] ?? 'tr'));
+                    $subject = $over ? \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_mail_expired') : \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_mail_subject');
+                    $body = '<p>' . ($over ? \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_expired') : \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_body', ['date' => format_date($sub['ends_at'])])) . '</p>';
+                    \Muh\Services\EmailTemplateService::send($locale, (string) $sub['tenant_email'], $subject, $body);
                 }
             }
         }

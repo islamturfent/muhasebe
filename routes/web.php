@@ -264,6 +264,7 @@ return function (Router $router): void {
         $g->post('/app/settings/security/mfa/enable', [\Muh\Controllers\SecurityController::class, 'enableMfa'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/security/mfa/verify', [\Muh\Controllers\SecurityController::class, 'verifyMfa'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/security/mfa/disable', [\Muh\Controllers\SecurityController::class, 'disableMfa'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/audit/export', [\Muh\Controllers\AuditLogController::class, 'export'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/audit', [\Muh\Controllers\AuditLogController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
 
         $g->get('/api/health', function () {

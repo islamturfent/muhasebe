@@ -40,6 +40,7 @@ final class CompanyService
                 'email'         => $data['email'] ?? null,
                 'company_type'  => $data['company_type'] ?? null,
                 'currency'      => $currency,
+                'locale'        => ($data['locale'] ?? '') === 'en' ? 'en' : 'tr',
                 'status'        => 'active',
                 'created_at'    => now(),
                 'updated_at'    => now(),
