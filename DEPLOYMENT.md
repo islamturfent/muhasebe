@@ -100,8 +100,17 @@ Add a scheduled job (cron on Linux):
 0 2 * * *  cd /var/www/muh && php bin/muh backup >> /var/log/muh-backup.log 2>&1
 ```
 
-Store backups off-box (separate storage/bucket). Restore by importing the `.sql`
-dump into MySQL and re-running `php bin/muh migrate` if needed.
+Store backups off-box (separate storage/bucket) by setting `BACKUP_REMOTE_DIR` and
+running `php bin/muh backup --upload`. Restore with `php bin/muh backup:restore <file.sql>`
+(imports the dump back into MySQL), or import the `.sql` manually and re-run
+`php bin/muh migrate` if the schema changed.
+
+Other daily ops (notifications + daily digest) — requires SMTP for real e-mail:
+
+```cron
+0 8 * * *  cd /var/www/muh && php bin/muh notifications >> /var/log/muh-notify.log 2>&1
+10 8 * * * cd /var/www/muh && php bin/muh notify:summary >> /var/log/muh-notify.log 2>&1
+```
 
 ## 5. Migrations & seed data
 

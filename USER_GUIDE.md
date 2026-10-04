@@ -58,13 +58,19 @@ Aktif firmanın Kasa/Banka/Alacak/Borç/Satış/Alış/Stok/Kâr özetini görme
 ## 4. Komut satırı (CLI)
 
 ```
-php bin/muh migrate [--fresh]   # şema (--fresh: tüm tabloları bırak)
-php bin/muh seed                # referans verileri + demo ofisler + süper admin
-php bin/muh test                # 24 birim/regresyon testi
-php bin/muh security            # HTTP güvenlik testleri (CSRF, tenant izolasyonu, RBAC /admin)
-php bin/muh backup              # SQL yedek (storage/backups)
-php bin/muh key:generate        # APP_KEY üret
-php bin/muh admin:make <email>  # kullanıcıyı süper admin yap
+php bin/muh migrate [--fresh]    # şema (--fresh: tüm tabloları bırak)
+php bin/muh seed                 # referans verileri + demo ofisler + süper admin
+php bin/muh test                 # 53 birim/regresyon testi
+php bin/muh test:email-template  # e-posta şablonu gate'i
+php bin/muh test:backup          # yedek rotasyonu gate'i
+php bin/muh i18n:check           # tr/en çeviri bütünlüğü + tanımsız anahtar denetimi
+php bin/muh doctor               # üretim hazırlık denetimi
+php bin/muh security             # HTTP güvenlik testleri (CSRF, tenant izolasyonu, RBAC /admin)
+php bin/muh backup --upload      # SQL yedek + off-box kopya (BACKUP_REMOTE_DIR)
+php bin/muh backup:restore <x>   # yedeği geri yükle
+php bin/muh notify:summary       # günlük e-posta özeti (her aktif ofise)
+php bin/muh key:generate         # APP_KEY üret
+php bin/muh admin:make <email>   # kullanıcıyı süper admin yap
 ```
 
 **Demo ofisler:** `0002_demo_office` + `0006_second_demo_office` iki ayrı, birbirinden
@@ -73,9 +79,9 @@ tenant/iki firma üzerinde test edilir.
 
 **Sürekli entegrasyon (CI):** Depoyu GitHub'a gönderdiğinizde
 `.github/workflows/ci.yml` otomatik çalışır — PHP 8.2 + MySQL 8 içinde
-`migrate --fresh` → `seed` → `test` (24 kontrol) yapar ve ayrı bir job'da uygulamayı
-açıp `security` (HTTP CSRF/tenant/RBAC) süitini koşar. Harici bağımlılık (Composer)
-gerekmez.
+`migrate --fresh` → `seed` → `test` (53 kontrol) + `doctor` + `i18n:check` yapar;
+ayrı `email-templates` ve `backup-rotation` gate job'ları ile `security`
+(HTTP CSRF/tenant/RBAC) süitini koşar. Harici bağımlılık (Composer) gerekmez.
 
 ---
 
