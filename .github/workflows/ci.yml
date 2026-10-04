@@ -231,6 +231,64 @@ jobs:
         run: |
           php bin/muh test:backup
 
+  smoke:
+    name: Gate — HTTP route smoke
+    runs-on: ubuntu-latest
+    needs: tests
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: muh
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring
+
+      - name: Wait for MySQL to be ready (PDO probe)
+        env:
+          DB_PASSWORD: root
+        run: |
+          php -r '$dsn="mysql:host=127.0.0.1;port=3306"; $ok=false; for($i=0;$i<30;$i++){ try{ new PDO($dsn,"root",getenv("DB_PASSWORD")); $ok=true; break; }catch(Throwable $e){ sleep(2);} } if(!$ok){ fwrite(STDERR,"MySQL not ready\n"); exit(1);} echo "MySQL ready\n";'
+
+      - name: Migrate + seed
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: muh
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          php bin/muh migrate --fresh
+          php bin/muh seed
+
+      - name: HTTP route smoke (server self-started)
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: muh
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          APP_ENV: production
+          APP_DEBUG: 'false'
+        run: |
+          php bin/muh test:smoke
+
   security:
     name: HTTP security checks (server + bin/muh security)
     runs-on: ubuntu-latest

@@ -214,6 +214,56 @@ SRV;
         exit($ok ? 0 : 1);
         break;
 
+    case 'test:smoke':
+        // Focused gate (#5): HTTP route smoke. Probes public routes (expect 200)
+        // and protected routes (expect an auth redirect) so view/route regressions
+        // are caught. Accepts an optional base URL of an already-running server;
+        // otherwise it starts the PHP built-in server itself.
+        $httpStatus = function (string $url): int {
+            $ctx = stream_context_create(['http' => ['follow_location' => false, 'timeout' => 6]]);
+            @file_get_contents($url, false, $ctx);
+            if (isset($http_response_header[0]) && preg_match('#^HTTP/\S+ (\d+)#', $http_response_header[0], $m)) {
+                return (int) $m[1];
+            }
+            return 0;
+        };
+
+        $ownServer = false;
+        $proc = null; $pipes = [];
+        $base = $args[1] ?? '';
+        if ($base === '') {
+            $base = 'http://127.0.0.1:8090';
+            $desc = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+            $proc = proc_open([PHP_BINARY, '-S', '127.0.0.1:8090', '-t', dirname(__DIR__) . '/public', dirname(__DIR__) . '/public/index.php'], $desc, $pipes);
+            $ownServer = is_resource($proc);
+            usleep(800000);
+        }
+
+        $ok = true; $checks = [];
+        $public = ['/' => 200, '/pricing' => 200, '/login' => 200];
+        foreach ($public as $path => $exp) {
+            $code = $httpStatus($base . $path);
+            $checks['GET ' . $path . ' -> ' . $exp] = $code === $exp;
+            if ($code !== $exp) { $ok = false; }
+        }
+        foreach (['/app/audit', '/app/notifications', '/admin/audit', '/app/audit/1'] as $path) {
+            $code = $httpStatus($base . $path);
+            $isRedirect = in_array($code, [301, 302, 303, 307, 308], true);
+            $checks['Korunan ' . $path . ' -> yönlendirme'] = $isRedirect;
+            if (!$isRedirect) { $ok = false; }
+        }
+        foreach ($checks as $n => $v) {
+            echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
+        }
+        if ($ownServer && is_resource($proc)) {
+            proc_terminate($proc);
+            @fclose($pipes[0]); @fclose($pipes[1]); @fclose($pipes[2]);
+            @proc_close($proc);
+        }
+        echo $ok ? "HTTP smoke gate: OK\n" : "HTTP smoke gate: FAIL\n";
+        exit($ok ? 0 : 1);
+        break;
+
     case 'backup':
         $file = (new \Muh\Database\Backup())->run();
         echo "Backup saved: {$file}\n";
