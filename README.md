@@ -60,7 +60,7 @@ bin/                    CLI (muh migrate | seed)
 ## Continuous integration
 A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
 - **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (53 checks), then `php bin/muh doctor` (readiness) and `php bin/muh i18n:check` (tr/en parity + undefined-key scan).
-- **email-templates**: gate for branded/localized e-mail template rendering (`php bin/muh test:email-template`) + real SMTP client over a loopback relay (`php bin/muh test:smtp`, verifies multiline EHLO + AUTH LOGIN + delivery).
+- **email-templates**: gate for branded/localized e-mail template rendering (`php bin/muh test:email-template`). The real SMTP client gate (`php bin/muh test:smtp`, verifies multiline EHLO + AUTH LOGIN + delivery) runs **locally** — its loopback subprocess relay is unreliable on hosted runners, so it's excluded from CI.
 - **backup-rotation**: gate for backup creation + retention rotation (`php bin/muh test:backup`).
 - **smoke**: HTTP route smoke — public pages 200 + protected pages redirect to login (`php bin/muh test:smoke`).
 - **security**: starts the app with the PHP built-in server and runs `php bin/muh security` (live HTTP CSRF / tenant isolation / RBAC checks).
