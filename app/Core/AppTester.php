@@ -916,6 +916,49 @@ final class AppTester
         }
         $results[] = ['name' => 'Markalı e-posta şablonu (tr/en)', 'ok' => $mailOk, 'detail' => $mailDetail];
 
+        // ---- SMTP çok satırlı yanıt tüketimi (SmtpMailer readResponse) ----
+        // Ağ kullanmaz; bellek-içi socket pair üzerinden gerçek readResponse()
+        // akışını çalıştırır, böylece CI'da da deterministik olarak koşar.
+        $smtpOk = false; $smtpDetail = '';
+        $pair = null;
+        try {
+            // Windows'ta AF_UNIX desteklenmez; AF_INET kullan. Linux'ta AF_UNIX.
+            $proto = PHP_OS_FAMILY === 'Windows' ? STREAM_PF_INET : STREAM_PF_UNIX;
+            $pair = stream_socket_pair($proto, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+            if ($pair === false) { throw new \RuntimeException('socket pair oluşturulamadı'); }
+            stream_set_blocking($pair[0], true);
+            $m = new \Muh\Services\SmtpMailer('localhost', 25, '', '', 'none', 'test <test@muh.local>');
+            $rp = new \ReflectionProperty(\Muh\Services\SmtpMailer::class, 'conn');
+            $rp->setAccessible(true);
+            $rp->setValue($m, $pair[1]);
+
+            // Gerçek bir relay gibi ÇOK SATIRLI EHLO yanıtı yaz.
+            fwrite($pair[0], "250-localhost\r\n250-AUTH LOGIN\r\n250 SIZE 10485760\r\n");
+            $cmd = new \ReflectionMethod(\Muh\Services\SmtpMailer::class, 'command');
+            $cmd->setAccessible(true);
+            $ret = $cmd->invoke($m, 'EHLO test', 250);
+
+            // readResponse son satıra kadar tüm devam satırlarını tüketmeli:
+            // buffer'da hiç 'kalan' satır kalmamalı (eski hata burayı bozuyordu).
+            stream_set_blocking($pair[1], false);
+            $leftover = (string) stream_get_contents($pair[1]);
+            $finalLine = trim((string) $ret);
+            $smtpOk = $finalLine === '250 SIZE 10485760' && $leftover === '';
+
+            // Beklenmeyen durum kodu RuntimeException üretmeli.
+            stream_set_blocking($pair[0], true);
+            stream_set_blocking($pair[1], true);
+            fwrite($pair[0], "535 5.7.8 auth required\r\n");
+            $threw = false;
+            try { $cmd->invoke($m, 'AUTH LOGIN', 334); } catch (\RuntimeException $e) { $threw = true; }
+            $smtpOk = $smtpOk && $threw;
+            $smtpDetail = $smtpOk ? ('çok satırlı EHLO tüketildi; kalan="' . $leftover . '" + hata kodu yakalandı') : 'hata (BUG): ret=' . $finalLine . ' leftover=' . $leftover;
+        } catch (\Throwable $e) {
+            $smtpOk = false; $smtpDetail = $e->getMessage();
+        }
+        if (is_array($pair)) { @fclose($pair[0]); @fclose($pair[1]); }
+        $results[] = ['name' => 'SMTP çok satırlı EHLO tüketimi', 'ok' => $smtpOk, 'detail' => $smtpDetail];
+
         // ---- Yedek rotasyonu (prune) + sağlık (ping/list) ----
         $bkOk = false; $bkDetail = '';
         try {

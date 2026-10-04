@@ -59,10 +59,10 @@ bin/                    CLI (muh migrate | seed)
 
 ## Continuous integration
 A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR:
-- **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (53 checks), then `php bin/muh doctor` (readiness) and `php bin/muh i18n:check` (tr/en parity + undefined-key scan).
+- **tests**: PHP 8.2 + MySQL 8 → `migrate --fresh` → `seed` → `php bin/muh test` (54 checks), then `php bin/muh doctor` (readiness) and `php bin/muh i18n:check` (tr/en parity + undefined-key scan).
 - **email-templates**: gate for branded/localized e-mail template rendering (`php bin/muh test:email-template`). The real SMTP client gate (`php bin/muh test:smtp`, verifies multiline EHLO + AUTH LOGIN + delivery) runs **locally** — its loopback subprocess relay is unreliable on hosted runners, so it's excluded from CI.
 - **backup-rotation**: gate for backup creation + retention rotation (`php bin/muh test:backup`).
-- **smoke**: HTTP route smoke — public pages 200 + protected pages redirect to login (`php bin/muh test:smoke`).
+- **smoke**: HTTP smoke (`php bin/muh test:smoke`) — public pages 200, protected pages redirect to login, **and authenticated rendering** of the new views: tenant `/app/notifications`, `/app/audit`, `/app/audit/{id}`, plus super admin `/admin`, `/admin/audit`, `/admin/audit/export`.
 - **security**: starts the app with the PHP built-in server and runs `php bin/muh security` (live HTTP CSRF / tenant isolation / RBAC checks).
 
 No Composer or external package install is required — the app is dependency-free.
@@ -147,7 +147,7 @@ To use PostgreSQL:
 | 11 | Notifications + documents | ✅ file upload/download per company, notification centre + auto scans + per-item e-mail send status + daily digest (`notify:summary`) |
 | 12 | Security + audit + backups | ✅ audit viewer, TOTP 2FA, `bin/muh backup` SQL dumps + off-box upload (`--upload`) + restore (`backup:restore`) |
 | 13 | TR/EN localization | ✅ all UI text via translation files (hard-coded Turkish removed) |
-| 14 | Testing/perf/production | ✅ `php bin/muh test` (53 self-tests), `php bin/muh security`, `php bin/muh doctor`, `php bin/muh i18n:check`, CI gate'leri (`email-templates`, `backup-rotation`), security headers, .env, maintenance mode, pagination |
+| 14 | Testing/perf/production | ✅ `php bin/muh test` (54 self-tests), `php bin/muh security`, `php bin/muh doctor`, `php bin/muh i18n:check`, CI gate'leri (`email-templates`, `backup-rotation`, `smoke` w/ authenticated views), security headers, .env, maintenance mode, pagination |
 | Opt. | e-Fatura / e-Arşiv | ✅ `EFaturaGateway` interface + simulated (default) + `RESTEFaturaGateway` (gerçek HTTP entegratör, test/prod, Basic auth); e-Fatura + e-Arşiv send, doc type + envelope id, UBL-TR XML + irsaliye + **toplu UBL/ZIP indirme** (`/app/invoices/ubl-bulk`) |
 | Opt. | Global search | ✅ grouped results across company/cari/invoice/product/entry/bank/cash/check/note |
 | Opt. | Import / Export | ✅ CSV import of current accounts & stock (mapping, preview, error report); CSV/Excel/PDF export |
@@ -173,7 +173,7 @@ DB transactions to keep DR/CR balanced and consistent.
 |---------|---------|
 | `migrate [--fresh]` | Run DB migrations (`--fresh` drops & recreates all tables) |
 | `seed` | Seed plans/roles/permissions/KDV rates + demo office & company |
-| `test` | Run the self-test suite (currently 53 checks) against the configured DB |
+| `test` | Run the self-test suite (currently 54 checks) against the configured DB |
 | `test:email-template` | Focused gate — branded/localized e-mail template rendering |
 | `test:smtp` | Focused gate — real SMTP client end-to-end (loopback relay; EHLO + AUTH LOGIN + delivery) |
 | `test:backup` | Focused gate — backup creation + retention rotation |

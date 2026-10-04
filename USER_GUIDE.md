@@ -60,7 +60,7 @@ Aktif firmanın Kasa/Banka/Alacak/Borç/Satış/Alış/Stok/Kâr özetini görme
 ```
 php bin/muh migrate [--fresh]    # şema (--fresh: tüm tabloları bırak)
 php bin/muh seed                 # referans verileri + demo ofisler + süper admin
-php bin/muh test                 # 53 birim/regresyon testi
+php bin/muh test                 # 54 birim/regresyon testi
 php bin/muh test:email-template  # e-posta şablonu gate'i
 php bin/muh test:backup          # yedek rotasyonu gate'i
 php bin/muh i18n:check           # tr/en çeviri bütünlüğü + tanımsız anahtar denetimi
@@ -79,7 +79,7 @@ tenant/iki firma üzerinde test edilir.
 
 **Sürekli entegrasyon (CI):** Depoyu GitHub'a gönderdiğinizde
 `.github/workflows/ci.yml` otomatik çalışır — PHP 8.2 + MySQL 8 içinde
-`migrate --fresh` → `seed` → `test` (53 kontrol) + `doctor` + `i18n:check` yapar;
+`migrate --fresh` → `seed` → `test` (54 kontrol) + `doctor` + `i18n:check` yapar;
 ayrı `email-templates` ve `backup-rotation` gate job'ları ile `security`
 (HTTP CSRF/tenant/RBAC) süitini koşar. Harici bağımlılık (Composer) gerekmez.
 

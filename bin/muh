@@ -289,6 +289,76 @@ SRV;
             $checks['Korunan ' . $path . ' -> yönlendirme'] = $isRedirect;
             if (!$isRedirect) { $ok = false; }
         }
+
+        // ---- Kimliği doğrulanmış uçtan uca render kontrolü (B1/B2 görünümleri) ----
+        $tenantJar = tempnam(sys_get_temp_dir(), 'smk');
+        $tt = function (string $method, string $path, array $post = [], bool $follow = false) use ($base, $tenantJar) {
+            $ch = curl_init($base . $path);
+            curl_setopt_array($ch, [CURLOPT_COOKIEJAR => $tenantJar, CURLOPT_COOKIEFILE => $tenantJar, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => $follow, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 15]);
+            if ($method === 'POST') { curl_setopt($ch, CURLOPT_POST, true); curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post)); }
+            $body = (string) curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            return [$code, $body];
+        };
+        $tLogin = function (string $email, string $password) use ($tt): void {
+            [, $b] = $tt('GET', '/login');
+            preg_match('/name="_token" value="([^"]+)"/', $b, $m);
+            $tt('POST', '/login', ['email' => $email, 'password' => $password, 'locale' => 'tr', '_token' => $m[1] ?? '']);
+        };
+        $tLogin('demo@muh.local', 'Demo1234');
+        [$cN, $bN] = $tt('GET', '/app/notifications');
+        [$cA, $bA] = $tt('GET', '/app/audit');
+
+        // Detay sayfasının render edeceği bir audit kaydını garanti et (temiz
+        // seed'de demo tenant'a ait audit olmayabilir). Sonra temizle.
+        $demo = DB::first("SELECT id, tenant_id FROM users WHERE email = 'demo@muh.local' AND deleted_at IS NULL");
+        $auditId = 0;
+        if ($demo) {
+            $auditId = (int) DB::insert('audit_logs', [
+                'tenant_id' => (int) $demo['tenant_id'], 'user_id' => (int) $demo['id'],
+                'module' => 'smoke', 'action' => 'smoke.render', 'entity_type' => 'test', 'entity_id' => '1',
+                'old_value' => '{"a":1}', 'new_value' => '{"a":2}',
+                'ip' => '127.0.0.1', 'user_agent' => 'muh-smoke',
+                'created_at' => now(),
+            ]);
+        }
+        [$cD, $bD] = $auditId > 0 ? $tt('GET', '/app/audit/' . $auditId) : [0, ''];
+        $checkN = $cN === 200;
+        $checkA = $cA === 200;
+        $checkD = $auditId > 0 && $cD === 200 && str_contains($bD, 'smoke.render');
+        if ($auditId > 0) { DB::execute('DELETE FROM audit_logs WHERE id = :id', ['id' => $auditId]); }
+        $checks['tenant /app/notifications 200'] = $checkN;
+        $checks['tenant /app/audit 200'] = $checkA;
+        $checks['tenant /app/audit/{id} detay 200'] = $checkD;
+        $ok = $ok && $checkN && $checkA && $checkD;
+        @unlink($tenantJar);
+
+        $adminJar = tempnam(sys_get_temp_dir(), 'smk');
+        $aa = function (string $method, string $path, array $post = [], bool $follow = false) use ($base, $adminJar) {
+            $ch = curl_init($base . $path);
+            curl_setopt_array($ch, [CURLOPT_COOKIEJAR => $adminJar, CURLOPT_COOKIEFILE => $adminJar, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => $follow, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 15]);
+            if ($method === 'POST') { curl_setopt($ch, CURLOPT_POST, true); curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post)); }
+            $body = (string) curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            return [$code, $body];
+        };
+        [, $b2] = $aa('GET', '/login');
+        preg_match('/name="_token" value="([^"]+)"/', $b2, $m2);
+        $aa('POST', '/login', ['email' => 'admin@muh.local', 'password' => 'Admin1234!', 'locale' => 'tr', '_token' => $m2[1] ?? '']);
+        [$cAdm] = $aa('GET', '/admin');
+        [$cAdmAud] = $aa('GET', '/admin/audit');
+        [$cExp] = $aa('GET', '/admin/audit/export?format=csv');
+        $checkAdm = $cAdm === 200;
+        $checkAdmAud = $cAdmAud === 200;
+        $checkExp = $cExp === 200;
+        $checks['süperadmin /admin 200'] = $checkAdm;
+        $checks['süperadmin /admin/audit 200'] = $checkAdmAud;
+        $checks['süperadmin /admin/audit/export 200'] = $checkExp;
+        $ok = $ok && $checkAdm && $checkAdmAud && $checkExp;
+        @unlink($adminJar);
+
         foreach ($checks as $n => $v) {
             echo '  [' . ($v ? 'PASS' : 'FAIL') . '] ' . $n . "\n";
         }
