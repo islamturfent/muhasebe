@@ -536,6 +536,40 @@ final class AdminController extends Controller
         return Response::redirect('/admin/settings/localization');
     }
 
+    // ---- Analitik / ofis izleme ----
+    public function analytics(Request $request): Response
+    {
+        $tenants = DB::select('SELECT * FROM tenants WHERE deleted_at IS NULL ORDER BY id DESC');
+        $rows = [];
+        $totals = ['users' => 0, 'companies' => 0, 'invoices' => 0, 'revenue' => 0.0, 'documents' => 0];
+        foreach ($tenants as $t) {
+            $tid = (int) $t['id'];
+            $users = (int) DB::scalar('SELECT COUNT(*) FROM users WHERE tenant_id = :t AND deleted_at IS NULL', ['t' => $tid]);
+            $companies = (int) DB::scalar('SELECT COUNT(*) FROM companies WHERE tenant_id = :t AND deleted_at IS NULL', ['t' => $tid]);
+            $invoices = (int) DB::scalar('SELECT COUNT(*) FROM invoices WHERE tenant_id = :t AND deleted_at IS NULL', ['t' => $tid]);
+            $revenue = (float) DB::scalar("SELECT COALESCE(SUM(total),0) FROM invoices WHERE tenant_id = :t AND type = 'sales' AND status = 'posted' AND deleted_at IS NULL", ['t' => $tid]);
+            $documents = (int) DB::scalar('SELECT COUNT(*) FROM documents WHERE tenant_id = :t', ['t' => $tid]);
+            $lastActivity = DB::scalar('SELECT MAX(created_at) FROM audit_logs WHERE tenant_id = :t', ['t' => $tid]);
+            $sub = DB::first('SELECT status, ends_at FROM subscriptions WHERE tenant_id = :tid ORDER BY id DESC LIMIT 1', ['tid' => $tid]);
+            $rows[] = [
+                'id' => $tid, 'name' => $t['name'], 'status' => $t['status'], 'users' => $users,
+                'companies' => $companies, 'invoices' => $invoices, 'revenue' => $revenue,
+                'documents' => $documents, 'last_activity' => $lastActivity, 'sub_status' => $sub['status'] ?? 'n/a',
+                'sub_ends' => $sub['ends_at'] ?? null,
+            ];
+            $totals['users'] += $users;
+            $totals['companies'] += $companies;
+            $totals['invoices'] += $invoices;
+            $totals['revenue'] += $revenue;
+            $totals['documents'] += $documents;
+        }
+        return $this->view('admin.analytics', [
+            'layout' => 'layouts.admin',
+            'rows' => $rows,
+            'totals' => $totals,
+        ]);
+    }
+
     // ---- Sistem sağlığı & yedekleme yönetimi ----
     public function backups(Request $request): Response
     {

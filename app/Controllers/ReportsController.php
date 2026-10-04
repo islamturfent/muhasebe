@@ -33,7 +33,7 @@ final class ReportsController extends Controller
         ]);
     }
 
-    private function export(string $format, string $title, string $subtitle, array $headers, array $rows, string $baseName): Response
+    private function export(string $format, string $title, string $subtitle, array $headers, array $rows, string $baseName, ?array $brand = null): Response
     {
         // Keep filename ASCII-safe for headers.
         $safe = str_slug($baseName);
@@ -41,7 +41,7 @@ final class ReportsController extends Controller
             case 'excel':
                 return ReportExportService::excel($title, $headers, $rows, $safe . '.xls');
             case 'pdf':
-                return ReportExportService::pdf($title, $subtitle, $headers, $rows, $safe . '.pdf');
+                return ReportExportService::pdf($title, $subtitle, $headers, $rows, $safe . '.pdf', $brand);
             case 'csv':
             default:
                 return ReportExportService::csv($headers, $rows, $safe . '.csv');
@@ -60,7 +60,7 @@ final class ReportsController extends Controller
             number_format((float) $r['credit'], 2, ',', '.'),
             number_format((float) $r['debit'] - (float) $r['credit'], 2, ',', '.'),
         ], $data);
-        return $this->export($format, __('accounting.trial_balance'), "C: {$companyId} P: {$periodId}", $headers, $rows, 'mizan');
+        return $this->export($format, __('accounting.trial_balance'), "C: {$companyId} P: {$periodId}", $headers, $rows, 'mizan', $this->reportBrand($companyId));
     }
 
     public function yevmiye(Request $request): Response
@@ -1183,5 +1183,11 @@ final class ReportsController extends Controller
             'headers' => $headers, 'rows' => $out, 'exportSlug' => 'yuklumlulukler',
             'companies' => $companies, 'companyId' => $companyId, 'periods' => $periods, 'periodId' => $periodId,
         ]);
+    }
+
+    private function reportBrand(int $companyId): array
+    {
+        $c = DB::first('SELECT name, tax_number FROM companies WHERE id = :id', ['id' => $companyId]);
+        return ['name' => $c['name'] ?? '', 'tax_number' => $c['tax_number'] ?? ''];
     }
 }

@@ -92,6 +92,7 @@ return function (Router $router): void {
         $g->post('/app/invoices/bulk', [\Muh\Controllers\InvoiceController::class, 'bulk'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices', [\Muh\Controllers\InvoiceController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}', [\Muh\Controllers\InvoiceController::class, 'show'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/invoices/{id}/ubl', [\Muh\Controllers\InvoiceController::class, 'ubl'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->get('/app/invoices/{id}/print', [\Muh\Controllers\InvoiceController::class, 'print'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/{id}/efatura', [\Muh\Controllers\InvoiceController::class, 'sendEfatura'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/invoices/{id}/submit-approval', [\Muh\Controllers\InvoiceController::class, 'submitApproval'], [\Muh\Middleware\TenantMiddleware::class]);
@@ -270,6 +271,7 @@ return function (Router $router): void {
     // ---- Super-admin panel (owner / assigned system admins only) ----
     $router->group(['middleware' => [\Muh\Middleware\AuthMiddleware::class, \Muh\Middleware\CsrfMiddleware::class, \Muh\Middleware\RateLimitMiddleware::class, \Muh\Middleware\AdminMiddleware::class]], function (\Muh\Core\RouterGroup $g): void {
         $g->get('/admin', [\Muh\Controllers\AdminController::class, 'index']);
+        $g->get('/admin/analytics', [\Muh\Controllers\AdminController::class, 'analytics']);
         $g->get('/admin/tenants', [\Muh\Controllers\AdminController::class, 'tenants']);
         $g->get('/admin/tenants/{id}', [\Muh\Controllers\AdminController::class, 'tenantShow']);
         $g->post('/admin/tenants/{id}/toggle', [\Muh\Controllers\AdminController::class, 'toggleTenant']);

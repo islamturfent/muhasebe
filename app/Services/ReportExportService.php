@@ -83,10 +83,13 @@ final class ReportExportService
         ]);
     }
 
-    public static function pdf(string $title, string $subtitle, array $headers, array $rows, string $filename): Response
+    public static function pdf(string $title, string $subtitle, array $headers, array $rows, string $filename, ?array $brand = null): Response
     {
         $pdf = new Pdf();
         $pdf->title($title);
+        if ($brand) {
+            $pdf->subheading(($brand['name'] ?? '') . ($brand['tax_number'] ? ' · VKN ' . $brand['tax_number'] : ''));
+        }
         if ($subtitle) {
             $pdf->subheading($subtitle);
         }
@@ -98,6 +101,7 @@ final class ReportExportService
         foreach ($rows as $row) {
             $pdf->tableRow(array_values($row), $widths, false);
         }
+        $pdf->footer('Hesap360 • ' . date('d.m.Y') . ' • ' . count($rows) . ' kayıt');
 
         $content = $pdf->output();
         return Response::make($content, 200, [

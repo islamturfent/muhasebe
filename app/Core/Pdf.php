@@ -104,6 +104,14 @@ final class Pdf
         $this->moveY($pts);
     }
 
+    /** Branding footer drawn near the bottom of the sheet (single-page friendly). */
+    public function footer(string $text): void
+    {
+        $this->y = self::H - 34;
+        $this->rule();
+        $this->text($this->left(), $this->y, $text, 8);
+    }
+
     private function ensureSpace(float $needed): void
     {
         if ($this->y + $needed > self::H - $this->bottomLimit) {

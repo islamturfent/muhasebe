@@ -414,6 +414,39 @@ final class InvoiceController extends Controller
         ]);
         return \Muh\Core\View::instance()->render('app.invoices.print', ['invoice' => $invoice, 'items' => $items, 'brand' => $brand]);
     }
+
+    /** UBL-TR XML indir (e-Fatura / irsaliye). */
+    public function ubl(Request $request, $id): Response
+    {
+        $id = (int) $id;
+        Auth::requireCan('invoice.read');
+        $tenantId = Auth::tenantId();
+        \Muh\Services\CurrentContextService::guardRecord((int) $tenantId, 'invoices', $id);
+        $invoice = DB::first(
+            "SELECT i.*, c.name AS company_name, c.tax_number AS company_tax, c.address AS company_address,
+                    c.currency AS company_currency, ca.name AS account_name, ca.tax_number AS account_tax
+               FROM invoices i
+               JOIN companies c ON c.id = i.company_id
+               LEFT JOIN current_accounts ca ON ca.id = i.current_account_id
+              WHERE i.id = :id AND i.tenant_id = :t AND i.deleted_at IS NULL",
+            ['id' => $id, 't' => $tenantId]
+        );
+        if (!$invoice) {
+            return Response::redirect('/app/invoices');
+        }
+        $items = DB::select(
+            'SELECT ii.*, p.name AS product_name FROM invoice_items ii
+              LEFT JOIN products p ON p.id = ii.product_id WHERE ii.invoice_id = :id ORDER BY ii.id',
+            ['id' => $id]
+        );
+        $despatch = (string) ($request->query('doc_type', (string) $invoice['type']) ?: 'invoice') === 'despatch';
+        $xml = \Muh\Services\EFatura\UblTrGenerator::generate($invoice, $items, $despatch);
+        return Response::make($xml, 200, [
+            'Content-Type' => 'application/xml; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $invoice['number'] . '.xml"',
+        ]);
+    }
+
     public function sendEfatura(Request $request, $id): Response
     {
         $id = (int) $id;

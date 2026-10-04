@@ -739,6 +739,37 @@ final class AppTester
         }
         $results[] = ['name' => 'Güvenlik politikası + depo bazlı stok', 'ok' => $spOk, 'detail' => $spDetail];
 
+        // ---- UBL-TR XML üretici ----
+        $ublOk = false; $ublDetail = '';
+        try {
+            $inv = ['number' => 'F-100', 'type' => 'SATIS', 'date' => date('Y-m-d'), 'due_date' => date('Y-m-d'),
+                'currency_code' => 'USD', 'exchange_rate' => 32.5, 'subtotal' => 82, 'total' => 100, 'tax' => 18,
+                'company_tax' => '1234567890', 'company_name' => 'ACME', 'company_address' => 'İst',
+                'account_tax' => '111', 'account_name' => 'Müşteri A'];
+            $items = [['product_name' => 'Kalem', 'quantity' => 2, 'unit_price' => 41, 'total' => 82]];
+            $xml = \Muh\Services\EFatura\UblTrGenerator::generate($inv, $items, false);
+            $despatch = \Muh\Services\EFatura\UblTrGenerator::generate($inv, $items, true);
+            $doc = @simplexml_load_string($xml);
+            $docD = @simplexml_load_string($despatch);
+            $ublOk = $doc !== false && $docD !== false && strpos($xml, '<cac:AccountingSupplierParty>') !== false;
+            $ublDetail = $ublOk ? 'UBL-TR XML iyi oluşturuldu (fatura + irsaliye)' : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $ublOk = false; $ublDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'UBL-TR XML üretici (fatura + irsaliye)', 'ok' => $ublOk, 'detail' => $ublDetail];
+
+        // ---- Süper admin analitik sorguları ----
+        $anOk = false; $anDetail = '';
+        try {
+            $totalInvoices = (int) DB::scalar('SELECT COUNT(*) FROM invoices WHERE deleted_at IS NULL');
+            $perTenant = DB::select('SELECT tenant_id, COUNT(*) AS c FROM users WHERE deleted_at IS NULL GROUP BY tenant_id');
+            $anOk = is_int($totalInvoices) && is_array($perTenant);
+            $anDetail = $anOk ? ('analitik sorguları ok (toplam fatura=' . $totalInvoices . ')') : 'hata (BUG)';
+        } catch (\Throwable $e) {
+            $anOk = false; $anDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Süper admin analitik sorguları', 'ok' => $anOk, 'detail' => $anDetail];
+
         return $results;
     }
 }

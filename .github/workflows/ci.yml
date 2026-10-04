@@ -83,8 +83,23 @@ jobs:
           DB_PASSWORD: root
           APP_ENV: production
           APP_DEBUG: 'false'
+          SESSION_SECURE: 'true'
         run: |
           php bin/muh test
+
+      - name: Readiness gate (bin/muh doctor)
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_DATABASE: muh
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          APP_ENV: production
+          APP_DEBUG: 'false'
+          SESSION_SECURE: 'true'
+        run: |
+          php bin/muh doctor
 
   security:
     name: HTTP security checks (server + bin/muh security)

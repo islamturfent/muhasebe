@@ -28,6 +28,7 @@ function adminNav(string $path, string $label): string {
 $menu = [
     '/admin' => __('admin.dashboard'),
     '/admin/tenants' => __('admin.tenants'),
+    '/admin/analytics' => __('admin.analytics'),
     '/admin/subscriptions' => __('admin.subscriptions'),
     '/admin/plans' => __('admin.plans'),
     '/admin/audit' => __('admin.audit'),
