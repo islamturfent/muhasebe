@@ -61,22 +61,89 @@ final class NotificationService
 
     /**
      * Send an e-mail for a notification type if enabled in the tenant mail
-     * settings and an SMTP/log target exists.
+     * settings and a target (SMTP/log) exists.
+     *
+     * Returns one of: 'sent' (dispatched), 'failed' (transmission error),
+     * 'skipped' (disabled in settings / no recipient).
      */
-    public static function maybeMail(int $tenantId, string $type, string $subject, string $body): bool
+    public static function maybeMail(int $tenantId, string $type, string $subject, string $body): string
     {
         $flag = 'notify_' . $type;
         $opts = MailSettingService::mailerOptions($tenantId);
         if (empty($opts[$flag])) {
+            return 'skipped';
+        }
+        $to = MailSettingService::tenantEmail($tenantId);
+        if (!$to) {
+            return 'skipped';
+        }
+        $locale = \Muh\Services\EmailTemplateService::norm((string) DB::scalar('SELECT locale FROM tenants WHERE id = :t', ['t' => $tenantId]));
+        $html = \Muh\Services\EmailTemplateService::layout($locale, $subject, '<p>' . $body . '</p>');
+        try {
+            return (new Mailer())->send($to, $subject, $html, $opts) ? 'sent' : 'failed';
+        } catch (\Throwable $e) {
+            return 'failed';
+        }
+    }
+
+    /**
+     * Record the e-mail send status on a notification (B2). 'skipped' clears
+     * the status (no e-mail attempted); 'sent' stores when it was dispatched.
+     */
+    public static function markEmailStatus(int $id, string $status): void
+    {
+        if (!in_array($status, ['sent', 'failed', 'skipped'], true)) {
+            $status = 'skipped';
+        }
+        DB::execute(
+            'UPDATE notifications SET email_status = :s, email_sent_at = :t, updated_at = NOW() WHERE id = :id',
+            ['s' => $status === 'skipped' ? null : $status, 't' => $status === 'sent' ? now() : null, 'id' => $id]
+        );
+    }
+
+    /**
+     * Daily e-mail digest (B2): send a tenant a branded, localized summary of
+     * today's notifications (falling back to the latest ones) when the
+     * `notify_daily_summary` mail setting is enabled. Returns true if sent.
+     */
+    public static function sendDailySummary(int $tenantId): bool
+    {
+        $opts = MailSettingService::mailerOptions($tenantId);
+        if (empty($opts['notify_daily_summary'])) {
             return false;
         }
         $to = MailSettingService::tenantEmail($tenantId);
         if (!$to) {
             return false;
         }
-        $locale = \Muh\Services\EmailTemplateService::norm((string) DB::scalar('SELECT locale FROM tenants WHERE id = :t', ['t' => $tenantId]));
-        $html = \Muh\Services\EmailTemplateService::layout($locale, $subject, '<p>' . $body . '</p>');
-        return (new Mailer())->send($to, $subject, $html, $opts);
+        $locale = EmailTemplateService::norm((string) DB::scalar('SELECT locale FROM tenants WHERE id = :t', ['t' => $tenantId]));
+
+        $rows = DB::select(
+            'SELECT * FROM notifications WHERE tenant_id = :t ORDER BY id DESC LIMIT 30',
+            ['t' => $tenantId]
+        );
+        $today = date('Y-m-d');
+        $todayItems = array_values(array_filter(
+            $rows,
+            fn ($r) => substr((string) ($r['created_at'] ?? ''), 0, 10) === $today
+        ));
+        $items = array_slice($todayItems ?: $rows, 0, 15);
+
+        $count = count($items);
+        $intro = EmailTemplateService::translate($locale, 'notify.summary_intro', ['count' => $count]);
+        $li = '';
+        foreach ($items as $n) {
+            $t = htmlspecialchars((string) ($n['title'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $b = htmlspecialchars((string) ($n['body'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $li .= '<li style="margin:8px 0;font-size:14px;"><strong>' . $t . '</strong> — ' . $b . '</li>';
+        }
+        $bodyHtml = '<p>' . $intro . '</p><ul style="padding-left:18px;">' . $li . '</ul>';
+        return EmailTemplateService::send(
+            $locale,
+            $to,
+            EmailTemplateService::translate($locale, 'notify.summary_subject', ['date' => date('d.m.Y')]),
+            $bodyHtml
+        );
     }
 
     public function unreadCount(?int $userId = null): int
@@ -229,7 +296,7 @@ final class NotificationService
                 continue;
             }
             $overdue = $inv['due_date'] < date('Y-m-d');
-            $this->create(
+            $id = $this->create(
                 $overdue ? 'due_date' : 'unpaid_invoice',
                 $overdue ? __('notify.overdue_title', ['no' => $inv['number']]) : __('notify.due_title', ['no' => $inv['number']]),
                 __('notify.due_body', ['company' => $inv['company_name'], 'amount' => money($inv['total'] - $inv['paid']), 'date' => format_date($inv['due_date'])]),
@@ -239,7 +306,7 @@ final class NotificationService
                 $tenantId
             );
             $created++;
-            static::maybeMail($tenantId, 'due', __('notify.due_mail_subject', ['no' => $inv['number']]), __('notify.due_body', ['company' => $inv['company_name'], 'amount' => money($inv['total'] - $inv['paid']), 'date' => format_date($inv['due_date'])]) . ' — <a href="' . url('/app/invoices/' . $inv['id']) . '">' . __('common.view') . '</a>');
+            static::markEmailStatus($id, static::maybeMail($tenantId, 'due', __('notify.due_mail_subject', ['no' => $inv['number']]), __('notify.due_body', ['company' => $inv['company_name'], 'amount' => money($inv['total'] - $inv['paid']), 'date' => format_date($inv['due_date'])]) . ' — <a href="' . url('/app/invoices/' . $inv['id']) . '">' . __('common.view') . '</a>'));
         }
 
         // 2) Critical stock
@@ -255,9 +322,9 @@ final class NotificationService
             if (DB::scalar('SELECT COUNT(*) FROM notifications WHERE tenant_id = :t AND payload = :p', ['t' => $tenantId, 'p' => json_encode(['key' => $key])]) > 0) {
                 continue;
             }
-            $this->create('critical_stock', __('notify.stock_title', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]), 'danger', null, null, '/app/inventory/' . $p['id'], ['key' => $key], $tenantId);
+            $id = $this->create('critical_stock', __('notify.stock_title', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]), 'danger', null, null, '/app/inventory/' . $p['id'], ['key' => $key], $tenantId);
             $created++;
-            static::maybeMail($tenantId, 'stock', __('notify.stock_mail_subject', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']]));
+            static::markEmailStatus($id, static::maybeMail($tenantId, 'stock', __('notify.stock_mail_subject', ['name' => $p['name']]), __('notify.stock_body', ['company' => $p['company_name'], 'stock' => (float) $p['stock_quantity']])));
         }
 
         // 2b) Vergi takvimi: yaklaşan / vadesi geçen yükümlülükler (14 gün).
@@ -274,7 +341,7 @@ final class NotificationService
                 continue;
             }
             $over = strtotime($to['due_date']) < strtotime(date('Y-m-d'));
-            $this->create(
+            $id = $this->create(
                 'tax',
                 $over ? __('notify.tax_overdue_title', ['name' => $to['name']]) : __('notify.tax_title', ['name' => $to['name']]),
                 __('notify.tax_body', ['date' => format_date($to['due_date'])]),
@@ -282,7 +349,7 @@ final class NotificationService
                 null, null, '/app/tax-calendar', ['key' => $key], $tenantId
             );
             $created++;
-            static::maybeMail($tenantId, 'tax', __('notify.tax_title', ['name' => $to['name']]), __('notify.tax_body', ['date' => format_date($to['due_date'])]));
+            static::markEmailStatus($id, static::maybeMail($tenantId, 'tax', __('notify.tax_title', ['name' => $to['name']]), __('notify.tax_body', ['date' => format_date($to['due_date'])])));
         }
 
         // 3) Subscription expiry (only the tenant's own subscription).
@@ -297,7 +364,7 @@ final class NotificationService
             $already = DB::scalar('SELECT COUNT(*) FROM notifications WHERE tenant_id = :t AND payload = :p', ['t' => $tenantId, 'p' => json_encode(['key' => $key])]) > 0;
             if ($daysLeft <= 14 && !$already) {
                 $over = $daysLeft < 0;
-                $this->create(
+                $subId = $this->create(
                     'subscription',
                     $over ? __('notify.sub_expired') : __('notify.sub_title', ['days' => max(0, $daysLeft)]),
                     $over ? __('notify.sub_body', ['date' => format_date($sub['ends_at'])]) : __('notify.sub_body', ['date' => format_date($sub['ends_at'])]),
@@ -306,12 +373,14 @@ final class NotificationService
                 );
                 $created++;
                 // E-posta hatırlatma: 3 gün içinde / sona erenler için (günde bir), ofisin dilinde markalı şablon.
+                $mailStatus = 'skipped';
                 if ($daysLeft <= 3 && $sub['tenant_email']) {
                     $locale = \Muh\Services\EmailTemplateService::norm((string) ($sub['tenant_locale'] ?? 'tr'));
                     $subject = $over ? \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_mail_expired') : \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_mail_subject');
                     $body = '<p>' . ($over ? \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_expired') : \Muh\Services\EmailTemplateService::translate($locale, 'notify.sub_body', ['date' => format_date($sub['ends_at'])])) . '</p>';
-                    \Muh\Services\EmailTemplateService::send($locale, (string) $sub['tenant_email'], $subject, $body);
+                    $mailStatus = \Muh\Services\EmailTemplateService::send($locale, (string) $sub['tenant_email'], $subject, $body) ? 'sent' : 'failed';
                 }
+                static::markEmailStatus($subId, $mailStatus);
             }
         }
 

@@ -475,6 +475,40 @@ final class AppTester
         }
         $results[] = ['name' => 'Onay bildirimi + Bildirim Merkezi özeti', 'ok' => $apOk, 'detail' => $apDetail];
 
+        // ---- B2: Bildirim e-posta gönderim durumu + günlük özet - rollback ----
+        $nsOk = false; $nsDetail = '';
+        try {
+            Auth::loginById(1);
+            $tid = Auth::tenantId();
+            DB::transaction(function () use (&$nsOk, &$nsDetail, $tid) {
+                $cols = [];
+                foreach (DB::select('SHOW COLUMNS FROM notifications') as $c) { $cols[$c['Field']] = true; }
+                if (!isset($cols['email_status']) || !isset($cols['email_sent_at'])) {
+                    $nsOk = false; $nsDetail = 'email_status/email_sent_at sütunları eksik (migration 0023?)';
+                    throw new \RuntimeException('__rollback__');
+                }
+                $id = (new \Muh\Services\NotificationService())->create('system', 'B2 test', 'body', 'info', null, null, null, [], $tid);
+                $status = \Muh\Services\NotificationService::maybeMail($tid, 'due', 'T', 'B');
+                \Muh\Services\NotificationService::markEmailStatus($id, $status);
+                $row = DB::first('SELECT email_status, email_sent_at FROM notifications WHERE id = :i', ['i' => $id]);
+                $statusOk = in_array($row['email_status'], ['sent', 'failed', 'skipped'], true);
+                if ($row['email_status'] === 'sent') {
+                    $statusOk = $statusOk && !empty($row['email_sent_at']);
+                }
+                $off = \Muh\Services\NotificationService::sendDailySummary($tid);
+                \Muh\Services\MailSettingService::save($tid, ['notify_daily_summary' => '1']);
+                $on = \Muh\Services\NotificationService::sendDailySummary($tid);
+                \Muh\Services\MailSettingService::save($tid, ['notify_daily_summary' => '0']);
+                $nsOk = $statusOk && $off === false && $on === true;
+                $nsDetail = $nsOk ? ('mail durum=' . $row['email_status'] . ' + özet(off=' . var_export($off, true) . '/on=' . var_export($on, true) . ')') : 'hata (BUG): mail=' . json_encode($row) . ' off=' . var_export($off, true) . ' on=' . var_export($on, true);
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $nsOk = false; $nsDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'Bildirim gönderim durumu + günlük e-posta özeti', 'ok' => $nsOk, 'detail' => $nsDetail];
+
         // ---- Beni Hatırla (kalıcı giriş / remember-me) - rollback ----
         $rmOk = false; $rmDetail = '';
         try {

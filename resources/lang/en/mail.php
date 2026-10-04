@@ -20,6 +20,7 @@ return [
     'notify_user' => 'New user',
     'notify_tax' => 'Upcoming tax obligation',
     'notify_approval' => 'Entry / invoice awaiting approval',
+    'notify_daily_summary' => 'Daily email summary',
     'save' => 'Save',
     'saved' => 'Email settings saved.',
     'send_test' => 'Send Test Email',

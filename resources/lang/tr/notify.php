@@ -30,4 +30,6 @@ return [
     'approval_invoice_rejected' => 'Faturanız reddedildi: :no',
     'approval_invoice_approved_body' => ':no numaralı faturanız onaylandı.',
     'approval_invoice_rejected_body' => ':no numaralı faturanız reddedildi. Açıklama: :note',
+    'summary_subject' => 'Günlük bildirim özeti — :date',
+    'summary_intro' => 'Bugün için :count bildiriminiz bulunuyor.',
 ];

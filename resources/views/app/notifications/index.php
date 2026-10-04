@@ -48,8 +48,11 @@ function timeAgo($dt, $locale): string {
         <div class="flex-1 min-w-0">
             <div class="font-semibold text-slate-800 text-sm"><?= e($n['title']) ?></div>
             <?php if ($n['body']): ?><p class="text-sm text-slate-500 mt-0.5"><?= e($n['body']) ?></p><?php endif; ?>
-            <div class="text-xs text-slate-400 mt-1">
+            <div class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <?= e(timeAgo($n['created_at'], $locale)) ?>
+                <?php if (!empty($n['email_status']) && $n['email_status'] !== 'skipped'): ?>
+                <span class="inline-flex items-center gap-1 <?= $n['email_status'] === 'sent' ? 'text-emerald-600' : 'text-red-600' ?>">● <?= e($n['email_status'] === 'sent' ? __('notification.email_sent') : __('notification.email_failed')) ?></span>
+                <?php endif; ?>
                 <?php if ($n['action_url']): ?> · <a href="<?= e(url($n['action_url'])) ?>" class="text-brand-600"><?= e(__('common.details')) ?></a><?php endif; ?>
             </div>
         </div>

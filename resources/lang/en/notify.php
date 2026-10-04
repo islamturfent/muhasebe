@@ -30,4 +30,6 @@ return [
     'approval_invoice_rejected' => 'Your invoice was rejected: :no',
     'approval_invoice_approved_body' => 'Your invoice :no was approved.',
     'approval_invoice_rejected_body' => 'Your invoice :no was rejected. Note: :note',
+    'summary_subject' => 'Daily notification summary — :date',
+    'summary_intro' => 'You have :count notification(s) today.',
 ];

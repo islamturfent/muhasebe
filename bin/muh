@@ -173,6 +173,21 @@ switch ($command) {
         echo "Notifications generated: {$total}\n";
         break;
 
+    case 'notify:summary':
+    case 'summary:send':
+        // Daily e-mail digest: send a localized summary of each active tenant's
+        // notifications when the `notify_daily_summary` mail setting is on.
+        // Intended to run via cron once a day. Usage: php bin/muh notify:summary
+        $tenants = DB::select("SELECT id FROM tenants WHERE status = 'active'");
+        $sent = 0;
+        foreach ($tenants as $tenant) {
+            if (\Muh\Services\NotificationService::sendDailySummary((int) $tenant['id'])) {
+                $sent++;
+            }
+        }
+        echo "Daily e-mail summaries sent: {$sent} tenant(s).\n";
+        break;
+
     case 'efatura:poll':
         // Query e-Fatura statuses (sending/sent) for every active tenant via the
         // configured gateway (simulated or real REST integrator).

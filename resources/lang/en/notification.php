@@ -15,5 +15,7 @@ return [
     'upcoming_due' => 'Upcoming Due',
     'overdue' => 'Overdue',
     'critical_stock' => 'Critical Stock',
+    'email_sent' => 'Email sent',
+    'email_failed' => 'Email failed',
     'view_all' => 'View all',
 ];

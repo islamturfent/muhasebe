@@ -20,6 +20,7 @@ return [
     'notify_user' => 'Yeni kullanıcı',
     'notify_tax' => 'Yaklaşan vergi yükümlülüğü',
     'notify_approval' => 'Onay bekleyen fiş / fatura',
+    'notify_daily_summary' => 'Günlük e-posta özeti',
     'save' => 'Kaydet',
     'saved' => 'E-posta ayarları kaydedildi.',
     'send_test' => 'Test E-postası Gönder',
