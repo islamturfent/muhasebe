@@ -136,6 +136,11 @@ return function (Router $router): void {
         $g->get('/app/settings/gib', [\Muh\Controllers\GibSettingsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/settings/gib', [\Muh\Controllers\GibSettingsController::class, 'save'], [\Muh\Middleware\TenantMiddleware::class]);
 
+        // GİB e-Belge Express (Faz 2)
+        $g->get('/app/express', [\Muh\Controllers\ExpressController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/express/pull', [\Muh\Controllers\ExpressController::class, 'pull'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/express/{id}/convert', [\Muh\Controllers\ExpressController::class, 'convert'], [\Muh\Middleware\TenantMiddleware::class]);
+
         $g->post('/app/periods/close', [\Muh\Controllers\PeriodController::class, 'close'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)

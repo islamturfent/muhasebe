@@ -311,6 +311,8 @@ SRV;
         [$cA, $bA] = $tt('GET', '/app/audit');
         [$cB] = $tt('GET', '/app/beyanname');
         $checkB = $cB === 200;
+        [$cE] = $tt('GET', '/app/express?company_id=' . ((int) DB::scalar('SELECT id FROM companies WHERE tenant_id = (SELECT tenant_id FROM users WHERE email = \'demo@muh.local\') ORDER BY id LIMIT 1') ?: 0));
+        $checkE = $cE === 200;
 
         // Detay sayfasının render edeceği bir audit kaydını garanti et (temiz
         // seed'de demo tenant'a ait audit olmayabilir). Sonra temizle.
@@ -334,7 +336,8 @@ SRV;
         $checks['tenant /app/audit 200'] = $checkA;
         $checks['tenant /app/audit/{id} detay 200'] = $checkD;
         $checks['tenant /app/beyanname 200'] = $checkB;
-        $ok = $ok && $checkN && $checkA && $checkD && $checkB;
+        $checks['tenant /app/express 200'] = $checkE;
+        $ok = $ok && $checkN && $checkA && $checkD && $checkB && $checkE;
         @unlink($tenantJar);
 
         $adminJar = tempnam(sys_get_temp_dir(), 'smk');
@@ -519,6 +522,20 @@ SRV;
             }
         }
         echo "e-Beyan gönderim: {$submitted} gönderildi, {$failed} hata.\n";
+        break;
+
+    case 'express:pull':
+        // GİB e-Belge Express (Faz 2): her aktif tenant için e-Fatura çek (ilk firma).
+        $tenants = DB::select("SELECT id FROM tenants WHERE status = 'active'");
+        $total = 0;
+        foreach ($tenants as $tenant) {
+            $comp = DB::scalar('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL ORDER BY id LIMIT 1', ['t' => (int) $tenant['id']]);
+            if (!$comp) { continue; }
+            $n = \Muh\Services\GIBExpressService::pull((int) $tenant['id'], (int) $comp, 'e-fatura', date('Y-m-01'), date('Y-m-d'));
+            $total += $n;
+            echo "  tenant #{$tenant['id']}: {$n} yeni evrak\n";
+        }
+        echo "GİB e-Belge Express: {$total} yeni evrak çekildi.\n";
         break;
 
     case 'efatura:poll':

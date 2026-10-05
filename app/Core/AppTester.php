@@ -982,6 +982,34 @@ final class AppTester
         }
         $results[] = ['name' => 'e-Beyan KDV akışı (hazırla→gönder→onay)', 'ok' => $beyOk, 'detail' => $beyDetail];
 
+        // ---- Faz 2: GİB e-Belge Express (çek + fişe çevir) ----
+        $exOk = false; $exDetail = ''; $exEntry = 0; $exDoc = 0;
+        try {
+            Auth::loginById(1);
+            $tid = Auth::tenantId();
+            $comp = DB::first('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL LIMIT 1', ['t' => $tid]);
+            if (!$comp) { throw new \RuntimeException('firma yok'); }
+            $n = \Muh\Services\GIBExpressService::pull($tid, (int) $comp['id'], 'e-fatura', date('Y-m-01'), date('Y-m-d'));
+            $doc = DB::first('SELECT * FROM gib_inbound_documents WHERE tenant_id = :t AND company_id = :c ORDER BY id DESC LIMIT 1', ['t' => $tid, 'c' => (int) $comp['id']]);
+            if (!$doc) { throw new \RuntimeException('evrak çekilemedi'); }
+            $exDoc = (int) $doc['id'];
+            $exEntry = \Muh\Services\GIBExpressService::createJournal($tid, $exDoc, []);
+            $d2 = DB::first('SELECT status, entry_id FROM gib_inbound_documents WHERE id = :i', ['i' => $exDoc]);
+            $entry = DB::first('SELECT id FROM accounting_entries WHERE id = :i', ['i' => $exEntry]);
+            $exOk = $n > 0 && $d2['status'] === 'converted' && (int) $d2['entry_id'] === $exEntry && $entry !== null;
+            $exDetail = $exOk ? ('pull=' . $n . ' fiş=#' . $exEntry) : 'hata (BUG)'; 
+        } catch (\Throwable $e) {
+            $exOk = false; $exDetail = $e->getMessage();
+        }
+        if (isset($tid) && $exDoc > 0) {
+            DB::execute('DELETE FROM gib_inbound_documents WHERE id = :i', ['i' => $exDoc]);
+        }
+        if ($exEntry > 0) {
+            DB::execute('DELETE FROM accounting_entry_lines WHERE entry_id = :i', ['i' => $exEntry]);
+            DB::execute('DELETE FROM accounting_entries WHERE id = :i', ['i' => $exEntry]);
+        }
+        $results[] = ['name' => 'GİB Express: çek + fişe çevir', 'ok' => $exOk, 'detail' => $exDetail];
+
         // ---- Yedek rotasyonu (prune) + sağlık (ping/list) ----
         $bkOk = false; $bkDetail = '';
         try {

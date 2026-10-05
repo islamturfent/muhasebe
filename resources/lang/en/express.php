@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'title' => 'GİB e-Belge (Express Import)',
+    'subtitle' => 'Pull e-Fatura / e-Arşiv documents from GİB and turn them into automatic journal entries.',
+    'company' => 'Company',
+    'doc_type' => 'Invoice type',
+    'from' => 'From',
+    'to' => 'To',
+    'download' => 'Download Invoices',
+    'source_note' => 'Source: GİB / integrator (simulated mode fetches test data).',
+    'documents' => 'Downloaded Documents',
+    'empty' => 'No documents yet. Start with Download Invoices.',
+    'downloaded_status' => 'Downloaded',
+    'converted_status' => 'Converted',
+    'base' => 'Base',
+    'vat' => 'VAT',
+    'total' => 'Total',
+    'entry' => 'Journal entry',
+    'inventory_code' => 'Inventory',
+    'vat_code' => 'VAT',
+    'supplier_code' => 'Supplier',
+    'prepare_save' => 'Prepare & Save Entry',
+    'pulled' => ':n documents downloaded from GİB.',
+    'converted' => 'Journal entry created: #:no',
+];

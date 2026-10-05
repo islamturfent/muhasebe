@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'title' => 'GİB e-Belge (Express Aktarım)',
+    'subtitle' => 'e-Fatura / e-Arşiv evraklarını GİB\'ten çekip otomatik muhasebe fişine çevirin.',
+    'company' => 'Firma',
+    'doc_type' => 'Fatura Tipi',
+    'from' => 'Başlangıç',
+    'to' => 'Bitiş',
+    'download' => 'Faturaları İndir',
+    'source_note' => 'Kaynak: GİB / entegratör (simulated mod test verisi çeker).',
+    'documents' => 'İndirilen Evraklar',
+    'empty' => 'Henüz evrak yok. Faturaları İndir ile başlayın.',
+    'downloaded_status' => 'İndirildi',
+    'converted_status' => 'Fişe çevrildi',
+    'base' => 'Matrah',
+    'vat' => 'KDV',
+    'total' => 'Toplam',
+    'entry' => 'Muhasebe Fişi',
+    'inventory_code' => 'Stok',
+    'vat_code' => 'KDV',
+    'supplier_code' => 'Satıcı',
+    'prepare_save' => 'Fiş Hazırla & Kaydet',
+    'pulled' => ':n evrak GİB\'ten indirildi.',
+    'converted' => 'Fiş oluşturuldu: #:no',
+];
