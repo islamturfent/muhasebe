@@ -141,6 +141,12 @@ return function (Router $router): void {
         $g->post('/app/express/pull', [\Muh\Controllers\ExpressController::class, 'pull'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/express/{id}/convert', [\Muh\Controllers\ExpressController::class, 'convert'], [\Muh\Middleware\TenantMiddleware::class]);
 
+        // Defter-Beyan (Faz 3)
+        $g->get('/app/defter-beyan', [\Muh\Controllers\DefterBeyanController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/defter-beyan', [\Muh\Controllers\DefterBeyanController::class, 'store'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/defter-beyan/import', [\Muh\Controllers\DefterBeyanController::class, 'import'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/defter-beyan/{id}/submit', [\Muh\Controllers\DefterBeyanController::class, 'submit'], [\Muh\Middleware\TenantMiddleware::class]);
+
         $g->post('/app/periods/close', [\Muh\Controllers\PeriodController::class, 'close'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)

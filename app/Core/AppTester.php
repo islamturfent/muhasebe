@@ -1010,6 +1010,29 @@ final class AppTester
         }
         $results[] = ['name' => 'GİB Express: çek + fişe çevir', 'ok' => $exOk, 'detail' => $exDetail];
 
+        // ---- Faz 3: Defter-Beyan (e-SMM + CSV içe aktarım) ----
+        $dbOk = false; $dbDetail = '';
+        try {
+            Auth::loginById(1);
+            $tid = Auth::tenantId();
+            $comp = DB::first('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL LIMIT 1', ['t' => $tid]);
+            if (!$comp) { throw new \RuntimeException('firma yok'); }
+            $no = date('YmdHis');
+            $id1 = \Muh\Services\DefterBeyanService::addRecord($tid, (int) $comp['id'], date('Y-m-d'), 'e-smm', 'Test SMM', 1000, 180, 'SMM-' . $no);
+            $csv = date('Y-m-d') . ",e-smm,CSV kayit,500,90,CSV-1\n" . date('Y-m-d') . ",gider,CSV gider,200,36,GD-1";
+            $imp = \Muh\Services\DefterBeyanService::importCsv($tid, (int) $comp['id'], $csv);
+            $res = \Muh\Services\DefterBeyanService::submitRecord($id1, $tid);
+            $r = DB::first('SELECT status, gib_reference FROM defter_beyan_records WHERE id = :i', ['i' => $id1]);
+            $dbOk = $imp === 2 && $res['ok'] && $r['status'] === 'sent' && !empty($r['gib_reference']);
+            $dbDetail = $dbOk ? ('e-SMM gönderildi (' . $r['gib_reference'] . ') + ' . $imp . ' CSV') : 'hata (BUG)'; 
+        } catch (\Throwable $e) {
+            $dbOk = false; $dbDetail = $e->getMessage();
+        }
+        if (isset($tid)) {
+            DB::execute("DELETE FROM defter_beyan_records WHERE tenant_id = :t AND description IN ('Test SMM','CSV kayit','CSV gider')", ['t' => $tid]);
+        }
+        $results[] = ['name' => 'Defter-Beyan: e-SMM + CSV içe aktarım', 'ok' => $dbOk, 'detail' => $dbDetail];
+
         // ---- Yedek rotasyonu (prune) + sağlık (ping/list) ----
         $bkOk = false; $bkDetail = '';
         try {
