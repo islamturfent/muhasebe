@@ -34,6 +34,7 @@ final class CompanyService
                 'trade_name'    => $data['trade_name'] ?? null,
                 'tax_number'    => $data['tax_number'] ?? null,
                 'tax_office'    => $data['tax_office'] ?? null,
+                'tax_office_code' => $data['tax_office_code'] ?? null,
                 'mersis'        => $data['mersis'] ?? null,
                 'address'       => $data['address'] ?? null,
                 'phone'         => $data['phone'] ?? null,
