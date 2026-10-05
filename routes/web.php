@@ -128,6 +128,14 @@ return function (Router $router): void {
         $g->post('/app/tax-calendar/{id}/toggle', [\Muh\Controllers\TaxCalendarController::class, 'toggleStatus'], [\Muh\Middleware\TenantMiddleware::class]);
         $g->post('/app/tax-calendar/{id}/delete', [\Muh\Controllers\TaxCalendarController::class, 'destroy'], [\Muh\Middleware\TenantMiddleware::class]);
 
+        // GİB e-Beyan (Faz 1)
+        $g->get('/app/beyanname', [\Muh\Controllers\BeyannameController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/beyanname/prepare', [\Muh\Controllers\BeyannameController::class, 'prepare'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/beyanname/{id}/submit', [\Muh\Controllers\BeyannameController::class, 'submit'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/beyanname/{id}/approve', [\Muh\Controllers\BeyannameController::class, 'approve'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->get('/app/settings/gib', [\Muh\Controllers\GibSettingsController::class, 'index'], [\Muh\Middleware\TenantMiddleware::class]);
+        $g->post('/app/settings/gib', [\Muh\Controllers\GibSettingsController::class, 'save'], [\Muh\Middleware\TenantMiddleware::class]);
+
         $g->post('/app/periods/close', [\Muh\Controllers\PeriodController::class, 'close'], [\Muh\Middleware\TenantMiddleware::class]);
 
         // Cash (kasa)

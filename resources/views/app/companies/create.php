@@ -39,6 +39,10 @@ Session::forget('_form_errors');
                 <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('onboarding.tax_office')) ?></label>
                 <input name="tax_office" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
             </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1"><?= e(__('onboarding.tax_office_code')) ?></label>
+                <input name="tax_office_code" maxlength="6" placeholder="6 haneli GİB kodu" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none">
+            </div>
         </div>
 
         <div class="grid md:grid-cols-2 gap-4">

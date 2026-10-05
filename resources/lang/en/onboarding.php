@@ -13,6 +13,7 @@ return [
     'trade_name' => 'Trade Name',
     'tax_number' => 'Tax Number',
     'tax_office' => 'Tax Office',
+    'tax_office_code' => 'GİB Tax Office Code',
     'fiscal_year' => 'Fiscal Year',
     'create_company' => 'Create Company',
     'company_created' => 'Your first client company has been created.',

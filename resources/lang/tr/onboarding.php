@@ -13,6 +13,7 @@ return [
     'trade_name' => 'Ticari Unvan',
     'tax_number' => 'Vergi Numarası',
     'tax_office' => 'Vergi Dairesi',
+    'tax_office_code' => 'GİB Vergi Dairesi Kodu',
     'fiscal_year' => 'Mali Dönem Yılı',
     'create_company' => 'Firmayı Oluştur',
     'company_created' => 'İlk müşteri firmanız oluşturuldu.',

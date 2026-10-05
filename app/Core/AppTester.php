@@ -959,6 +959,29 @@ final class AppTester
         if (is_array($pair)) { @fclose($pair[0]); @fclose($pair[1]); }
         $results[] = ['name' => 'SMTP çok satırlı EHLO tüketimi', 'ok' => $smtpOk, 'detail' => $smtpDetail];
 
+        // ---- Faz 1: e-Beyan KDV akışı (hazırla → paketle → gönder → onay) ----
+        $beyOk = false; $beyDetail = '';
+        try {
+            Auth::loginById(1);
+            $tid = Auth::tenantId();
+            DB::transaction(function () use (&$beyOk, &$beyDetail, $tid) {
+                $comp = DB::first('SELECT id FROM companies WHERE tenant_id = :t AND deleted_at IS NULL LIMIT 1', ['t' => $tid]);
+                if (!$comp) { $beyOk = false; $beyDetail = 'firma yok'; throw new \RuntimeException('__rollback__'); }
+                $id = \Muh\Services\BeyannameService::prepareKdv($tid, (int) $comp['id'], date('Y-m'));
+                $pkg = \Muh\Services\BeyannameService::package($id);
+                $res = \Muh\Services\BeyannameService::submit($id, $tid);
+                $apr = \Muh\Services\BeyannameService::approve($id);
+                $row = DB::first('SELECT status, gib_reference FROM beyannameler WHERE id = :id', ['id' => $id]);
+                $beyOk = $pkg && $res['ok'] && $apr && $row['status'] === 'approved' && !empty($row['gib_reference']);
+                $beyDetail = $beyOk ? ('akış ok (ref=' . $row['gib_reference'] . ')') : 'hata (BUG)'; 
+                throw new \RuntimeException('__rollback__');
+            });
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            $beyOk = false; $beyDetail = $e->getMessage();
+        }
+        $results[] = ['name' => 'e-Beyan KDV akışı (hazırla→gönder→onay)', 'ok' => $beyOk, 'detail' => $beyDetail];
+
         // ---- Yedek rotasyonu (prune) + sağlık (ping/list) ----
         $bkOk = false; $bkDetail = '';
         try {

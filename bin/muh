@@ -309,6 +309,8 @@ SRV;
         $tLogin('demo@muh.local', 'Demo1234');
         [$cN, $bN] = $tt('GET', '/app/notifications');
         [$cA, $bA] = $tt('GET', '/app/audit');
+        [$cB] = $tt('GET', '/app/beyanname');
+        $checkB = $cB === 200;
 
         // Detay sayfasının render edeceği bir audit kaydını garanti et (temiz
         // seed'de demo tenant'a ait audit olmayabilir). Sonra temizle.
@@ -331,7 +333,8 @@ SRV;
         $checks['tenant /app/notifications 200'] = $checkN;
         $checks['tenant /app/audit 200'] = $checkA;
         $checks['tenant /app/audit/{id} detay 200'] = $checkD;
-        $ok = $ok && $checkN && $checkA && $checkD;
+        $checks['tenant /app/beyanname 200'] = $checkB;
+        $ok = $ok && $checkN && $checkA && $checkD && $checkB;
         @unlink($tenantJar);
 
         $adminJar = tempnam(sys_get_temp_dir(), 'smk');
@@ -497,6 +500,25 @@ SRV;
             }
         }
         echo "Daily e-mail summaries sent: {$sent} tenant(s).\n";
+        break;
+
+    case 'beyanname:send':
+        // e-Beyan (Faz 1): her aktif tenant'in draft/packaged/error beyannamelerini
+        // tenant'in GİB gateway'i üzerinden gönderir.
+        $tenants = DB::select("SELECT id FROM tenants WHERE status = 'active'");
+        $submitted = 0; $failed = 0;
+        foreach ($tenants as $tenant) {
+            $rows = DB::select(
+                "SELECT id FROM beyannameler WHERE tenant_id = :t AND status IN ('draft','packaged','error') ORDER BY id",
+                ['t' => (int) $tenant['id']]
+            );
+            foreach ($rows as $r) {
+                $res = \Muh\Services\BeyannameService::submit((int) $r['id'], (int) $tenant['id']);
+                $res['ok'] ? $submitted++ : $failed++;
+                echo "  beyanname #{$r['id']}: " . ($res['ok'] ? 'sent' : 'failed') . " — " . $res['message'] . ($res['reference'] ? " ({$res['reference']})" : '') . "\n";
+            }
+        }
+        echo "e-Beyan gönderim: {$submitted} gönderildi, {$failed} hata.\n";
         break;
 
     case 'efatura:poll':
