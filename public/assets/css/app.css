@@ -60,3 +60,23 @@ html.dark .text-brand-600, html.dark .text-brand-700 { color:#93b4ff; }
 
 /* Shadows softened in dark */
 html.dark .shadow-sm, html.dark .shadow, html.dark .shadow-lg { box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 1px 2px rgba(0,0,0,0.4); }
+
+/* ------------------------------------------------------------------
+   Landing/marketing dark mode — gradient stops + opacity surfaces that
+   Tailwind's <html class="dark"> remap above does not cover.
+   ------------------------------------------------------------------ */
+/* Hero gradient: override the full background-image for dark mode (the
+   gradient stops from-brand-50 via-white to-white don't remap reliably, so we
+   target the named .hero-gradient element explicitly for a guaranteed dark
+   result while leaving light mode untouched). */
+html.dark .hero-gradient { background-image: linear-gradient(to bottom, #1e3a8a 0%, #0f172a 62%); }
+
+/* Opacity-backed surfaces (navbar / featured pricing card) */
+html.dark .bg-white\/90       { background-color: rgba(15,23,42,0.9); }
+html.dark .bg-brand-50\/30    { background-color: rgba(23,37,84,0.4); }
+
+/* Remaining pastel pills used on the landing ("solutions" badges) */
+html.dark .bg-emerald-100 { background-color:#064e3b; }
+html.dark .bg-amber-100   { background-color:#451a03; }
+html.dark .text-emerald-700 { color:#6ee7b7; }
+html.dark .text-amber-700   { color:#fcd34d; }

@@ -56,7 +56,7 @@ $nav = [
 </header>
 
 <!-- Hero -->
-<section class="relative overflow-hidden bg-gradient-to-b from-brand-50 via-white to-white">
+<section class="relative overflow-hidden hero-gradient bg-gradient-to-b from-brand-50 via-white to-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-28 text-center">
         <span class="inline-block px-4 py-1.5 rounded-full bg-brand-100 text-brand-700 text-xs font-semibold mb-6"><?= e(__('landing.hero_badge')) ?></span>
         <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-4xl mx-auto leading-tight">
